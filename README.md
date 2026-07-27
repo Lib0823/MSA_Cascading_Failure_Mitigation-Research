@@ -6,7 +6,7 @@
 
 모놀리식에서 쿠버네티스(K8s) 기반 분산 아키텍처로 전환하는 과정에서 마이크로서비스(MSA) 간 연쇄 장애(cascading failure) 위험이 급증한다. 기존 K8s HPA는 (1) 사후반응적이라는 점, (2) 상태성 리소스 병목에서 Thundering Herd를 유발할 수 있다는 점, (3) 서비스 간 위상(topology) 정보를 반영하지 못한다는 점, (4) 시계열 전용 모델은 장애 전파 경로를 포착하지 못한다는 점에서 한계를 가진다.
 
-본 연구는 그래프 어텐션 네트워크(GAT)로 서비스 호출 관계를 학습해 장애를 선제적으로 예측하고, Deep Ensemble(N=5) 기반 신뢰도 추정치에 따라 조치 강도를 차등화하는 **신뢰도 구간별 대응(confidence-tiered response)** 정책 엔진을 제안한다. 관련 연구(GRAF, FIRM, AGQ, GraphGRU)는 "위상 인지 예측", "이질적 조치 선택", "신뢰도 구간별 대응"이라는 세 축 중 최소 하나 이상을 다루지 않으며, 본 연구는 이 세 축을 모두 충족하는 위치에 있다. Online Boutique 벤치마크 위에서 Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection 등 이질적 조치를 신뢰도 구간에 따라 선택적으로 트리거하는 아키텍처를 검증할 예정이다.
+본 연구는 그래프 어텐션 네트워크(GAT)로 서비스 호출 관계를 학습해 장애를 선제적으로 예측하고, Deep Ensemble(N=5) 기반 신뢰도 추정치에 따라 조치 강도를 차등화하는 **신뢰도 구간별 대응(confidence-tiered response)** 정책 엔진을 제안한다. 관련 연구(GRAF, FIRM, AGQ, GraphGRU)는 "위상 인지 예측", "이질적 조치 선택", "신뢰도 구간별 대응"이라는 세 축 중 최소 하나 이상을 다루지 않으며, 본 연구는 이 세 축을 모두 충족하는 위치에 있다. Online Boutique 벤치마크 위에서 Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout(비핵심 기능 차단) 등 이질적 조치를 신뢰도 구간에 따라 선택적으로 트리거하는 아키텍처를 검증할 예정이다.
 
 ## Motivation
 
@@ -16,19 +16,19 @@
 
 ## Research Goal
 
-위상 인지형 예측(GRAF류)과 이질적 조치 선택(FIRM류)의 교집합에, **신뢰도 구간별 대응**이라는 세 번째 축을 더한 Policy Engine을 설계하고 검증한다.
+위상 인지형 예측(GRAF류)과 학습 기반 조치 선택(FIRM류)의 교집합에, **신뢰도 구간별 대응**이라는 세 번째 축을 더한 Policy Engine을 설계하고 검증한다.
 
 | 축 | GRAF | FIRM | AGQ | GraphGRU | 본 연구 |
 |---|---|---|---|---|---|
 | 예측 모델 | GNN(MPNN, 위상 반영) | SVM(위상 미반영) | STGNN+Q-learning | GAT(DTW 동적 그래프) | GAT(정적, 실 호출관계 기반) |
-| 조치 공간 | 자원 할당 | 이질적 | 자원 할당 | 없음(예측만) | 이질적 |
+| 조치 공간 | 자원 할당 | 자원 재할당(다차원, 전부 프로비저닝) | 자원 할당 | 없음(예측만) | 질적 이질(CB/Shedding/Scale/Redirect/Brownout) |
 | 신뢰도 구간별 대응 | 없음 | 없음 | 없음 | 없음 | **있음 (신규 기여)** |
 
 ## Method
 
 - **AI 예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. Readout은 flatten이 아닌 mean/attention pooling 채택(그래프 크기 확장에도 모델 구조 유지).
 - **의사결정 계층 (핵심 Contribution)**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine. 고신뢰도=적극적 조치 / 중간신뢰도=저비용·가역적 조치 / 저신뢰도=보류.
-- **실행 계층**: Traffic Shedding, Circuit Breaker, K8s Scale-up, Read Redirection 4종 Actuator.
+- **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
 - **실험**: Online Boutique(11~12개 서비스) 벤치마크, Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
 
 자세한 아키텍처 설계 근거와 심사 방어 논리는 [docs/proposal.md](docs/proposal.md)를 참고.

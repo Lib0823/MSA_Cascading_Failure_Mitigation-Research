@@ -14,7 +14,7 @@
 | GNN 모델 학습 (GAT, Deep Ensemble N=5) | 1~2개월 | - |
 | LSTM baseline 학습 | +2~4주 | GNN과 병행 가능 |
 | Policy Engine 비용함수/의사결정 로직 구현 | 1~2개월 | - |
-| Actuator 통합 (2~4종) | 1~1.5개월 | 부분 병행 가능 |
+| Actuator 통합 (2~5종) | 1~1.5개월 | 부분 병행 가능 |
 | 실험 환경 구축 + 반복실험 + 임계치 튜닝 | 1~2개월 (보통 예상보다 오래 걸림) | - |
 | 논문 작성 | 1~1.5개월 | - |
 | **합계** | **약 7~10개월** | |
@@ -23,17 +23,17 @@
 
 1. Train Ticket 서브셋 보조 실험 (부하 스케일업 실험으로 대체 가능)
 2. FIRM류 baseline 추가 (GRAF류 baseline + LSTM baseline만으로도 최소 방어 가능)
-3. Actuator 4종 → 2종(Circuit Breaker + Read Redirection)으로 축소, 나머지는 "확장 가능 설계"로만 서술
+3. Actuator 5종 → 2종(Circuit Breaker + Read Redirection)으로 축소, 나머지(Scale-up/Shedding/Brownout)는 "확장 가능 설계"로만 서술. 특히 Brownout은 앱 계측(필수/선택 분리)이 필요해 컷 우선순위가 가장 높음.
 4. 부하 스케일업 실험(동시 사용자 수 변화 실험) — 그래도 시간이 없으면 생략 가능하나 §4-4 방어력이 약해짐에 유의
 
 ## 마일스톤
 
 **2학기 중반까지 (프로포절 심사 대비)**
 - [x] 신뢰도(Confidence) 산출 방식 확정 — Deep Ensemble(N=5)로 확정 ([challenges.md](challenges.md) F1)
-- [ ] 비용함수 초안 수식화 ([challenges.md](challenges.md) G1, 오픈 이슈)
+- [x] 비용함수 초안 수식화 — 기대비용 최소화형으로 확정 ([challenges.md](challenges.md) G1, [docs/proposal.md](../docs/proposal.md) §2-B)
 - [x] 관련연구 비교표(GRAF/FIRM/AGQ/GraphGRU 4자) 완성 ([docs/proposal.md](../docs/proposal.md) §3)
 - [x] 벤치마크 최종 확정 — Online Boutique 메인
-- [ ] GNN 추론 레이턴시 vs 반응속도 이슈 최소한의 해법 방향 결정 ([challenges.md](challenges.md) G2, 미착수)
+- [x] GNN 추론 레이턴시 vs 반응속도 이슈 해법 방향 결정 — 2계층 제어(로컬 반사 + GNN 선제)로 확정 ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
 
 **프로포절 심사** (약 3학기차)
 
@@ -53,8 +53,6 @@
 
 | # | 이슈 | 심사 전 필요 수준 |
 |---|---|---|
-| 1 | 비용함수 구체적 수식 미정 (관련연구, 특히 FIRM의 RL reward 설계 검토 후 확정 예정) | 초안 수준이면 충분 — 정확한 계수 튜닝까지는 불필요, 변수들을 어떻게 저울질하는 함수 형태인지 골격만 있으면 됨. Deep Ensemble의 신뢰도 구간(고/중/저) 임계값 설계와 연계 필요. |
-| 2 | GNN 추론 주기와 즉각 반응 필요 조치(Circuit Breaker 등) 사이의 타이밍 문제 — 논의 시작 안 됨 | 해법 방향만 있으면 충분. 시계열 결합 미채택 결정과 직결되므로 함께 검토. |
-| 3 | 실험용 트래픽 프로파일의 구체적 파라미터(버스트 강도, 점진 증가 속도 등) 미정 | 프로포절 심사 필수 항목 아님 — 실험 단계로 미뤄도 무방. |
+| G3 | 실험용 트래픽 프로파일의 구체적 파라미터(버스트 강도, 점진 증가 속도 등) 미정 | 프로포절 심사 필수 항목 아님 — 실험 단계로 미뤄도 무방. mₐ(완화효과) 측정 방식 정의도 이 이슈와 연계. |
 
-> [해결됨] 신뢰도 산출 방식(MC Dropout / Deep Ensemble / entropy 중 택1)은 Deep Ensemble(N=5)로 확정되어 위 목록에서 제외됨. 상세 근거는 [challenges.md](challenges.md) F1 참고.
+> [해결됨] (1) 신뢰도 산출 방식은 Deep Ensemble(N=5)로 확정 ([challenges.md](challenges.md) F1). (2) 비용함수 수식화(G1)는 기대비용 최소화형으로 확정 ([challenges.md](challenges.md) G1, [docs/proposal.md](../docs/proposal.md) §2-B). (3) GNN 추론 레이턴시 vs 즉각반응(G2)은 2계층 제어(로컬 반사 + GNN 선제)로 확정 ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D). 위 세 항목은 목록에서 제외됨.

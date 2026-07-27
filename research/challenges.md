@@ -53,7 +53,7 @@
 ### B5. GRAF·FIRM·AGQ 원문 재확인 — 실제 GNN 입력 그래프 규모
 - **문제**: GRAF·FIRM·AGQ가 실제로 GNN 입력에 사용한 그래프 규모가 얼마나 되는지 정밀 확인 필요.
 - **확인(GRAF, 2021 CoNEXT 원문 + 2024 ToN 확장판)**: GRAF는 2021년부터 Online Boutique와 Social Network 두 벤치마크를 함께 사용했으며 2024년 확장판에서 새로 추가된 것이 아님. 다만 GNN 입력으로 실제 사용한 그래프는 벤치마크 전체가 아니라 특정 요청 체인(critical chain)만 잘라낸 서브그래프: Online Boutique는 6개 노드(MS1~MS6, 카트 페이지 체인), Social Network는 10개 노드(MS1~MS10, post-compose 체인). 즉 본 연구가 채택한 11개 노드(Online Boutique 전체 위상)는 GRAF의 실제 GNN 입력 규모보다 오히려 크다.
-- **확인(FIRM)**: GNN을 사용하지 않고 SVM 기반 critical path 추출 + RL(actor-critic)로 이질적 조치를 선택하는 구조. 그래프 임베딩 학습이 없어 노드 수 제약이 없고, DeathStarBench(Social Network 36, Media Service 38, Hotel Reservation 15) + Train-Ticket(41) 벤치마크의 전체 서비스 그래프를 그대로 사용.
+- **확인(FIRM)**: GNN을 사용하지 않고 SVM 기반 critical path 추출 + RL(actor-critic)로 저수준 자원(CPU/Mem/LLC/IO/Net) 한도 재할당을 선택하는 구조(조치 공간 상세는 D14). 그래프 임베딩 학습이 없어 노드 수 제약이 없고, DeathStarBench(Social Network 36, Media Service 38, Hotel Reservation 15) + Train-Ticket(41) 벤치마크의 전체 서비스 그래프를 그대로 사용.
 - **확인(AGQ)**: 메인 비교 실험(Table 3, HAB/MMN/AWS/SLO 등 실제 경쟁 베이스라인과 신뢰구간까지 명시한 핵심 결과)은 Sock Shop(~13개 노드) 규모에서 수행. "수백 개 노드" 규모의 LinkedIn 실험은 메인 베이스라인이 아닌 DCRNN·T-GCN 두 GNN 모델과만 비교한 보조 실험이며, 실제 LinkedIn 데이터가 아니라 공개 아키텍처 설명을 참고해 자체 시뮬레이션한 비공개·비재현 환경.
 - **결론**: GNN 기반 선행연구(GRAF, AGQ)의 실질적 핵심 검증 규모는 모두 본 연구의 11개 노드와 같은 자릿수(6~13개)이며, 본 연구가 유독 작은 것이 아님. "AGQ는 대규모에서 검증했다"는 인상은 메인 결과가 아닌 비재현 보조 실험에서 비롯된 것이라 근거로서의 무게가 약함. [docs/proposal.md](../docs/proposal.md) §3, 우려 6에 반영.
 
@@ -62,7 +62,7 @@
 ## C. 스코프 및 일정
 
 ### C1. 스코프(Actuator/장애주입) — "끼워넣기만 하면 되는가?"
-- **문제**: GNN은 사전학습 모델, Actuator 4종은 기성 라이브러리, 장애주입은 전용 툴이라 스코프를 축소할 수 있는 것 아닌지 검토.
+- **문제**: GNN은 사전학습 모델, Actuator 5종은 대부분 기성 라이브러리(단 Brownout은 앱 계측 필요), 장애주입은 전용 툴이라 스코프를 축소할 수 있는 것 아닌지 검토.
 - **확인**: Resilience4j/Spring Cloud Gateway 등 라이브러리 자체는 기성품이지만, "GNN 출력 → Policy Engine → Actuator 트리거"를 잇는 통합 로직은 직접 구현해야 함. Chaos Mesh/Istio는 장애주입 전용이고 트래픽 생성은 별도 도구(Locust/k6/JMeter/Gatling) 필요.
 - **결론**: GNN 레이어 구현·Actuator 개별 세부튜닝은 가벼워지나, Policy Engine 통합 로직·실험 파이프라인 구축은 여전히 무거움. 스코프는 유지하되 우선순위 컷라인을 사전 설정([timeline.md](timeline.md) 참고).
 
@@ -95,8 +95,8 @@
 
 ### D4. "GRAF가 제일 적합한 선행연구인가?" — FIRM 발견
 - **문제**: GRAF 하나만으로 관련연구 비교가 충분한지 검토.
-- **확인**: FIRM(USENIX OSDI 2020, UIUC: Qiu, Banerjee, Jha, Kalbarczyk, Iyer) 발견. SVM 기반 감지/localize + RL 기반으로 수평/수직 스케일링과 브라운아웃(Traffic Shedding과 유사) 등 이질적 조치 중에서 선택하나 그래프 구조는 반영하지 않음. OSDI는 시스템 분야 최상위 학회(SOSP와 함께 최상위 2대 학회).
-- **결론**: GRAF 하나만으로는 부족함. GRAF(위상 인지, 조치는 자원할당 한정)와 FIRM(이질적 조치, 위상 미반영)이 서로 다른 축을 커버하며, 본 연구는 이 둘의 교집합 + 신뢰도 구간별 대응(신규)에 위치. 관련연구는 두 논문을 나란히 비교표로 제시하기로 결정. §4-3 baseline에 FIRM류도 선택적으로 추가.
+- **확인**: FIRM(USENIX OSDI 2020, UIUC: Qiu, Banerjee, Jha, Kalbarczyk, Iyer) 발견. SVM 기반 감지/localize + RL(DDPG) 기반으로 저수준 자원 한도(CPU/Mem/LLC/IO/Net)를 재할당하는 조치를 선택하나 그래프 구조는 반영하지 않음. OSDI는 시스템 분야 최상위 학회(SOSP와 함께 최상위 2대 학회). (당초 '브라운아웃 포함 이질적 조치'로 기재했으나, 원문 재확인 결과 조치 공간은 전부 자원 프로비저닝에 한정됨 — D14 참고.)
+- **결론**: GRAF 하나만으로는 부족함. GRAF(위상 인지, 조치는 자원할당 한정)와 FIRM(학습 기반 적응적 조치 선택, 단 조치는 자원 프로비저닝 한정, 위상 미반영)이 서로 다른 축을 커버하며, 본 연구는 이 둘의 교집합 + 신뢰도 구간별 대응(신규)에 위치. 관련연구는 두 논문을 나란히 비교표로 제시하기로 결정. §4-3 baseline에 FIRM류도 선택적으로 추가.
 
 ### D5. AGQ 검토 — 학회 위상/관련도 분리 평가
 - **확인**: AGQ(Future Generation Computer Systems, Elsevier Q1, 2026)는 STGNN(dense-connectivity)+Q-learning 결합. 학회 위상은 GRAF/FIRM보다 한 단계 아래(OSDI/CoNEXT 같은 top-tier 컨퍼런스 대비)나, 관련도(예측+학습기반 조치 동시 보유)는 셋 중 가장 높아 심사 방어 시급성이 가장 큼. "AGQ"는 별도 배포 소프트웨어 프레임워크가 아니라 논문 내 제안 방법론에 붙인 이름(GRAF·FIRM과 동일한 성격).
@@ -137,6 +137,14 @@
 - **확인**: GRAF ToN 2024판 Discussion에서 "the readout phase's neural network input node dimension is linearly dependent on the number of microservices in an application... GRAF's performance may degrade when applied to applications composed of hundreds to thousands of microservices"라고 직접 명시. 원인은 readout 단계에서 노드 임베딩을 flatten해 FC 신경망에 입력하는 구조.
 - **결론**: 이 한계는 GNN 위상 인지 자체의 한계가 아니라 GRAF의 readout 설계(flatten) 선택에서 비롯된 것. 본 연구는 이를 반면교사로 삼아 pooling 기반 readout을 채택(E5)하고, 이를 [docs/proposal.md](../docs/proposal.md) 우려 6·10의 근거로 사용.
 
+### D14. FIRM 원문 조치 공간 재확인 — 브라운아웃 오기재 정정 + 본 연구 조치 5종 확정
+- **문제**: FIRM이 실제로 브라운아웃을 조치로 사용하는지, "brownout으로 FIRM 우려 7을 방어한다"는 논거가 원문에 근거하는지 재확인 필요. (D4에 'FIRM = 수평/수직 스케일링 + 브라운아웃'으로 기재돼 있었음.)
+- **확인**: FIRM 원문(arXiv 2008.08509) Table 3(State-action space)과 §3.4~3.5(Action Execution)를 직접 확인. FIRM의 RL(DDPG) Action Space는 **저수준 자원 5종의 한도 재할당** `RLTᵢ, i ∈ {CPU, Mem, LLC, IO, Net}`이며, 실행은 cgroups(`cpu.cfs_*`, `blkio`)·Intel MBA/CAT·HTB로 수행하고, 한도가 상·하한에 닿으면 수평 스케일아웃/인. **브라운아웃은 조치 공간에 없음.** 검색엔진 요약은 'horizontal/vertical scaling + brownout'이라 했으나 원문과 불일치 — 원문 우선(팩트체크 원칙).
+- **결론**:
+  1. **정정**: 기존 D4·proposal의 'FIRM 브라운아웃 포함' 및 'FIRM 이질적 조치'는 오기재로 정정. FIRM 조치 공간 = 다차원이지만 전부 자원 프로비저닝(비프로비저닝 조치 없음).
+  2. **차별점 강화**: 따라서 상태성 병목(커넥션풀/Thundering Herd, D2) 시나리오는 GRAF·AGQ뿐 아니라 **FIRM도 다루지 못함** → 본 연구의 비프로비저닝 조치가 FIRM 대비로도 신규 기여임을 [docs/proposal.md](../docs/proposal.md) 우려 7·§3에 반영.
+  3. **Brownout 채택(5번째 조치)**: 브라운아웃은 FIRM 근거와 **무관하게**, Online Boutique의 `adservice`/`recommendationservice`(비핵심 기능)를 dimmer로 차단하는 형태로 **벤치마크에서 실제 구현 가능**하다는 근거로 본 연구의 정식 5번째 조치로 채택(CB/Shedding/Redirection/Scale-up/Brownout). Traffic Shedding(요청 통째 거부)과 달리 요청을 받되 품질만 낮추는 질적으로 다른 레버라 조치 공간 이질성을 넓힘. 단 앱 계측(필수/선택 분리)이 필요해 실증 우선순위는 코어 조치 뒤([timeline.md](timeline.md) 컷 우선순위). [docs/proposal.md](../docs/proposal.md) §2-B·§2-C 반영.
+
 ---
 
 ## E. 모델 아키텍처 설계
@@ -154,7 +162,7 @@
 
 ### E4. 시계열(STGNN) 결합 여부 — 1차 미채택, 확장 옵션 유보
 - **문제**: AGQ·GraphGRU처럼 시계열 결합 모델이 예측 정확도 면에서 유리한 것 아닌가에 대한 재검토.
-- **결론**: 목적 자체가 다름(AGQ·GraphGRU는 연속적 수치의 정확한 예측이 목표, 본 연구는 현재 위험 여부+확신도의 즉각 판단이 목표)을 1차 근거로, 추론 지연 최소화라는 설계 철학을 2차 근거로 최종 확정. 1차 모델은 정적 GAT(스냅샷 1장)로 진행. 오픈이슈(G2)의 실측 검증 결과에 따라 입력 윈도우 확장 등 최소 침습적 확장을 후속 실험으로 고려 가능.
+- **결론**: 목적 자체가 다름(AGQ·GraphGRU는 연속적 수치의 정확한 예측이 목표, 본 연구는 현재 위험 여부+확신도의 즉각 판단이 목표)을 1차 근거로, 추론 지연 최소화라는 설계 철학을 2차 근거로 최종 확정. 1차 모델은 정적 GAT(스냅샷 1장)로 진행. G2(2계층 제어로 해소)의 추론 주기 실측 튜닝 결과에 따라 입력 윈도우 확장 등 최소 침습적 확장을 후속 실험으로 고려 가능.
 - **심사 방어 로직**: (1) 문제 정의가 다름 명시 → (2) 설계 트레이드오프임을 명시(정확도보다 낮은 추론지연 우선) → (3) 실측 검증 예정임을 명시.
 
 ### E5. Readout 방식 — Flatten이 아닌 Pooling 채택
@@ -186,15 +194,22 @@
 
 ---
 
-## G. 오픈 이슈 (미해결)
+## G. 오픈 이슈 및 해소 기록
 
-### G1. 비용함수(Cost Function) 구체화
+### G1. 비용함수(Cost Function) 구체화 — [해결됨] 초안 골격 확정
 - **이슈**: "가용성 손실/되돌리기 난이도/오탐 피해를 저울질"이라는 서술이 수식/모델 없이 선언적임.
-- **상태**: 오픈 이슈로 남음. 관련연구(특히 FIRM의 RL reward 설계) 검토와 함께 구체화하기로 함. 심사 전에는 초안 수준(변수와 저울질 형태의 골격)이면 충분. F1(Deep Ensemble 신뢰도 구간 임계값)과 연계하여 함께 설계 필요.
+- **의사결정 과정**:
+  1. **함수 형태**: 후보 3안(기대비용 최소화 / 가중합 스코어 / FIRM식 reward 차용) 중 **기대비용 최소화형** 채택. 신뢰도 p가 확률 가중치로 자연스럽게 들어가 "왜 신뢰도가 조치를 가르는가"가 수식으로 정당화되고, 조치별 임계값 θₐ가 유도되어 신뢰도 구간(고/중/저)이 자동 생성되기 때문. FIRM식 reward는 RL 미채택(E3) 결정과 서사 충돌 위험으로, 가중합 스코어는 구간별 대응의 필연성이 약해 기각.
+  2. **변수 축**: 3축(가용성 손실 L / disruption Dₐ / 가역성 Rₐ) 유지, 오탐 피해는 Dₐ·Rₐ로 파생 정의.
+  3. **완화효과 mₐ 포함 여부**: 포함으로 결정. mₐ가 핵심 기여(신뢰도 구간별 대응)를 격상시키는 것은 아니나(구간 메커니즘은 mₐ 없이도 성립), 커넥션풀 차별점(D2)을 비용함수 외부 하드코딩 규칙이 아니라 **내부에서 유도**되게 만드는 역할을 함. mₐ를 변수로 두면 비용함수가 "조치 비용 계산기"에서 "장애 유형 인지형 의사결정기"로 격상. 측정 부담(장애 유형별 mₐ 추정)은 오픈이슈 G3와 연계해 실험 이월.
+- **결론**: 기대비용 최소화형 비용함수 `E[비용|a] = p·[(1−mₐ)·L + Dₐ] + (1−p)·[Dₐ·Rₐ]`, `E[비용|보류] = p·L`, 유도 임계값 `θₐ = Dₐ·Rₐ / (mₐ·L − Dₐ·(1−Rₐ))`로 초안 골격 확정. L·D·R·m 실제 수치는 실험 튜닝으로 이월. F1(Deep Ensemble)의 신뢰도 구간 임계값 설계도 θₐ 유도로 함께 해결됨. [docs/proposal.md](../docs/proposal.md) §2-B에 반영.
 
-### G2. GNN 추론 레이턴시 vs 즉각 반응 필요성
+### G2. GNN 추론 레이턴시 vs 즉각 반응 필요성 — [해결됨] 2계층 제어로 방향 확정
 - **이슈**: Circuit Breaker/Traffic Shedding처럼 즉각 반응이 필요한 조치가 GNN 추론 주기에 묶이면 오히려 반응이 느려질 위험.
-- **상태**: 오픈 이슈로 남음. 추론 주기와 스레드 고갈 속도 사이의 타이밍 갭을 어떻게 다룰지 후속 논의 필요. E4(시계열 결합 여부)의 최종 판단과 직결되므로 함께 검토 필요. 심사 전에는 방향성 수준이면 충분.
+- **의사결정 과정**:
+  1. 초안: "CB를 로컬 전용으로 빼고 GNN은 다른 조치만" 검토 → 이질적 조치가 차별점인데 CB를 조치 공간에서 빼는 것이 아깝다는 판단으로 기각.
+  2. 대안: CB를 GNN 조치로 유지하되 로컬 반응층과 공존시키는 2계층 구조 채택. 두 층이 같은 액추에이터를 건드리는 중복 충돌 우려는 "OR 의미론 + GNN escalate-only + lease TTL" 규칙으로 해소(한 액추에이터에 사실상 단일 중재 보장). Resilience4j의 `FORCED_OPEN` 상태로 구현 가능해 이국적 메커니즘이 아님.
+- **결론**: 트리거 경로를 이원화한다. **Tier 1(로컬 반사, 상시 on)**이 CB·Shedding을 ms 단위로 반응시켜 급속 장애를 잡고, **Tier 2(GNN 선제, N초 주기)**가 위상 인지 예측 + 신뢰도 구간별 비용함수로 5종을 선택(CB·Shedding은 force-open/force-shed, Redirect/Scale/Brownout은 단독). **5종 이질적 조치는 CB 포함 그대로 유지.** CB 임계값 pre-arm은 확장 옵션. GNN 추론 주기 파라미터 실측 튜닝은 실험 이월. E4(시계열 미채택)와 정합. [docs/proposal.md](../docs/proposal.md) §2-D·우려 11에 반영.
 
 ### G3. 트래픽 프로파일 파라미터
 - **이슈**: A4에서 도구(Locust/k6 + Istio/Chaos Mesh)는 확정했으나, 구체적 프로파일 조합(정상/버스트/점진증가의 파라미터 등)은 미상세화.

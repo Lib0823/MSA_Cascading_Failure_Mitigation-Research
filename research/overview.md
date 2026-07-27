@@ -17,13 +17,13 @@
 
 ## 연구 목적
 
-서비스 호출 관계를 반영한 GNN 예측과, 예측의 신뢰도(확신도)에 따라 조치 강도를 달리하는 정책 엔진을 결합한 아키텍처를 제안하고 검증하는 것이 목적이다. 위상 인지형 예측(GRAF류)과 이질적 조치 선택(FIRM류)의 교집합에, 신뢰도 구간별 대응이라는 세 번째 축을 더하는 것이 핵심 기여다.
+서비스 호출 관계를 반영한 GNN 예측과, 예측의 신뢰도(확신도)에 따라 조치 강도를 달리하는 정책 엔진을 결합한 아키텍처를 제안하고 검증하는 것이 목적이다. 위상 인지형 예측(GRAF류)과 학습 기반 조치 선택(FIRM류)의 교집합에, 신뢰도 구간별 대응이라는 세 번째 축을 더하는 것이 핵심 기여다.
 
 ## 연구 방법
 
 - **예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출.
 - **의사결정 계층**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine.
-- **실행 계층**: Traffic Shedding, Circuit Breaker, K8s Scale-up, Read Redirection 4종 Actuator.
+- **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
 - **실험**: Online Boutique(11~12개 서비스) 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
 
 자세한 아키텍처 설계와 근거는 [docs/proposal.md](../docs/proposal.md) §2, 비교 실험 설계는 §4를 참고.

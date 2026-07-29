@@ -47,12 +47,13 @@
 - **보조 실험(Train Ticket 서브셋) 진행 시에만**: 시간단위 과금 VPS(Hetzner/DigitalOcean/Vultr 등, GPU 불필요)를 며칠 단기 대여 → 데이터 수집 후 즉시 종료. AWS 신규 크레딧(200달러/6개월)의 시계를 이 실험에 미리 소모하지 않는다.
 - GPU가 필요해지는 예외 상황(현재는 낮은 확률)이 생기면 Vast.ai 등 GPU 마켓플레이스를 고려한다.
 
-## 아직 해결되지 않은 오픈 이슈
+## 오픈 이슈 현황
 
-상세 배경과 팩트체크 근거는 [challenges.md](challenges.md) "G. 오픈 이슈" 항목 참고.
+상세 배경과 팩트체크 근거는 [challenges.md](challenges.md) "G. 오픈 이슈 및 해소 기록" 참고.
 
-| # | 이슈 | 심사 전 필요 수준 |
-|---|---|---|
-| G3 | 실험용 트래픽 프로파일의 구체적 파라미터(버스트 강도, 점진 증가 속도 등) 미정 | 프로포절 심사 필수 항목 아님 — 실험 단계로 미뤄도 무방. mₐ(완화효과) 측정 방식 정의도 이 이슈와 연계. |
+**프로포절 심사 대비 미결정 설계 이슈: 없음.**
 
-> [해결됨] (1) 신뢰도 산출 방식은 Deep Ensemble(N=5)로 확정 ([challenges.md](challenges.md) F1). (2) 비용함수 수식화(G1)는 기대비용 최소화형으로 확정 ([challenges.md](challenges.md) G1, [docs/proposal.md](../docs/proposal.md) §2-B). (3) GNN 추론 레이턴시 vs 즉각반응(G2)은 2계층 제어(로컬 반사 + GNN 선제)로 확정 ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D). 위 세 항목은 목록에서 제외됨.
+- [해결] 신뢰도 산출 방식 — Deep Ensemble(N=5) ([challenges.md](challenges.md) F1)
+- [해결] 비용함수 수식화(G1) — 기대비용 최소화형 ([challenges.md](challenges.md) G1, [docs/proposal.md](../docs/proposal.md) §2-B)
+- [해결] 추론 레이턴시 vs 즉각반응(G2) — 2계층 제어(로컬 반사 + GNN 선제) ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
+- [이관] 트래픽 프로파일 파라미터 + mₐ 측정(G3) — 실험 설계 [docs/proposal.md](../docs/proposal.md) §4-5로 이동(심사 필수 아님, 실측 기반 확정)

@@ -26,7 +26,7 @@
 
 ## Method
 
-- **AI 예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. Readout은 flatten이 아닌 mean/attention pooling 채택(그래프 크기 확장에도 모델 구조 유지).
+- **AI 예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. 출력은 flatten이 아닌 공유 per-node head 기반 노드 레벨 예측 채택(서비스별 위험도 산출, 그래프 크기 확장에도 파라미터 구조 유지).
 - **의사결정 계층 (핵심 Contribution)**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine. 고신뢰도=적극적 조치 / 중간신뢰도=저비용·가역적 조치 / 저신뢰도=보류.
 - **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
 - **실험**: Online Boutique(11~12개 서비스) 벤치마크, Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.

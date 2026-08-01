@@ -32,7 +32,7 @@ GNN은 사전학습된 범용 모델이 존재하지 않는 영역이다. 본 �
 | 강화학습(RL) 결합 | 미채택 | Policy Engine이 이미 신뢰도 구간별 정책에 따라 조치를 선택하는 구조이므로, 액션 선택까지 RL로 재학습시킬 필요가 없다. RL 없이도 결정 로직이 해석 가능하다는 점이 오히려 설명 가능성 측면의 강점이다. |
 | 시계열 결합 (STGNN) | 미채택(1차 모델), 확장 옵션으로 유보 | 본 연구의 목표는 "미래의 연속적 수치를 정확히 예측"(AGQ·GraphGRU의 목표)이 아니라 "현재 상태의 위험 여부와 확신도를 즉각 판단"하는 것이다. 시계열 결합은 버퍼링 시간과 시간축 attention 연산이 추가되어 추론 지연이 늘어나므로, 즉각 대응이 핵심 기여인 본 연구에서는 정확도보다 낮은 추론 지연을 우선하는 설계를 택한다. G2(추론 레이턴시 vs 즉각반응 타이밍)는 2계층 제어(§2-D)로 해소했으며, 최근 시점들의 흐름이 판단 정확도에 유의미하다면 최소 침습적 확장(입력 윈도우 확대)을 후속 실험으로 고려할 수 있다. |
 | 신뢰도 산출 방식 | **Deep Ensemble(N=5) 채택** | 후보(MC Dropout/Deep Ensemble/Softmax Entropy) 중, Lakshminarayanan et al.(2017)이 MC Dropout 대비 더 신뢰할 수 있는 불확실성 추정치를 제공함을 실증한 결과를 1차 근거로 채택한다. MC Dropout은 추론 시 동일 모델에 대한 N회 반복 순전파가 필요해 지연 시간이 증가하는 반면, Deep Ensemble은 N개 모델을 병렬 배치하여 추론할 수 있어 즉각 대응이 핵심인 본 시스템에 구조적으로 더 적합하다. 그래프 규모가 작아(11개 노드) N=5 모델 학습에 따른 비용 부담도 낮다. |
-| [신규] Readout 방식 | **Pooling 채택 (Flatten 미채택)** | GRAF는 readout 단계에서 각 노드 임베딩을 flatten해 완전연결(FC) 신경망에 통째로 입력하는 구조를 사용하며, 이로 인해 FC 입력 차원과 파라미터 수가 노드 수에 선형 비례한다. GRAF 스스로(ToN 2024판 Discussion) "readout phase's neural network input node dimension is linearly dependent on the number of microservices"이며 "performance may degrade when applied to applications composed of hundreds to thousands of microservices"라고 확장성 한계를 인정한다. 본 연구는 flatten 대신 mean/attention pooling으로 그래프 전체를 고정 크기 벡터로 압축하는 readout을 채택해, 그래프 크기(노드 수)가 달라져도 모델 파라미터·출력 차원이 그대로 유지되도록 설계한다. |
+| [신규] 출력(Readout) 방식 | **노드 레벨 + 공유 per-node head (Flatten 미채택)** | GRAF는 readout 단계에서 각 노드 임베딩을 flatten해 완전연결(FC) 신경망에 통째로 입력하는 구조를 사용하며, 이로 인해 FC 입력 차원과 파라미터 수가 노드 수에 선형 비례한다. GRAF 스스로(ToN 2024판 Discussion) "readout phase's neural network input node dimension is linearly dependent on the number of microservices"이며 "performance may degrade when applied to applications composed of hundreds to thousands of microservices"라고 확장성 한계를 인정한다. 본 연구는 flatten 대신 **모든 노드에 동일한 head(공유 MLP)를 적용하는 노드 레벨 예측**을 채택해, 파라미터·출력 구조가 노드 수와 무관하게 고정되도록 설계한다(서비스별 위험도 산출 → Actuator 타겟팅과 직결, §4-2). |
 
 ### B. 의사결정 계층 — Policy Engine (핵심 Contribution)
 
@@ -157,7 +157,21 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 ### 4-2. Ground Truth 정의
 
-(추가 상세화 예정 — 원본 자료 §4-2 그대로 유지)
+GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호출 그래프 스냅샷)에 정답 라벨을 부여한다. 라벨 정의는 다음과 같이 확정한다(상세 의사결정은 [challenges.md](../research/challenges.md) E6).
+
+**라벨 단위 — 노드 레벨**: 각 서비스(노드)마다 위험 여부를 예측한다. GAT가 산출하는 노드별 임베딩에 **공유 per-node head**(모든 노드에 동일한 MLP)를 적용해 파라미터가 노드 수와 무관하게 고정된다(§2-A, GRAF의 flatten과 대비되는 확장성 근거). 노드 레벨 출력은 Policy Engine이 "어느 서비스에" 조치할지를 모델에서 직접 얻게 하며, 신뢰도 구간별 대응도 서비스 단위로 세밀화된다.
+
+**위험(positive) 정의 — SLO 위반**: 노드 v가 시점 t에 positive ⟺ [t, t+Δ] 안에 v가 SLO 위반(P99 지연 > 임계 또는 에러율 > 임계) 상태에 빠진다. 임계값은 서비스별 baseline으로 산정한다. CPU/메모리/요청률/스레드풀·커넥션풀 사용률 등 리소스 지표는 라벨이 아니라 **입력 feature**(선행 지표)로 두어 라벨-입력 누수를 피한다.
+
+**전파성 조건(refinement)**: positive는 "전파에 기인한 위반"으로 한정한다 — v의 SLO 위반이 이웃(상류) 서비스의 선행 열화에 뒤따를 때만 positive로 본다. 랜덤 주입된 1차 장애의 onset(외생적이라 입력에 선행 신호가 없음)은 positive에서 제외/유예한다. 이로써 모델은 위상을 통해서만 예측 가능한 **전파 신호**를 학습하며, 이것이 시계열 전용 모델(LSTM) 대비 우위의 핵심 근거가 된다.
+
+**예측 지평 Δ**: 단일 고정 지평의 이진 분류로 둔다(다중 지평은 후속 확장). Δ의 하한은 폐루프 응답시간(§2-D: GNN 주기 + 추론 + Policy 판정 + Actuator 실행)으로, 그보다 짧으면 조치할 시간이 없어 예측이 무의미하다. 상한은 현재 상태로 전파를 예측 가능한 범위이며, 너무 길면 랜덤 주입 타이밍이 창에 섞여 라벨이 노이즈가 된다. 구체 값은 §4-5의 실측 캘리브레이션으로 정한다.
+
+**라벨링 파이프라인 — 자동 역라벨링**: 장애주입(Istio/Chaos Mesh) + 트래픽(§4-5)을 걸고 서비스별 지표 시계열과 그래프 스냅샷을 샘플링 간격마다 기록한 뒤, 기록된 미래 지표로부터 각 (스냅샷, 노드)에 위 기준을 적용해 라벨을 프로그램으로 역산한다(수작업 주석 없음 → 재현 가능). 두 가지를 방법론으로 반영한다.
+- **클래스 불균형**: positive(임박 위반)가 negative보다 드물므로 class weight·oversampling·장애주입 비율 조정으로 대응한다(구체 기법은 실험 단계).
+- **장애주입 커버리지**: 장애 유형(지연/에러/리소스 stress) × 주입 지점을 다양화하되, 커넥션풀 등 **상태성 병목 시나리오를 반드시 포함**한다 — 차별점(D2)의 실증이자 §4-5의 mₐ 측정이 이루어지는 실험이다.
+
+신뢰도는 지도 라벨이 없다(Deep Ensemble 분산에서 산출). 예측 신뢰도의 타당성은 보정(calibration, 고신뢰도 예측의 정확도가 실제로 높은지)으로 간접 검증한다.
 
 ### 4-3. Baseline 비교군
 
@@ -205,7 +219,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 3단 논리:
 1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했다. GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
 2. **의도적 스코프 설정**: §5에 명시된 대로, 본 연구의 기여는 "위상 정보 반영의 효과 검증"이지 "초대규모 프로덕션 스케일링 검증"이 아니며, 후자는 후속 연구로 명시적으로 남긴다.
-3. **구조적 확장성**: GRAF는 readout에서 노드 임베딩을 flatten하는 방식이라 모델 파라미터가 노드 수에 선형 비례하고, 이를 스스로 확장성 한계로 인정한다(ToN 2024판 Discussion). 본 연구는 flatten이 아닌 pooling 기반 readout을 채택해(§2-A 표) 그래프 크기가 달라져도 모델 구조·파라미터 수가 그대로 유지되도록 설계했다 — "검증은 작은 규모에서 했지만, 모델 구조 자체는 큰 규모에도 적용 가능하도록 설계했다"는 근거.
+3. **구조적 확장성**: GRAF는 readout에서 노드 임베딩을 flatten하는 방식이라 모델 파라미터가 노드 수에 선형 비례하고, 이를 스스로 확장성 한계로 인정한다(ToN 2024판 Discussion). 본 연구는 flatten이 아닌 공유 per-node head 기반 노드 레벨 예측을 채택해(§2-A 표) 그래프 크기가 달라져도 모델 구조·파라미터 수가 그대로 유지되도록 설계했다 — "검증은 작은 규모에서 했지만, 모델 구조 자체는 큰 규모에도 적용 가능하도록 설계했다"는 근거.
 
 [선택 보강] 필요 시 §4-4의 부하 스케일업 실험과 Train Ticket 서브셋 보조 실험으로 확장성 검증을 실측 보강했다는 점도 함께 제시한다.
 

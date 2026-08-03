@@ -61,6 +61,7 @@
 - [x] 관련연구 비교표(GRAF/FIRM/AGQ/GraphGRU 4자) 완성 ([docs/proposal.md](../docs/proposal.md) §3)
 - [x] 벤치마크 최종 확정 — Online Boutique 메인
 - [x] GNN 추론 레이턴시 vs 반응속도 이슈 해법 방향 결정 — 2계층 제어(로컬 반사 + GNN 선제)로 확정 ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
+- [x] 문제 정의(§2-0) + Policy Engine 알고리즘(§2-E) 정형화, 비용함수 p 정의 정정 ([challenges.md](challenges.md) G4)
 
 **프로포절 심사** (약 3학기차)
 

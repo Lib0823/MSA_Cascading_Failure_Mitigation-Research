@@ -21,7 +21,7 @@
 
 ## 연구 방법
 
-- **예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출.
+- **예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. 노드 feature에 시계열 통계량을 주입(TA-GAT)해 정적 그래프 위에서 시간성까지 학습.
 - **의사결정 계층**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine.
 - **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
 - **실험**: Online Boutique(11~12개 서비스) 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.

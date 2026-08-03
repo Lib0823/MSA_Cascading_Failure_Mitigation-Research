@@ -227,3 +227,47 @@
   - 트래픽 = 정상/버스트/점진증가 3종 프로파일, 클러스터 용량 맞춤 캘리브레이션.
   - mₐ = (장애 유형 × 조치) 대조 실험으로 추정, 조치 전후 SLO 회복분을 대리 지표로 사용. 상태성 병목에서 Scale-up mₐ가 낮게 나오는지는 §4-3 baseline 실험의 부산물로 함께 확인 → 별도 실험 아님.
   - [docs/proposal.md](../docs/proposal.md) §4-5에 반영. 이로써 프로포절 심사 대비 오픈 이슈는 모두 해소/이관됨.
+
+---
+
+## H. 외부 피드백 검토 (2026-08, [docs/feedback-0802.md](../docs/feedback-0802.md))
+
+선행연구 4편 기반으로 받은 외부 피드백 5건을 원문·자체 설계와 대조해 하나씩 검토했다. 수치는 선행연구 기반 팩트로 전제하되, attribution·타깃·프레이밍은 우리 설계에 맞게 교정해 조건부로 전부 반영했다. **핵심 원칙: 피드백을 100% 수용하지 않고, 우리 확정 설계(F1/G1/G2/GT)와 충돌·자해 지점을 교정한 뒤 채택.**
+
+### H1. 앙상블 N=5 추론 오버헤드 — [채택, 프레임 교정]
+- **피드백**: N=5가 골든타임 안에 끝나는지 증명하라(FIRM 1.2ms, AGQ 0.4s, GRAF 6.7s 인용) + 병렬추론 + TensorRT/ONNX.
+- **교정**: "골든타임 sub-100ms 증명" 프레임은 G2(2계층 제어)와 층위가 안 맞음 — GNN은 골든타임 경로에 없고(Tier 1이 담당) Tier 2 선제 층이다. 따라서 프레임을 "GNN 결정지연 < GRAF 6.7초 기준선, N초 주기 안에 충분"으로 재해석해 흡수.
+- **팩트 확인**: GRAF 원문(ToN'24 PDF) 직접 확인 — "gradient descent algorithm's 90%-tile latency to reach the target tolerance threshold takes about **6.7 seconds**". 즉 6.7초 = 자원할당 최적화 solver 수렴 시간이지 GNN 추론 시간이 아님(피드백 프레이밍 교정의 근거). 병렬추론은 채택, TensorRT/ONNX는 후속 옵션 각주로만.
+- **반영**: [docs/proposal.md](../docs/proposal.md) 우려 12 신설.
+
+### H2. Read Redirection 비침습 구현 — [채택(a), 타깃·메커니즘 둘 다 교정]
+- **피드백**: ProductCatalog의 읽기 부하를 read-replica로, Istio VirtualService/DestinationRule 동적 변경으로 분산.
+- **팩트 확인**: Online Boutique 원문 확인 — `productcatalogservice`는 **DB 없이 로컬 JSON**을 읽어 read-replica 개념이 성립하지 않음(→ 이 타깃이면 단순 스케일아웃과 구분 불가, 조치 이질성 붕괴). `cartservice`는 **Redis**를 backing store로 사용.
+- **교정**: 타깃 ProductCatalog→**cartservice/Redis**, 메커니즘 VS/DR→**Envoy Redis proxy `read_policy`(EnvoyFilter 주입)**. 이 교정으로 (1) 진짜 read/write 분리 성립, (2) primary에 커넥션 안 쌓고 상태성 병목 완화 = **D2(커넥션풀/Thundering Herd) 차별점을 조치 레벨에서 실증**. Brownout(기능 생략)·Shedding(요청 거부)과 구분: 기능 유지+일관성 일시 약화(stale read).
+- **주의**: Envoy `read_policy` read/write 분리 지원은 실증 착수 전 재확인 대상. Read Redirection은 5종 중 OB 실증이 가장 애매했던 조치였으나, 타깃 교정으로 오히려 D2 실증 조치로 승격.
+- **반영**: [docs/proposal.md](../docs/proposal.md) §2-C·§2-B·§4-5.
+
+### H3. 신뢰도 지표(ECE) + 오탐/Drop Rate + Safety Guard — [채택, 우리가 원래 필요했던 것]
+- **피드백**: ECE로 신뢰도 타당성 입증 + 불필요한 Shedding으로 인한 정상요청 Drop Rate 비교 + 분산 임계 시 극단조치 유보(Safety Guard).
+- **교정**: 피드백이 "분산 기반 신뢰도"로 뭉뚱그린 것을 **두 축으로 분리** — (1) 실패확률 p → ECE로 보정 검증(비용함수 입력 정당화), (2) 분산-신뢰도 → Drop Rate로 운영 검증(핵심 기여 정량화). Safety Guard는 신규가 아니라 기존 "저신뢰=보류"(비용함수 §2-B)에 이름 부여.
+- **평가**: §4-4에 ECE도 Drop Rate도 없던 빈칸을 채움 → 피드백 중 순이득이 가장 큼. ECE는 클래스 불균형(§4-2)으로 표본이 얇아질 수 있어 reliability diagram 병기.
+- **반영**: [docs/proposal.md](../docs/proposal.md) §4-4·§4-2·§2-B(Safety Guard 명명).
+
+### H4. 정적 GAT(위상) 타당성 — [채택(A), FIRM attribution 교정]
+- **피드백**: 논리적 위상 안정성(GRAF·FIRM 증명) + 노드 feature에 상태 주입(AGQ식) + 대규모 변경 시 FIRM 전이학습.
+- **팩트 확인**: FIRM 전이학습 사용 여부 확인(D14 전례로 재검증) — FIRM은 실제로 전이학습 사용(마이크로서비스별 RL 에이전트를 이전 경험에서 전이, from-scratch보다 빠른 수렴). 단 **FIRM은 GNN이 아님(SVM+RL)**.
+- **교정**: 위상 안정성은 "GRAF·FIRM 증명"으로 과잉 귀속하지 않고 MSA 일반 성질로 서술. 전이학습은 "FIRM이 GNN에 했다"가 아니라 **선례로만 인용**하고 개념을 GAT fine-tuning에 적용(attribution 정확히 — D14 재발 방지). 이 우려는 우려 8(시간축 논쟁)과 다른 공간/위상 논쟁이라 별도 항목.
+- **반영**: [docs/proposal.md](../docs/proposal.md) 우려 13 신설 + FIRM 참고문헌 각주.
+
+### H5. TA-GAT(시계열 통계 feature) — [채택, 브랜딩·자해 지점 교정]
+- **피드백**: 무거운 STGNN 대신 노드 feature에 슬라이딩 윈도우 통계량 주입([현재 부하, 최근 평균, slope, std, 직전 SLO 위반 여부]).
+- **평가**: 우리가 이미 열어둔 "입력 윈도우 확대"(E4)의 구체적 방법. 채택.
+- **교정 2건**: (1) **"TA-GAT" 명명은 서술 편의 라벨로만 유지**, 신규 모델·핵심 기여로 내세우지 않음(사용자 요청: 시계열 포함 사실을 드러내되 과대포장 회피). (2) **"self 직전 SLO 위반 여부" feature는 제외** — 위상 없이도 아는 자기상관 신호라 "이미 위반→계속 위반" 지름길로 위상 학습을 우회, LSTM 대비 우위 근거를 자해. feature 윈도우는 라벨창 [t,t+Δ]과 겹치지 않게 t 이전으로만(누수 방지).
+- **부수 이득**: GAT에 시계열 정보를 주면 GAT-vs-LSTM 비교의 변수가 위상 하나로 정제됨(단 LSTM이 보는 시퀀스를 초과하지 않게 통제). 스냅샷 전용 vs 시계열 보강 GAT를 ablation으로 → 실증 기여 추가.
+- **반영**: [docs/proposal.md](../docs/proposal.md) §2-A·§4-2·§4-3(ablation 6번)·우려 8.
+
+### H6. 통합 검토 결론
+- 5건 모두 기존 확정 설계(F1/G1/G2/GT)와 **충돌 없음**. H2·H5는 오히려 핵심 차별점(D2·위상 우위) 강화, H3·H4는 비워둔 자리(신뢰도 검증·위상 변경 방어) 보완, H1만 프레임 충돌을 2계층으로 흡수.
+- **필수 통합 조건 4가지(문서에 명시)**: ① D2 시나리오를 Read Redirection 타깃(cartservice→Redis)과 동일 자원에 정렬(§4-5), ② Read Redirection vs Brownout 이질성 명시(§2-C), ③ self-SLO feature 제외 + 라벨창 경계(§4-2), ④ ECE 클래스 불균형 주의(§4-4).
+- **프로젝트 리스크(이론 아님)**: H2(Redis replica+EnvoyFilter)·H5(시계열 파이프라인+ablation)·H3(ECE+drop-rate)이 실험 매트릭스를 키움. 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택([timeline.md](timeline.md) 컷 우선순위).
+- **실증 착수 전 재확인 2건**: Envoy `redis_proxy read_policy`의 read/write 분리 지원(H2), (참고) FIRM 1.2ms·AGQ 0.4s 지연 수치는 방어 시 인용 전 원문 재확인 권장.

@@ -1,0 +1,10 @@
+# === DevKit ===
+# 스캔 입력 (자료 성격에 따라 커밋 여부는 사용자 판단 — 기본은 커밋 허용)
+# ontology_temp/       # 도메인 소스 자료. 팀 공유하려면 커밋, 민감하면 무시
+
+# 생성물 (regenerable, 무시)
+graphify-out/
+devkit/ontology.html   # yaml에서 재생성 가능 (원하면 커밋 가능)
+
+# graphify 캐시가 프롬프트 캐시를 무효화하지 않도록
+graph.json

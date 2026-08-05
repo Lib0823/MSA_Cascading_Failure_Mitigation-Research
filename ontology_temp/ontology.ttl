@@ -1,0 +1,355 @@
+@prefix msacf: <https://example.org/ontology/msa-cascading-failure#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+# Ontology metadata
+#################################################################
+<https://example.org/ontology/msa-cascading-failure> a owl:Ontology ;
+    rdfs:label "MSA 연쇄 장애 완화 연구 온톨로지"@ko ;
+    rdfs:comment "신뢰도 기반 GNN 예측을 활용한 MSA 연쇄 장애 선제 대응 아키텍처 연구의 도메인 온톨로지(작업본). 출처: docs/proposal.md, research/challenges.md."@ko ;
+    owl:versionInfo "0.1-temp" .
+
+#################################################################
+# Top-level classes
+#################################################################
+msacf:Entity a owl:Class ; rdfs:label "개체"@ko .
+
+msacf:SystemConcept      a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "시스템·위상"@ko .
+msacf:FailureConcept     a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "장애·전파"@ko .
+msacf:PredictionConcept  a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "예측 모델·불확실성"@ko .
+msacf:DecisionConcept    a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "의사결정·비용함수"@ko .
+msacf:ActuationConcept   a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "조치·제어"@ko .
+msacf:ExperimentConcept  a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "실험·검증"@ko .
+msacf:RelatedWorkConcept a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "선행연구·비교축"@ko .
+msacf:DefenseConcept     a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label "심사 우려·설계결정"@ko .
+
+#################################################################
+# 1. System / topology
+#################################################################
+msacf:Microservice a owl:Class ; rdfs:subClassOf msacf:SystemConcept ;
+    rdfs:label "마이크로서비스"@ko ; rdfs:comment "호출 그래프의 노드 v∈V (§2-0)."@ko .
+msacf:ServiceCallGraph a owl:Class ; rdfs:subClassOf msacf:SystemConcept ;
+    rdfs:label "서비스 호출 그래프"@ko ; rdfs:comment "정적 방향 그래프 G_t=(V,E) (§2-0, 우려13)."@ko .
+msacf:CallDependency a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "호출 의존 엣지"@ko .
+msacf:Resource a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "리소스"@ko .
+msacf:StatefulResource a owl:Class ; rdfs:subClassOf msacf:Resource ;
+    rdfs:label "상태성 리소스"@ko ; rdfs:comment "스케일아웃이 역효과를 낼 수 있음 (D2)."@ko .
+msacf:StatelessResource a owl:Class ; rdfs:subClassOf msacf:Resource ; rdfs:label "무상태 리소스"@ko .
+msacf:ConnectionPool a owl:Class ; rdfs:subClassOf msacf:StatefulResource ;
+    rdfs:label "커넥션풀"@ko ; rdfs:comment "cartservice→Redis 경로에 구체화 (§4-5)."@ko .
+msacf:SLO a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "SLO"@ko .
+msacf:Topology a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "위상"@ko .
+
+#################################################################
+# 2. Failure
+#################################################################
+msacf:FailureEvent a owl:Class ; rdfs:subClassOf msacf:FailureConcept ; rdfs:label "장애 사건"@ko .
+msacf:CascadingFailure a owl:Class ; rdfs:subClassOf msacf:FailureEvent ; rdfs:label "연쇄 장애"@ko .
+msacf:SLOViolation a owl:Class ; rdfs:subClassOf msacf:FailureEvent ;
+    rdfs:label "SLO 위반"@ko ; rdfs:comment "P99>임계 또는 에러율>임계. positive 라벨 기준 (§4-2)."@ko .
+msacf:ThunderingHerd a owl:Class ; rdfs:subClassOf msacf:FailureEvent ;
+    rdfs:label "Thundering Herd"@ko ; rdfs:comment "상태성 병목서 스케일아웃이 상태 악화 (§1-2)."@ko .
+msacf:PropagationPath a owl:Class ; rdfs:subClassOf msacf:FailureConcept ; rdfs:label "전파 경로"@ko .
+msacf:FirstOrderFault a owl:Class ; rdfs:subClassOf msacf:FailureConcept ;
+    rdfs:label "1차 주입 장애"@ko ; rdfs:comment "선행신호 없어 positive서 제외/유예 (E6)."@ko .
+msacf:FaultInjection a owl:Class ; rdfs:subClassOf msacf:FailureConcept ; rdfs:label "장애주입"@ko .
+
+#################################################################
+# 3. Prediction model / uncertainty / output
+#################################################################
+msacf:PredictionModel a owl:Class ; rdfs:subClassOf msacf:PredictionConcept ; rdfs:label "예측 모델"@ko .
+msacf:GNN a owl:Class ; rdfs:subClassOf msacf:PredictionModel ; rdfs:label "그래프 신경망"@ko .
+msacf:GAT a owl:Class ; rdfs:subClassOf msacf:GNN ;
+    rdfs:label "GAT"@ko ; rdfs:comment "attention 차등 집계. 최종 채택 (§2-A, E1)."@ko .
+msacf:GCN a owl:Class ; rdfs:subClassOf msacf:GNN ; rdfs:label "GCN"@ko ; rdfs:comment "이웃 균등. 기각."@ko .
+msacf:GraphSAGE a owl:Class ; rdfs:subClassOf msacf:GNN ; rdfs:label "GraphSAGE"@ko .
+msacf:MPNN a owl:Class ; rdfs:subClassOf msacf:GNN ; rdfs:label "MPNN"@ko ; rdfs:comment "GRAF 사용."@ko .
+msacf:STGNN a owl:Class ; rdfs:subClassOf msacf:GNN ; rdfs:label "STGNN"@ko ; rdfs:comment "AGQ 사용. 구조 미채택 (E4)."@ko .
+msacf:LSTM a owl:Class ; rdfs:subClassOf msacf:PredictionModel ; rdfs:label "LSTM"@ko ; rdfs:comment "위상 부재 대표, baseline 3."@ko .
+msacf:SVM a owl:Class ; rdfs:subClassOf msacf:PredictionModel ; rdfs:label "SVM"@ko ; rdfs:comment "FIRM 감지기."@ko .
+
+msacf:UncertaintyMethod a owl:Class ; rdfs:subClassOf msacf:PredictionConcept ; rdfs:label "불확실성 산출 기법"@ko .
+msacf:DeepEnsemble a owl:Class ; rdfs:subClassOf msacf:UncertaintyMethod ;
+    rdfs:label "Deep Ensemble"@ko ; rdfs:comment "N=5, 병렬추론. 채택 (F1)."@ko .
+msacf:MCDropout a owl:Class ; rdfs:subClassOf msacf:UncertaintyMethod ; rdfs:label "MC Dropout"@ko ; rdfs:comment "반복추론 지연으로 기각."@ko .
+msacf:SoftmaxEntropy a owl:Class ; rdfs:subClassOf msacf:UncertaintyMethod ; rdfs:label "Softmax Entropy"@ko .
+
+msacf:NodeFeature a owl:Class ; rdfs:subClassOf msacf:PredictionConcept ;
+    rdfs:label "노드 feature"@ko ; rdfs:comment "self-SLO 위반 이력 제외(누수/지름길, H5)."@ko .
+msacf:ResourceMetricFeature a owl:Class ; rdfs:subClassOf msacf:NodeFeature ; rdfs:label "리소스 지표 feature"@ko .
+msacf:TemporalStatisticFeature a owl:Class ; rdfs:subClassOf msacf:NodeFeature ;
+    rdfs:label "시계열 통계 feature"@ko ; rdfs:comment "슬라이딩 윈도우 평균·slope·std. t 이전만. TA-GAT의 실체 (§2-A)."@ko .
+
+msacf:Readout a owl:Class ; rdfs:subClassOf msacf:PredictionConcept ; rdfs:label "Readout"@ko .
+msacf:SharedPerNodeHead a owl:Class ; rdfs:subClassOf msacf:Readout ;
+    rdfs:label "공유 per-node head"@ko ; rdfs:comment "파라미터가 노드 수와 무관. 채택 (E5)."@ko .
+msacf:FlattenReadout a owl:Class ; rdfs:subClassOf msacf:Readout ;
+    rdfs:label "Flatten readout"@ko ; rdfs:comment "GRAF. 파라미터가 노드 수에 선형(D13)."@ko .
+
+msacf:PredictionOutput a owl:Class ; rdfs:subClassOf msacf:PredictionConcept ; rdfs:label "예측 출력"@ko .
+msacf:FailureProbability a owl:Class ; rdfs:subClassOf msacf:PredictionOutput ;
+    rdfs:label "위험 확률 p̄_v"@ko ; rdfs:comment "앙상블 평균, P(위반) 점추정. ECE 검증 (§2-0)."@ko .
+msacf:Uncertainty a owl:Class ; rdfs:subClassOf msacf:PredictionOutput ;
+    rdfs:label "불확실성 u_v"@ko ; rdfs:comment "앙상블 분산. 신뢰도=낮은 u. Drop Rate 검증 (§2-0)."@ko .
+
+#################################################################
+# 4. Decision / cost function
+#################################################################
+msacf:PolicyEngine a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "Policy Engine"@ko ; rdfs:comment "기대비용 최소 조치 선택. 핵심 기여 (§2-B)."@ko .
+msacf:CostFunction a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "비용함수"@ko ; rdfs:comment "E[비용|a]=p·[(1−mₐ)L+Dₐ]+(1−p)·[Dₐ·Rₐ] (§2-B)."@ko .
+msacf:EffectiveRisk a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "신뢰도 반영 위험도 p_eff"@ko ; rdfs:comment "max(0, p̄_v − κ√u_v). 비용식의 p (G4)."@ko .
+msacf:ActionThreshold a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "조치 임계값 θₐ"@ko ; rdfs:comment "Dₐ·Rₐ/(mₐ·L−Dₐ(1−Rₐ)). p_eff>θₐ면 조치."@ko .
+msacf:ConfidenceTieredResponse a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "신뢰도 구간별 대응"@ko ; rdfs:comment "문헌상 빈자리. 신규 기여 (§3)."@ko .
+msacf:ConfidenceTier a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "신뢰도 구간"@ko ; rdfs:comment "고/중/저. θₐ에서 유도(손으로 안 그음)."@ko .
+msacf:SafetyGuard a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ;
+    rdfs:label "Safety Guard"@ko ; rdfs:comment "저신뢰 자동 보류. 비용함수에서 유도(하드코딩 아님, G4)."@ko .
+msacf:CostVariable a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ; rdfs:label "비용 변수"@ko .
+msacf:Withhold a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ; rdfs:label "보류"@ko .
+
+#################################################################
+# 5. Actuation / control
+#################################################################
+msacf:Actuator a owl:Class ; rdfs:subClassOf msacf:ActuationConcept ; rdfs:label "조치"@ko .
+msacf:CircuitBreaker a owl:Class ; rdfs:subClassOf msacf:Actuator ; rdfs:label "Circuit Breaker"@ko .
+msacf:TrafficShedding a owl:Class ; rdfs:subClassOf msacf:Actuator ; rdfs:label "Traffic Shedding"@ko .
+msacf:ReadRedirection a owl:Class ; rdfs:subClassOf msacf:Actuator ;
+    rdfs:label "Read Redirection"@ko ; rdfs:comment "기능 유지+일관성 약화(stale read). Envoy read_policy (H2)."@ko .
+msacf:K8sScaleUp a owl:Class ; rdfs:subClassOf msacf:Actuator ;
+    rdfs:label "K8s Scale-up"@ko ; rdfs:comment "프로비저닝. 상태성 병목서 Thundering Herd."@ko .
+msacf:Brownout a owl:Class ; rdfs:subClassOf msacf:Actuator ;
+    rdfs:label "Brownout"@ko ; rdfs:comment "비핵심 기능 생략(dimmer). adservice/recommendationservice (D14)."@ko .
+
+msacf:ControlTier a owl:Class ; rdfs:subClassOf msacf:ActuationConcept ; rdfs:label "제어 계층"@ko .
+msacf:LocalReflexTier a owl:Class ; rdfs:subClassOf msacf:ControlTier ;
+    rdfs:label "Tier1 로컬 반사"@ko ; rdfs:comment "자기 통계만, ms 반응 (§2-D)."@ko .
+msacf:GNNProactiveTier a owl:Class ; rdfs:subClassOf msacf:ControlTier ;
+    rdfs:label "Tier2 GNN 선제"@ko ; rdfs:comment "위상 예측, N초 주기 (§2-D)."@ko .
+msacf:ConflictResolution a owl:Class ; rdfs:subClassOf msacf:ActuationConcept ; rdfs:label "충돌 중재"@ko .
+msacf:ORSemantics a owl:Class ; rdfs:subClassOf msacf:ConflictResolution ; rdfs:label "OR 의미론"@ko .
+msacf:EscalateOnly a owl:Class ; rdfs:subClassOf msacf:ConflictResolution ; rdfs:label "escalate-only"@ko .
+msacf:Lease a owl:Class ; rdfs:subClassOf msacf:ConflictResolution ; rdfs:label "lease TTL"@ko .
+
+#################################################################
+# 6. Experiment
+#################################################################
+msacf:Benchmark a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "벤치마크"@ko .
+msacf:GroundTruthLabel a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ;
+    rdfs:label "정답 라벨"@ko ; rdfs:comment "노드레벨·SLO위반·전파성 refine, y_v(t)∈{0,1} (§4-2)."@ko .
+msacf:LabelingStrategy a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ;
+    rdfs:label "자동 역라벨링"@ko ; rdfs:comment "미래 지표로 역산, 수작업 없음."@ko .
+msacf:PredictionHorizon a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "예측 지평 Δ"@ko .
+msacf:EvaluationMetric a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "평가 지표"@ko .
+msacf:ECE a owl:Class ; rdfs:subClassOf msacf:EvaluationMetric ;
+    rdfs:label "ECE"@ko ; rdfs:comment "p̄ 보정 검증. reliability diagram 병기 (H3)."@ko .
+msacf:DropRate a owl:Class ; rdfs:subClassOf msacf:EvaluationMetric ;
+    rdfs:label "Drop Rate"@ko ; rdfs:comment "신뢰도 대응 효과 정량화 (H3)."@ko .
+msacf:Baseline a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "baseline 비교군"@ko .
+msacf:Ablation a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "ablation"@ko .
+msacf:TrafficProfile a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "트래픽 프로파일"@ko .
+msacf:MitigationEffectMeasurement a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "mₐ 측정"@ko .
+msacf:Tool a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "도구"@ko .
+
+#################################################################
+# 7. Related work / axes
+#################################################################
+msacf:RelatedWork a owl:Class ; rdfs:subClassOf msacf:RelatedWorkConcept ; rdfs:label "선행연구"@ko .
+msacf:ComparisonAxis a owl:Class ; rdfs:subClassOf msacf:RelatedWorkConcept ; rdfs:label "비교축"@ko .
+msacf:Contribution a owl:Class ; rdfs:subClassOf msacf:RelatedWorkConcept ; rdfs:label "기여"@ko .
+
+#################################################################
+# 8. Defense
+#################################################################
+msacf:Concern a owl:Class ; rdfs:subClassOf msacf:DefenseConcept ; rdfs:label "심사 우려"@ko .
+msacf:DesignDecision a owl:Class ; rdfs:subClassOf msacf:DefenseConcept ; rdfs:label "설계 결정"@ko .
+
+#################################################################
+# Object properties
+#################################################################
+msacf:calls a owl:ObjectProperty , owl:IrreflexiveProperty ;
+    rdfs:domain msacf:Microservice ; rdfs:range msacf:Microservice ; rdfs:label "호출한다"@ko .
+msacf:hasNode a owl:ObjectProperty ; rdfs:domain msacf:ServiceCallGraph ; rdfs:range msacf:Microservice .
+msacf:hasEdge a owl:ObjectProperty ; rdfs:domain msacf:ServiceCallGraph ; rdfs:range msacf:CallDependency .
+msacf:dependsOnResource a owl:ObjectProperty ; rdfs:domain msacf:Microservice ; rdfs:range msacf:Resource .
+msacf:hasBottleneck a owl:ObjectProperty ; rdfs:subPropertyOf msacf:dependsOnResource .
+
+msacf:propagatesTo a owl:ObjectProperty ; rdfs:domain msacf:FailureEvent ; rdfs:range msacf:Microservice .
+msacf:triggers a owl:ObjectProperty ; rdfs:domain msacf:FaultInjection ; rdfs:range msacf:FailureEvent .
+msacf:inducedBy a owl:ObjectProperty ; rdfs:domain msacf:ThunderingHerd ; rdfs:range msacf:Actuator .
+
+msacf:predictsRiskOf a owl:ObjectProperty ; rdfs:domain msacf:PredictionModel ; rdfs:range msacf:Microservice .
+msacf:hasFeature a owl:ObjectProperty ; rdfs:domain msacf:Microservice ; rdfs:range msacf:NodeFeature .
+msacf:usesReadout a owl:ObjectProperty ; rdfs:domain msacf:GNN ; rdfs:range msacf:Readout .
+msacf:quantifiesUncertaintyVia a owl:ObjectProperty ; rdfs:domain msacf:PredictionModel ; rdfs:range msacf:UncertaintyMethod .
+msacf:producesOutput a owl:ObjectProperty ; rdfs:domain msacf:PredictionModel ; rdfs:range msacf:PredictionOutput .
+msacf:aggregatesTo a owl:ObjectProperty ; rdfs:domain msacf:PredictionOutput ; rdfs:range msacf:EffectiveRisk .
+msacf:excludesFeature a owl:ObjectProperty ; rdfs:domain msacf:GroundTruthLabel ; rdfs:range msacf:NodeFeature .
+
+msacf:selects a owl:ObjectProperty ; rdfs:domain msacf:PolicyEngine ; rdfs:range msacf:Actuator .
+msacf:consumes a owl:ObjectProperty ; rdfs:domain msacf:PolicyEngine ; rdfs:range msacf:EffectiveRisk .
+msacf:evaluatedBy a owl:ObjectProperty ; rdfs:domain msacf:Actuator ; rdfs:range msacf:CostFunction .
+msacf:hasThreshold a owl:ObjectProperty ; rdfs:domain msacf:Actuator ; rdfs:range msacf:ActionThreshold .
+msacf:hasCostVariable a owl:ObjectProperty ; rdfs:domain msacf:CostFunction ; rdfs:range msacf:CostVariable .
+msacf:derivedFrom a owl:ObjectProperty ; rdfs:domain msacf:SafetyGuard ; rdfs:range msacf:CostFunction ;
+    rdfs:comment "Safety Guard는 비용함수에서 유도(하드코딩 규칙 아님)."@ko .
+msacf:derivesTier a owl:ObjectProperty ; rdfs:domain msacf:CostFunction ; rdfs:range msacf:ConfidenceTier .
+msacf:mitigates a owl:ObjectProperty ; rdfs:domain msacf:Actuator ; rdfs:range msacf:FailureEvent .
+msacf:targetsResource a owl:ObjectProperty ; rdfs:domain msacf:Actuator ; rdfs:range msacf:Resource .
+
+msacf:triggeredBy a owl:ObjectProperty ; rdfs:domain msacf:Actuator ; rdfs:range msacf:ControlTier .
+msacf:resolvesConflictVia a owl:ObjectProperty ; rdfs:domain msacf:ControlTier ; rdfs:range msacf:ConflictResolution .
+msacf:hasLease a owl:ObjectProperty ; rdfs:domain msacf:GNNProactiveTier ; rdfs:range msacf:Lease .
+
+msacf:runsOn a owl:ObjectProperty ; rdfs:domain msacf:PredictionModel ; rdfs:range msacf:Benchmark .
+msacf:labeledBy a owl:ObjectProperty ; rdfs:domain msacf:Benchmark ; rdfs:range msacf:LabelingStrategy .
+msacf:validates a owl:ObjectProperty ; rdfs:domain msacf:EvaluationMetric ; rdfs:range msacf:PredictionOutput .
+msacf:comparedAgainst a owl:ObjectProperty ; rdfs:domain msacf:PolicyEngine ; rdfs:range msacf:Baseline .
+msacf:measures a owl:ObjectProperty ; rdfs:domain msacf:MitigationEffectMeasurement ; rdfs:range msacf:CostVariable .
+msacf:usesTool a owl:ObjectProperty ; rdfs:domain msacf:ExperimentConcept ; rdfs:range msacf:Tool .
+
+msacf:usesModel a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:PredictionModel .
+msacf:coversAxis a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:ComparisonAxis .
+msacf:lacksAxis a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:ComparisonAxis .
+msacf:fills a owl:ObjectProperty ; rdfs:domain msacf:Contribution ; rdfs:range msacf:ComparisonAxis .
+msacf:precedentFor a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:DesignDecision .
+msacf:addressedBy a owl:ObjectProperty ; rdfs:domain msacf:Concern ; rdfs:range msacf:DesignDecision .
+msacf:defends a owl:ObjectProperty ; rdfs:domain msacf:DesignDecision ; rdfs:range msacf:Contribution .
+
+#################################################################
+# Datatype properties
+#################################################################
+msacf:disruption a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:string .
+msacf:reversibility a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:string .
+msacf:mitigationEffect a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:string .
+msacf:targetPropagationSpeed a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:string .
+msacf:confidenceTierRequired a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:string .
+msacf:isProvisioning a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:boolean .
+msacf:ensembleSize a owl:DatatypeProperty ; rdfs:domain msacf:DeepEnsemble ; rdfs:range xsd:integer .
+msacf:attentionWeighting a owl:DatatypeProperty ; rdfs:domain msacf:GNN ; rdfs:range xsd:boolean .
+msacf:parameterScalesWithNodes a owl:DatatypeProperty ; rdfs:domain msacf:Readout ; rdfs:range xsd:boolean .
+msacf:temporalWindowBeforeT a owl:DatatypeProperty ; rdfs:domain msacf:TemporalStatisticFeature ; rdfs:range xsd:boolean .
+msacf:venue a owl:DatatypeProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range xsd:string .
+msacf:year a owl:DatatypeProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range xsd:integer .
+msacf:actionSpaceKind a owl:DatatypeProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range xsd:string .
+msacf:verifiedGraphSize a owl:DatatypeProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range xsd:string .
+msacf:nodeCount a owl:DatatypeProperty ; rdfs:domain msacf:Benchmark ; rdfs:range xsd:string .
+msacf:hasBackingStore a owl:DatatypeProperty ; rdfs:domain msacf:Microservice ; rdfs:range xsd:string .
+msacf:symbol a owl:DatatypeProperty ; rdfs:domain msacf:CostVariable ; rdfs:range xsd:string .
+msacf:tunedInExperiment a owl:DatatypeProperty ; rdfs:domain msacf:CostVariable ; rdfs:range xsd:boolean .
+
+#################################################################
+# Individuals — actuators (§2-B table)
+#################################################################
+msacf:CircuitBreaker_i a owl:NamedIndividual , msacf:CircuitBreaker ;
+    msacf:disruption "낮음" ; msacf:reversibility "낮음" ; msacf:mitigationEffect "높음" ;
+    msacf:targetPropagationSpeed "빠름" ; msacf:confidenceTierRequired "중간에서도 발동" ;
+    msacf:isProvisioning false ; msacf:triggeredBy msacf:Tier1_LocalReflex , msacf:Tier2_GNNProactive .
+msacf:TrafficShedding_i a owl:NamedIndividual , msacf:TrafficShedding ;
+    msacf:disruption "중" ; msacf:reversibility "낮음~중" ; msacf:mitigationEffect "중~높음" ;
+    msacf:targetPropagationSpeed "빠름" ; msacf:confidenceTierRequired "중~고" ;
+    msacf:isProvisioning false ; msacf:triggeredBy msacf:Tier1_LocalReflex , msacf:Tier2_GNNProactive .
+msacf:ReadRedirection_i a owl:NamedIndividual , msacf:ReadRedirection ;
+    msacf:disruption "낮음" ; msacf:reversibility "낮음" ; msacf:mitigationEffect "중" ;
+    msacf:targetPropagationSpeed "중" ; msacf:confidenceTierRequired "낮음~중" ;
+    msacf:isProvisioning false ; msacf:triggeredBy msacf:Tier2_GNNProactive ;
+    msacf:targetsResource msacf:ConnectionPool .
+msacf:K8sScaleUp_i a owl:NamedIndividual , msacf:K8sScaleUp ;
+    msacf:disruption "높음" ; msacf:reversibility "높음" ; msacf:mitigationEffect "상황의존" ;
+    msacf:targetPropagationSpeed "느림" ; msacf:confidenceTierRequired "고신뢰도만" ;
+    msacf:isProvisioning true ; msacf:triggeredBy msacf:Tier2_GNNProactive .
+msacf:Brownout_i a owl:NamedIndividual , msacf:Brownout ;
+    msacf:disruption "중" ; msacf:reversibility "낮음" ; msacf:mitigationEffect "중~높음" ;
+    msacf:targetPropagationSpeed "중" ; msacf:confidenceTierRequired "낮음~중" ;
+    msacf:isProvisioning false ; msacf:triggeredBy msacf:Tier2_GNNProactive .
+
+#################################################################
+# Individuals — related work (§3)
+#################################################################
+msacf:GRAF a owl:NamedIndividual , msacf:RelatedWork ;
+    msacf:usesModel msacf:MPNN ; msacf:venue "CoNEXT'21/ToN'24" ; msacf:actionSpaceKind "자원할당(스칼라)" ;
+    msacf:verifiedGraphSize "6~10노드" ; msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
+    msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse ;
+    rdfs:comment "flatten readout 확장성 한계 자인(D13). 6.7s=solver 수렴 시간(우려12)."@ko .
+msacf:FIRM a owl:NamedIndividual , msacf:RelatedWork ;
+    msacf:usesModel msacf:SVM ; msacf:venue "OSDI'20" ; msacf:actionSpaceKind "자원재할당 5종(전부 프로비저닝)" ;
+    msacf:verifiedGraphSize "15~41(비GNN)" ; msacf:coversAxis msacf:Axis_ActionSpaceHeterogeneity ;
+    msacf:lacksAxis msacf:Axis_TopologyAwarePrediction , msacf:Axis_ConfidenceTieredResponse ;
+    msacf:precedentFor msacf:DD_TransferLearning ;
+    rdfs:comment "조치 전부 프로비저닝(브라운아웃·CB 없음, D14). 전이학습은 선례로만 인용(GNN 아님)."@ko .
+msacf:AGQ a owl:NamedIndividual , msacf:RelatedWork ;
+    msacf:usesModel msacf:STGNN ; msacf:venue "FGCS'26" ; msacf:actionSpaceKind "자원할당(스칼라)" ;
+    msacf:verifiedGraphSize "~13노드" ; msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
+    msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse .
+msacf:GraphGRU a owl:NamedIndividual , msacf:RelatedWork ;
+    msacf:usesModel msacf:GAT ; msacf:venue "ICPADS'22" ; msacf:actionSpaceKind "없음(예측만)" ;
+    msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
+    msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse .
+
+#################################################################
+# Individuals — comparison axes / contribution
+#################################################################
+msacf:Axis_TopologyAwarePrediction a owl:NamedIndividual , msacf:ComparisonAxis ; rdfs:label "위상 인지 예측"@ko .
+msacf:Axis_ActionSpaceHeterogeneity a owl:NamedIndividual , msacf:ComparisonAxis ; rdfs:label "조치 공간 이질성"@ko .
+msacf:Axis_ConfidenceTieredResponse a owl:NamedIndividual , msacf:ComparisonAxis ;
+    rdfs:label "신뢰도 구간별 대응"@ko ; rdfs:comment "네 선행연구 모두 비운 유일 축(신규 기여)."@ko .
+msacf:Contribution_Main a owl:NamedIndividual , msacf:Contribution ;
+    msacf:fills msacf:Axis_TopologyAwarePrediction , msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse .
+
+#################################################################
+# Individuals — benchmarks
+#################################################################
+msacf:OnlineBoutique a owl:NamedIndividual , msacf:Benchmark ;
+    msacf:nodeCount "11~12" ; rdfs:comment "메인. GRAF와 동일. cartservice→Redis 상태성 병목."@ko .
+msacf:SockShop a owl:NamedIndividual , msacf:Benchmark ; msacf:nodeCount "11~15" .
+msacf:TrainTicket a owl:NamedIndividual , msacf:Benchmark ; msacf:nodeCount "40~64" .
+msacf:DeathStarBench a owl:NamedIndividual , msacf:Benchmark ; msacf:nodeCount "15~41" .
+
+#################################################################
+# Individuals — cost variables
+#################################################################
+msacf:Var_L a owl:NamedIndividual , msacf:CostVariable ; msacf:symbol "L" ; msacf:tunedInExperiment true .
+msacf:Var_D a owl:NamedIndividual , msacf:CostVariable ; msacf:symbol "Dₐ" ; msacf:tunedInExperiment true .
+msacf:Var_R a owl:NamedIndividual , msacf:CostVariable ; msacf:symbol "Rₐ" ; msacf:tunedInExperiment true .
+msacf:Var_m a owl:NamedIndividual , msacf:CostVariable ; msacf:symbol "mₐ" ; msacf:tunedInExperiment true .
+msacf:Var_kappa a owl:NamedIndividual , msacf:CostVariable ; msacf:symbol "κ" ; msacf:tunedInExperiment true .
+msacf:Var_theta a owl:NamedIndividual , msacf:CostVariable ; msacf:symbol "θₐ" ; msacf:tunedInExperiment false .
+
+#################################################################
+# Individuals — metrics, tiers, decisions
+#################################################################
+msacf:ECE_metric a owl:NamedIndividual , msacf:ECE ; msacf:validates msacf:FailureProbability_out .
+msacf:DropRate_metric a owl:NamedIndividual , msacf:DropRate ; msacf:validates msacf:Uncertainty_out .
+msacf:FailureProbability_out a owl:NamedIndividual , msacf:FailureProbability .
+msacf:Uncertainty_out a owl:NamedIndividual , msacf:Uncertainty .
+
+msacf:Tier1_LocalReflex a owl:NamedIndividual , msacf:LocalReflexTier ;
+    msacf:resolvesConflictVia msacf:CR_OR .
+msacf:Tier2_GNNProactive a owl:NamedIndividual , msacf:GNNProactiveTier ;
+    msacf:resolvesConflictVia msacf:CR_OR , msacf:CR_EscalateOnly , msacf:CR_Lease ; msacf:hasLease msacf:CR_Lease .
+msacf:CR_OR a owl:NamedIndividual , msacf:ORSemantics .
+msacf:CR_EscalateOnly a owl:NamedIndividual , msacf:EscalateOnly .
+msacf:CR_Lease a owl:NamedIndividual , msacf:Lease .
+
+msacf:DD_TransferLearning a owl:NamedIndividual , msacf:DesignDecision ;
+    rdfs:label "위상 변경 시 fine-tune 전이학습"@ko .
+
+#################################################################
+# Individuals — concerns (§6)
+#################################################################
+msacf:Concern6 a owl:NamedIndividual , msacf:Concern ; rdfs:label "작은 벤치마크?"@ko .
+msacf:Concern7 a owl:NamedIndividual , msacf:Concern ; rdfs:label "FIRM과 차이?"@ko .
+msacf:Concern8 a owl:NamedIndividual , msacf:Concern ; rdfs:label "왜 정적 GAT?"@ko .
+msacf:Concern9 a owl:NamedIndividual , msacf:Concern ; rdfs:label "왜 Deep Ensemble?"@ko .
+msacf:Concern10 a owl:NamedIndividual , msacf:Concern ; rdfs:label "그래프 커지면 학습?"@ko .
+msacf:Concern11 a owl:NamedIndividual , msacf:Concern ; rdfs:label "즉각조치를 GNN에 묶으면?"@ko .
+msacf:Concern12 a owl:NamedIndividual , msacf:Concern ; rdfs:label "N=5 골든타임?"@ko ; msacf:addressedBy msacf:DD_TwoTier .
+msacf:Concern13 a owl:NamedIndividual , msacf:Concern ; rdfs:label "정적 위상 유효?"@ko ; msacf:addressedBy msacf:DD_TransferLearning .
+msacf:DD_TwoTier a owl:NamedIndividual , msacf:DesignDecision ; rdfs:label "2계층 제어"@ko .

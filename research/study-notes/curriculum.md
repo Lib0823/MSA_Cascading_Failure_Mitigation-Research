@@ -18,9 +18,9 @@
 
 ## ① GNN/ML — [1-gnn/curriculum.md](1-gnn/curriculum.md)
 
-STEP 1~8로 구성된 세부 커리큘럼이 이미 있음(위 링크 참고). 다음 항목은 기존 STEP에 없어 추가로 필요하다.
+STEP 1~8로 구성된 세부 커리큘럼이 이미 있음(위 링크 참고).
 
-- [ ] **Calibration 평가** (ECE, reliability diagram) — [proposal.md §4-2·§4-4](../../docs/proposal.md)에서 실패확률 p̄_v의 보정 검증에 직접 쓰임. STEP 8(신뢰도 산출 방법론)에 보강 항목으로 추가 예정.
+- [x] **Calibration 평가** (ECE, reliability diagram) — [proposal.md §4-2·§4-4](../../docs/proposal.md)에서 실패확률 p̄_v의 보정 검증에 직접 쓰임. STEP 8-보강으로 링크 추가 완료([1-gnn/curriculum.md](1-gnn/curriculum.md#step-8-보강-calibration-평가-방법론-ece-reliability-diagram--가볍게-23일)).
 
 ## ② K8s/인프라 — [2-infra-k8s/](2-infra-k8s/)
 

@@ -59,6 +59,16 @@
 - 목표: 이 STEP이 끝나면 MC Dropout / Deep Ensemble / Softmax entropy 중 신뢰도 산출 방식을 확정할 수 있어야 함(프로포절 심사 1순위 마일스톤). → [research/challenges.md](../challenges.md) F1에서 Deep Ensemble(N=5)로 확정됨.
 - 학습 노트: [7. 신뢰도(Confidence) 산출 방법론.pdf](7.%20신뢰도%28Confidence%29%20산출%20방법론.pdf)
 
+## STEP 8-보강. Calibration 평가 방법론 (ECE, reliability diagram) — 가볍게, 2~3일
+
+> [research/study-notes/curriculum.md](../curriculum.md)(상위 개요)에서 지목된 추가 항목. STEP 8이 "신뢰도를 어떻게 만드는가"(Deep Ensemble)를 다뤘다면, 이 항목은 "만들어진 확률이 실제로 보정되어 있는가"를 검증하는 방법론이다. [docs/proposal.md](../../../docs/proposal.md) §4-2·§4-4에서 실패확률 p̄_v의 보정 검증(ECE + reliability diagram)에 직접 쓰인다.
+
+- **[Must Have]** KDD 2020: Hands-On Tutorial — How to Calibrate your Neural Network Classifier (Natalia Culakova & Daniel Murphy, nPlan): https://www.youtube.com/watch?v=WJ-KYsAqyLA
+- ACM(Association for Computing Machinery) 공식 채널에 올라온 KDD(SIGKDD, 데이터마이닝 최상위 학회) 2020 정식 튜토리얼. reliability diagram·ECE·MCE·RMS calibration error 측정법과 Platt scaling/Temperature scaling/Isotonic regression 등 보정 기법을 핸즈온으로 다룬다. 공식 GitHub([nplan-io/kdd2020-calibration](https://github.com/nplan-io/kdd2020-calibration))에 Colab 노트북도 공개되어 있어 실습까지 가능.
+- **[참고, 한국어]** [Paper Review] Rethinking Calibration of Deep Neural Network: Do Not Be Afraid of Overconfidence — 서울대학교 산업공학과 DSBA 연구실: https://www.youtube.com/watch?v=BN7NO_A9ePc
+- DSBA 연구실(구 고려대, 현 서울대 산업공학과)은 국내 ML 커뮤니티에서 널리 참고되는 연구실 채널로, 이 영상은 최신 논문 리뷰라 다소 심화 내용이지만 캘리브레이션 연구 동향을 한국어로 파악하는 데 보조 자료로 쓸 수 있다. Must Have(KDD 2020)로 기초를 잡은 뒤 시청 권장.
+- 목표: reliability diagram을 직접 그리고 ECE를 계산할 수 있는 수준 — Deep Ensemble이 낸 위험 확률 p̄_v가 "80%라고 말할 때 실제로 80% 비율로 위반이 나는지"를 정량적으로 검증할 수 있어야 한다(§4-4 평가지표 방어).
+
 ## 전체 타임라인 요약
 
 | 주차 | STEP |

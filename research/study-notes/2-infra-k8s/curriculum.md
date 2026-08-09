@@ -6,10 +6,10 @@
 
 ## 1. K8s 심화 — HPA 내부 동작, resource requests/limits, cgroups, Minikube/K3s 운영
 
-- **[Must Have]** TechWorld with Nana — Kubernetes Tutorial for Beginners [FULL COURSE in 4 Hours]: https://www.youtube.com/watch?v=X48VuDVv0do
+- **[Must Have]** TechWorld with Nana — Kubernetes Crash Course for Absolute Beginners [NEW] (1시간 12분): https://www.youtube.com/watch?v=s_o8dwzRlu4
 - **[Must Have]** Learn Kubernetes with KodeKloud (재생목록): https://www.youtube.com/playlist?list=PL2We04F3Y_43dAehLMT5GxJhtk3mJtkl5
 
-TechWorld with Nana는 "가장 많이 시청된 무료 쿠버네티스 강의"(크래시 코스 기준 조회수 600만+)로 알려진 채널로, Minikube 설치부터 리소스 요청/제한, YAML 구성까지 실습 중심으로 다룬다. KodeKloud 재생목록은 CKA(Certified Kubernetes Administrator) 자격증 준비용 무료 자료 중 가장 인기 있는 자료로 꼽히며, KodeKloud 노트 사이트(notes.kodekloud.com)의 Resource Limits·Scheduling·Autoscaling 챕터와 짝을 이뤄 HPA/리소스 관리를 스케줄링 관점에서 보강해준다.
+TechWorld with Nana는 "가장 많이 시청된 무료 쿠버네티스 강의" 채널로 알려져 있으며, 이 크래시 코스는 아키텍처(Node/Pod/Deployment/Service/ConfigMap/Volume 등)를 개념부터 잡고 Minikube+kubectl로 로컬 클러스터를 띄워 MongoDB 웹앱을 배포하는 데모까지 1시간 12분 안에 압축해서 다룬다(기존에 링크했던 4시간짜리 풀 코스와 같은 채널·같은 강사의 축약판). 다만 이 영상 자체는 HPA·리소스 requests/limits를 전용으로 깊게 다루지 않으므로, 그 부분은 아래 KodeKloud 재생목록(CKA 준비용 자료 중 가장 인기 있는 자료로 꼽힘)과 KodeKloud 노트 사이트(notes.kodekloud.com)의 Resource Limits·Scheduling·Autoscaling 챕터가 담당한다 — 두 자료를 짝으로 봐야 이 섹션 목표가 완성된다.
 
 한국어로 HPA 내부 동작 원리(15초 주기 컨트롤 루프)나 cgroups와의 관계를 전문적으로 다루는 한국어 발표 영상은 검색으로 찾지 못했다(스캐터랩·제니퍼소프트 등 기술 블로그 글은 있으나 영상은 없음). 위 두 영상은 모두 영어이며, 필요 시 유튜브 자동 번역 자막(설정 → 자막 → 자동 번역 → 한국어)으로 보완할 수 있다.
 

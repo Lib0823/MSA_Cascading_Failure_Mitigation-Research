@@ -16,6 +16,13 @@
 - CQ2.2 전파에 기인한 위반과 1차 주입 장애를 어떻게 구분하는가? → `propagatesTo`, `FaultInjection`
 - CQ2.3 연쇄 장애는 어떤 경로로 퍼지는가? → `PropagationPath`, `calls`
 
+## CQ2b. 이질적 워크로드 노드
+
+- CQ2b.1 LLM 추론 노드는 일반 서비스와 무엇이 다른가? → `LLMInferenceNode`, `hasNodeType`
+- CQ2b.2 서로 다른 원시 지표를 어떻게 한 feature 벡터에 담는가? → `SemanticSlot` 6종 + `NodeTypeEmbedding`(제로 패딩 기각, E8)
+- CQ2b.3 커넥션풀 소진과 KV 캐시 소진은 왜 같은 슬롯인가? → f1 "스케일아웃으로 해소되지 않는 유계 자원의 포화"
+- CQ2b.4 LLM 노드가 1개뿐인 것의 한계는? → `NodeTypeEmbedding` 학습 신호 부족(G6)
+
 ## CQ3. 예측 모델 · 불확실성
 
 - CQ3.1 왜 GCN/MPNN/ChebConv이 아니라 GAT인가? → `GAT` vs `GCN`/`MPNN`, `attentionWeighting`
@@ -37,7 +44,9 @@
 
 - CQ5.1 조치 5종은 무엇이며 각각 프로비저닝인가 비프로비저닝인가? → `Actuator` 하위, `isProvisioning`
 - CQ5.2 각 조치의 disruption·가역성·완화효과·대상 전파속도·신뢰도 구간은? → `Actuator` 데이터 속성
-- CQ5.3 Read Redirection과 Brownout·Traffic Shedding의 질적 차이는? → 개체 주석(기능유지+일관성약화 vs 기능생략 vs 요청거부)
+- CQ5.3 Degraded-path Redirection과 Brownout·Traffic Shedding의 질적 차이는? → 개체 주석(경로 변경 vs 작업량 축소 vs 요청 거부)
+- CQ5.5 같은 조치가 노드 타입에 따라 어디에 적용되는가? → `appliesAt`, `hasNodeType`, `nodeTypeScoped`
+- CQ5.6 LLM 노드에서 조치 5종은 각각 무엇으로 구현되는가? → `ModelDowngrade_i`/`TokenBudgetCut_i`/`InferenceCapacityUp_i` + CB·Shedding 공통
 - CQ5.4 어떤 조치가 상태성 병목(cartservice→Redis)에서 효과적이고 어떤 것이 역효과인가? → `mitigationEffect` on `StatefulResource`
 
 ## CQ6. 제어 구조(2계층)
@@ -52,7 +61,9 @@
 - CQ7.2 라벨은 어떻게 생성되는가(자동 역라벨링)? → `LabelingStrategy`
 - CQ7.3 p̄(실패확률)와 u(불확실성)는 각각 무엇으로 검증되는가? → `ECE`(p̄) / `DropRate`(u)
 - CQ7.4 baseline 비교군과 ablation은 무엇인가? → `Baseline`, `Ablation` 개체
-- CQ7.5 어떤 조치를 시간 부족 시 먼저 컷하는가? → `Actuator` 개체 주석(cut priority)
+- CQ7.5 어떤 조치를 시간 부족 시 먼저 컷하는가? → `Actuator` 개체 주석(cut priority — 3종 유지)
+- CQ7.6 장애 시나리오 3종은 각각 어떤 조치를 최적해로 갖는가? → `FailureScenario` 개체
+- CQ7.7 측정 환경이 라벨을 오염시키지 않았음을 무엇으로 보장하는가? → `ExperimentValidityGate`(호스트 CPU 임계 초과 구간 제외, A5)
 
 ## CQ8. 선행연구 · 차별점
 
@@ -60,8 +71,10 @@
 - CQ8.2 본 연구가 채우는 빈자리는 무엇인가? → `ConfidenceTieredResponse` = 유일하게 모두가 비운 축
 - CQ8.3 FIRM의 조치 공간은 왜 전부 프로비저닝인가(비프로비저닝 조치가 신규 기여)? → `FIRM` 개체 주석 D14
 - CQ8.4 각 선행연구의 예측 모델·조치공간·venue·검증 그래프 규모는? → `RelatedWork` 데이터 속성
+- CQ8.5 검토 문헌을 왜 3분할하는가? LLM 라우팅 연구는 왜 비교표에 없는가? → `ComparisonTarget`/`UtilizedTechnique`/`AdjacentWork`, 세 비교축 미정의(D20)
+- CQ8.6 LLM으로 오토스케일링을 결정하는 연구(ORACL)와 무엇이 다른가? → `ORACL` 개체 주석, `distinguishedFrom`(D21)
 
 ## CQ9. 심사 방어
 
-- CQ9.1 각 심사 우려(6~13)는 어떤 설계 요소로 방어되는가? → `Concern` `addressedBy` `DesignDecision`
-- CQ9.2 "작은 벤치마크" 우려는 무엇으로 방어되는가? → 우려6 → 선례+스코프+공유head 확장성
+- CQ9.1 각 심사 우려(1~8)는 어떤 설계 요소로 방어되는가? → `Concern` `addressedBy` `DesignDecision`
+- CQ9.2 "작은 벤치마크" 우려는 무엇으로 방어되는가? → 우려1 → 선례+스코프+공유head 확장성

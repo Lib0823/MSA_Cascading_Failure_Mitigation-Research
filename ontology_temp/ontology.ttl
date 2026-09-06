@@ -32,7 +32,7 @@ msacf:DefenseConcept     a owl:Class ; rdfs:subClassOf msacf:Entity ; rdfs:label
 msacf:Microservice a owl:Class ; rdfs:subClassOf msacf:SystemConcept ;
     rdfs:label "마이크로서비스"@ko ; rdfs:comment "호출 그래프의 노드 v∈V (§2-0)."@ko .
 msacf:ServiceCallGraph a owl:Class ; rdfs:subClassOf msacf:SystemConcept ;
-    rdfs:label "서비스 호출 그래프"@ko ; rdfs:comment "정적 방향 그래프 G_t=(V,E) (§2-0, 우려13)."@ko .
+    rdfs:label "서비스 호출 그래프"@ko ; rdfs:comment "정적 방향 그래프 G_t=(V,E) (§2-0, 우려8)."@ko .
 msacf:CallDependency a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "호출 의존 엣지"@ko .
 msacf:Resource a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "리소스"@ko .
 msacf:StatefulResource a owl:Class ; rdfs:subClassOf msacf:Resource ;
@@ -121,8 +121,10 @@ msacf:Withhold a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ; rdfs:label 
 msacf:Actuator a owl:Class ; rdfs:subClassOf msacf:ActuationConcept ; rdfs:label "조치"@ko .
 msacf:CircuitBreaker a owl:Class ; rdfs:subClassOf msacf:Actuator ; rdfs:label "Circuit Breaker"@ko .
 msacf:TrafficShedding a owl:Class ; rdfs:subClassOf msacf:Actuator ; rdfs:label "Traffic Shedding"@ko .
-msacf:ReadRedirection a owl:Class ; rdfs:subClassOf msacf:Actuator ;
-    rdfs:label "Read Redirection"@ko ; rdfs:comment "기능 유지+일관성 약화(stale read). Envoy read_policy (H2)."@ko .
+msacf:DegradedPathRedirection a owl:Class ; rdfs:subClassOf msacf:Actuator ;
+    rdfs:label "Degraded-path Redirection"@ko ;
+    rdfs:comment "경로 변경 — 일반 서비스는 read-replica 우회(기능 유지 + 일관성 약화, stale read), LLM 노드는 소형 모델 라우팅. 종전 명칭 ReadRedirection은 DB 읽기 한정으로 읽혀 개명 (H2, E9)."@ko ;
+    msacf:nodeTypeScoped true .
 msacf:K8sScaleUp a owl:Class ; rdfs:subClassOf msacf:Actuator ;
     rdfs:label "K8s Scale-up"@ko ; rdfs:comment "프로비저닝. 상태성 병목서 Thundering Herd."@ko .
 msacf:Brownout a owl:Class ; rdfs:subClassOf msacf:Actuator ;
@@ -161,7 +163,30 @@ msacf:Tool a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "�
 #################################################################
 # 7. Related work / axes
 #################################################################
+msacf:NodeType a owl:Class ; rdfs:subClassOf msacf:SystemConcept ; rdfs:label "노드 타입"@ko ;
+    rdfs:comment "노드의 워크로드 유형. 조치 실행 방식과 appliesAt이 여기서 분기 (E9)."@ko .
+msacf:GeneralService a owl:Class ; rdfs:subClassOf msacf:NodeType ; rdfs:label "일반 서비스"@ko .
+msacf:LLMInferenceNode a owl:Class ; rdfs:subClassOf msacf:NodeType ; rdfs:label "LLM 추론 노드"@ko ;
+    rdfs:comment "지연이 토큰 길이·KV 캐시 점유·큐 깊이에 지배됨. 검증 대상이지 의사결정 주체가 아님 (B7, D21)."@ko .
+msacf:KVCache a owl:Class ; rdfs:subClassOf msacf:StatefulResource ; rdfs:label "KV 캐시"@ko ;
+    rdfs:comment "LLM 추론의 유계 자원. 커넥션풀 소진과 동일 현상으로 f1에 통합 표현 (E8)."@ko .
+msacf:SemanticSlot a owl:Class ; rdfs:subClassOf msacf:NodeFeature ; rdfs:label "의미 기준 공통 슬롯"@ko ;
+    rdfs:comment "노드 타입 간 일반화된 공통 슬롯 6종. 전용 차원 + 제로 패딩 기각 (E8)."@ko .
+msacf:NodeTypeEmbedding a owl:Class ; rdfs:subClassOf msacf:NodeFeature ; rdfs:label "노드 타입 임베딩"@ko ;
+    rdfs:comment "학습 가능한 타입 표현 4~8차원. LLM 노드 1개라 학습 신호 부족이 잔여 리스크 (G6)."@ko .
+msacf:ApplyPoint a owl:Class ; rdfs:subClassOf msacf:DecisionConcept ; rdfs:label "조치 적용 지점"@ko ;
+    rdfs:comment "apply_point(a,v). 위험 노드 v와 다를 수 있으며 (조치 종류 x 노드 타입)의 함수 (E7, E9)."@ko .
+msacf:FailureScenario a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "장애 시나리오"@ko ;
+    rdfs:comment "각각 서로 다른 Actuator를 최적해로 갖도록 설계 (4-6)."@ko .
+msacf:ExperimentValidityGate a owl:Class ; rdfs:subClassOf msacf:ExperimentConcept ; rdfs:label "실험 유효성 기준"@ko ;
+    rdfs:comment "호스트 CPU 임계 초과 구간을 라벨링에서 제외. CPU 경합에 의한 가짜 양성 차단 (A5)."@ko .
 msacf:RelatedWork a owl:Class ; rdfs:subClassOf msacf:RelatedWorkConcept ; rdfs:label "선행연구"@ko .
+msacf:ComparisonTarget a owl:Class ; rdfs:subClassOf msacf:RelatedWork ; rdfs:label "비교 대상"@ko ;
+    rdfs:comment "같은 문제를 다루는 경쟁 연구 5편. 5자 비교표 (D16, D20)."@ko .
+msacf:UtilizedTechnique a owl:Class ; rdfs:subClassOf msacf:RelatedWork ; rdfs:label "활용 기법"@ko ;
+    rdfs:comment "Actuator 구현 근거로 채택. 경쟁 대상 아님 (D17)."@ko .
+msacf:AdjacentWork a owl:Class ; rdfs:subClassOf msacf:RelatedWork ; rdfs:label "인접 연구"@ko ;
+    rdfs:comment "키워드가 겹치나 문제 범위가 다름 (D18, D19, D21)."@ko .
 msacf:ComparisonAxis a owl:Class ; rdfs:subClassOf msacf:RelatedWorkConcept ; rdfs:label "비교축"@ko .
 msacf:Contribution a owl:Class ; rdfs:subClassOf msacf:RelatedWorkConcept ; rdfs:label "기여"@ko .
 
@@ -215,6 +240,12 @@ msacf:comparedAgainst a owl:ObjectProperty ; rdfs:domain msacf:PolicyEngine ; rd
 msacf:measures a owl:ObjectProperty ; rdfs:domain msacf:MitigationEffectMeasurement ; rdfs:range msacf:CostVariable .
 msacf:usesTool a owl:ObjectProperty ; rdfs:domain msacf:ExperimentConcept ; rdfs:range msacf:Tool .
 
+msacf:hasNodeType a owl:ObjectProperty ; rdfs:domain msacf:Microservice ; rdfs:range msacf:NodeType .
+msacf:mapsToSlot a owl:ObjectProperty ; rdfs:domain msacf:Microservice ; rdfs:range msacf:SemanticSlot .
+msacf:appliesAt a owl:ObjectProperty ; rdfs:domain msacf:Actuator ; rdfs:range msacf:ApplyPoint .
+msacf:justifies a owl:ObjectProperty ; rdfs:domain msacf:UtilizedTechnique ; rdfs:range msacf:Actuator .
+msacf:distinguishedFrom a owl:ObjectProperty ; rdfs:domain msacf:Contribution ; rdfs:range msacf:AdjacentWork .
+msacf:nodeTypeScoped a owl:DatatypeProperty ; rdfs:domain msacf:Actuator ; rdfs:range xsd:boolean .
 msacf:usesModel a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:PredictionModel .
 msacf:coversAxis a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:ComparisonAxis .
 msacf:lacksAxis a owl:ObjectProperty ; rdfs:domain msacf:RelatedWork ; rdfs:range msacf:ComparisonAxis .
@@ -256,7 +287,7 @@ msacf:TrafficShedding_i a owl:NamedIndividual , msacf:TrafficShedding ;
     msacf:disruption "중" ; msacf:reversibility "낮음~중" ; msacf:mitigationEffect "중~높음" ;
     msacf:targetPropagationSpeed "빠름" ; msacf:confidenceTierRequired "중~고" ;
     msacf:isProvisioning false ; msacf:triggeredBy msacf:Tier1_LocalReflex , msacf:Tier2_GNNProactive .
-msacf:ReadRedirection_i a owl:NamedIndividual , msacf:ReadRedirection ;
+msacf:DegradedPathRedirection_i a owl:NamedIndividual , msacf:DegradedPathRedirection ;
     msacf:disruption "낮음" ; msacf:reversibility "낮음" ; msacf:mitigationEffect "중" ;
     msacf:targetPropagationSpeed "중" ; msacf:confidenceTierRequired "낮음~중" ;
     msacf:isProvisioning false ; msacf:triggeredBy msacf:Tier2_GNNProactive ;
@@ -273,22 +304,67 @@ msacf:Brownout_i a owl:NamedIndividual , msacf:Brownout ;
 #################################################################
 # Individuals — related work (§3)
 #################################################################
-msacf:GRAF a owl:NamedIndividual , msacf:RelatedWork ;
+msacf:ModelDowngrade_i a owl:NamedIndividual , msacf:DegradedPathRedirection ;
+    msacf:disruption "중" ; msacf:reversibility "낮음" ; msacf:mitigationEffect "중~높음" ;
+    msacf:confidenceTierRequired "낮음~중" ; msacf:isProvisioning false ;
+    rdfs:comment "LLM 노드의 Redirection 구현체. 소형 모델 라우팅. appliesAt = v 자신 (E9)."@ko .
+msacf:TokenBudgetCut_i a owl:NamedIndividual , msacf:Brownout ;
+    msacf:disruption "중" ; msacf:reversibility "낮음" ; msacf:mitigationEffect "중" ;
+    msacf:confidenceTierRequired "낮음~중" ; msacf:isProvisioning false ;
+    rdfs:comment "LLM 노드의 Brownout 구현체. max_tokens 상한 / RAG top-k 축소. appliesAt = v 자신 (E9)."@ko .
+msacf:InferenceCapacityUp_i a owl:NamedIndividual , msacf:K8sScaleUp ;
+    msacf:disruption "높음" ; msacf:reversibility "높음" ; msacf:mitigationEffect "상황의존" ;
+    msacf:confidenceTierRequired "고신뢰도만" ; msacf:isProvisioning true ;
+    rdfs:comment "LLM 노드의 Scale-up 구현체. vLLM 용량 파라미터 조정. 레플리카 증설은 VRAM 8GB 제약으로 스코프 밖."@ko .
+
+msacf:S1_ConnectionPoolExhaustion a owl:NamedIndividual , msacf:FailureScenario ;
+    rdfs:comment "HikariCP maximumPoolSize 축소 + 슬로우 쿼리. 기대 최적 조치 = DegradedPathRedirection. Thundering Herd 실증 (D2)."@ko .
+msacf:S2_LLMSaturation a owl:NamedIndividual , msacf:FailureScenario ;
+    rdfs:comment "긴 프롬프트 버스트. LLM 확장의 핵심 실증 — 컷하면 확장 실익이 없다. 품질-지연 트레이드오프."@ko .
+msacf:S3_CallAmplification a owl:NamedIndividual , msacf:FailureScenario ;
+    rdfs:comment "요청당 조회 횟수 N 증가. apply_point != 위험 노드를 실증 — 위상 인지 필요성의 근거."@ko .
+
+msacf:DeepScaler a owl:NamedIndividual , msacf:ComparisonTarget ;
+    msacf:venue "ASE'23" ; msacf:actionSpaceKind "자원 프로비저닝(상호작용 서비스 동시 재구성)" ;
+    msacf:verifiedGraphSize "Bookinfo / Online Boutique(10) / Train-Ticket" ;
+    msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
+    msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse ;
+    rdfs:comment "attention GCN + EM 기반 adaptive graph learning. 예측 대상은 자원 수치 회귀. 벤치마크가 겹침 (D16)."@ko .
+msacf:FrugalGPT a owl:NamedIndividual , msacf:UtilizedTechnique ;
+    msacf:venue "TMLR 2024" ; msacf:justifies msacf:DegradedPathRedirection ;
+    rdfs:comment "응답 신뢰도 미달 시 상위 모델로 escalate. 프리프린트 아님 — 인용 시 venue 정확히 (D17)."@ko .
+msacf:RouteLLM a owl:NamedIndividual , msacf:UtilizedTechnique ;
+    msacf:venue "ICLR 2025" ; msacf:justifies msacf:DegradedPathRedirection ;
+    rdfs:comment "선호도 학습 라우터. 판단 근거가 질의 난이도이지 시스템 부하가 아님 (D17)."@ko .
+msacf:HW_Router a owl:NamedIndividual , msacf:AdjacentWork ;
+    msacf:venue "DAC" ;
+    rdfs:comment "관측범위가 단일 LLM 서비스 내부, 반응형, 조치 라우팅 단일, 신뢰도 없음 (D18)."@ko .
+msacf:GraphRouter a owl:NamedIndividual , msacf:AdjacentWork ;
+    msacf:venue "ICLR 2025" ;
+    rdfs:comment "그래프 정의가 질의-모델 적합도이지 서비스 호출 토폴로지가 아님. 구분 서술 누락 시 리스크 최대 (D19)."@ko .
+msacf:ORACL a owl:NamedIndividual , msacf:AdjacentWork ;
+    msacf:venue "IEEE TSC 2026" ;
+    rdfs:comment "LLM CoT로 오토스케일링 의사결정. 본 연구가 기각한 방향 (A). 구분선은 의사결정 주체·조치 공간·신뢰도 축·재현성·LLM의 위치 (D21)."@ko .
+msacf:Graph_PHPA a owl:NamedIndividual , msacf:RelatedWork ;
+    msacf:venue "CloudNet 2022" ;
+    rdfs:comment "LSTM+GNN 결합 선제적 HPA. 비교표 미편입 — LSTM 독립 baseline 설계의 대비 근거 (D22)."@ko .
+
+msacf:GRAF a owl:NamedIndividual , msacf:ComparisonTarget ;
     msacf:usesModel msacf:MPNN ; msacf:venue "CoNEXT'21/ToN'24" ; msacf:actionSpaceKind "자원할당(스칼라)" ;
     msacf:verifiedGraphSize "6~10노드" ; msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
     msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse ;
-    rdfs:comment "flatten readout 확장성 한계 자인(D13). 6.7s=solver 수렴 시간(우려12)."@ko .
-msacf:FIRM a owl:NamedIndividual , msacf:RelatedWork ;
+    rdfs:comment "flatten readout 확장성 한계 자인(D13). 6.7s=solver 수렴 시간(우려7)."@ko .
+msacf:FIRM a owl:NamedIndividual , msacf:ComparisonTarget ;
     msacf:usesModel msacf:SVM ; msacf:venue "OSDI'20" ; msacf:actionSpaceKind "자원재할당 5종(전부 프로비저닝)" ;
     msacf:verifiedGraphSize "15~41(비GNN)" ; msacf:coversAxis msacf:Axis_ActionSpaceHeterogeneity ;
     msacf:lacksAxis msacf:Axis_TopologyAwarePrediction , msacf:Axis_ConfidenceTieredResponse ;
     msacf:precedentFor msacf:DD_TransferLearning ;
     rdfs:comment "조치 전부 프로비저닝(브라운아웃·CB 없음, D14). 전이학습은 선례로만 인용(GNN 아님)."@ko .
-msacf:AGQ a owl:NamedIndividual , msacf:RelatedWork ;
+msacf:AGQ a owl:NamedIndividual , msacf:ComparisonTarget ;
     msacf:usesModel msacf:STGNN ; msacf:venue "FGCS'26" ; msacf:actionSpaceKind "자원할당(스칼라)" ;
     msacf:verifiedGraphSize "~13노드" ; msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
     msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse .
-msacf:GraphGRU a owl:NamedIndividual , msacf:RelatedWork ;
+msacf:GraphGRU a owl:NamedIndividual , msacf:ComparisonTarget ;
     msacf:usesModel msacf:GAT ; msacf:venue "ICPADS'22" ; msacf:actionSpaceKind "없음(예측만)" ;
     msacf:coversAxis msacf:Axis_TopologyAwarePrediction ;
     msacf:lacksAxis msacf:Axis_ActionSpaceHeterogeneity , msacf:Axis_ConfidenceTieredResponse .
@@ -344,12 +420,18 @@ msacf:DD_TransferLearning a owl:NamedIndividual , msacf:DesignDecision ;
 #################################################################
 # Individuals — concerns (§6)
 #################################################################
-msacf:Concern6 a owl:NamedIndividual , msacf:Concern ; rdfs:label "작은 벤치마크?"@ko .
-msacf:Concern7 a owl:NamedIndividual , msacf:Concern ; rdfs:label "FIRM과 차이?"@ko .
-msacf:Concern8 a owl:NamedIndividual , msacf:Concern ; rdfs:label "왜 정적 GAT?"@ko .
-msacf:Concern9 a owl:NamedIndividual , msacf:Concern ; rdfs:label "왜 Deep Ensemble?"@ko .
-msacf:Concern10 a owl:NamedIndividual , msacf:Concern ; rdfs:label "그래프 커지면 학습?"@ko .
-msacf:Concern11 a owl:NamedIndividual , msacf:Concern ; rdfs:label "즉각조치를 GNN에 묶으면?"@ko .
-msacf:Concern12 a owl:NamedIndividual , msacf:Concern ; rdfs:label "N=5 골든타임?"@ko ; msacf:addressedBy msacf:DD_TwoTier .
-msacf:Concern13 a owl:NamedIndividual , msacf:Concern ; rdfs:label "정적 위상 유효?"@ko ; msacf:addressedBy msacf:DD_TransferLearning .
+msacf:Concern1 a owl:NamedIndividual , msacf:Concern ; rdfs:label "작은 벤치마크?"@ko .
+msacf:Concern2 a owl:NamedIndividual , msacf:Concern ; rdfs:label "FIRM과 차이?"@ko .
+msacf:Concern3 a owl:NamedIndividual , msacf:Concern ; rdfs:label "왜 정적 GAT?"@ko .
+msacf:Concern4 a owl:NamedIndividual , msacf:Concern ; rdfs:label "왜 Deep Ensemble?"@ko .
+msacf:Concern5 a owl:NamedIndividual , msacf:Concern ; rdfs:label "그래프 커지면 학습?"@ko .
+msacf:Concern6 a owl:NamedIndividual , msacf:Concern ; rdfs:label "즉각조치를 GNN에 묶으면?"@ko .
+msacf:Concern7 a owl:NamedIndividual , msacf:Concern ; rdfs:label "N=5 골든타임?"@ko ; msacf:addressedBy msacf:DD_TwoTier .
+msacf:Concern8 a owl:NamedIndividual , msacf:Concern ; rdfs:label "정적 위상 유효?"@ko ; msacf:addressedBy msacf:DD_TransferLearning .
+msacf:Concern9 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "LLM을 넣은 게 유행 편승 아닌가 - LLM은 검증 대상이지 기여가 아님. vanilla 커버리지 대조로 답 (B7)"@ko .
+msacf:Concern10 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "모델 라우팅은 이미 있는 기법 - UtilizedTechnique로 인용, 기여는 발동 시점 결정 (D17)"@ko .
+msacf:Concern11 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "HW-Router와 뭐가 다른가 - 4축 구분 + S3 (D18)"@ko .
+msacf:Concern12 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "GraphRouter와 겹치지 않나 - 그래프 정의가 다름 (D19)"@ko .
+msacf:Concern13 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "소형 모델 실험이 일반화되나 - 검증 대상은 티어 간 상대적 격차 (5 한정)"@ko .
+msacf:Concern14 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "LLM 응답 품질을 어떻게 측정했나 - 측정 안 함. D_downgrade 정책 파라미터 + theta 교차점 (F4)"@ko .
 msacf:DD_TwoTier a owl:NamedIndividual , msacf:DesignDecision ; rdfs:label "2계층 제어"@ko .

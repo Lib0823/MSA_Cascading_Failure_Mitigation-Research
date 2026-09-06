@@ -24,17 +24,21 @@ msacf:Entity
 | 클래스 | ⊑ | 정의 | 근거 |
 |---|---|---|---|
 | `Microservice` | SystemConcept | 서비스 호출 그래프의 노드 `v ∈ V`. 리소스 지표를 feature로 갖는다. | §2-0 |
-| `ServiceCallGraph` | SystemConcept | 시점 t의 방향 그래프 `G_t=(V,E)`. **위상은 정적**. | §2-0, 우려13 |
+| `ServiceCallGraph` | SystemConcept | 시점 t의 방향 그래프 `G_t=(V,E)`. **위상은 정적**. | §2-0, 우려8 |
 | `CallDependency` | SystemConcept | 방향성 호출 관계 엣지 `E ⊆ V×V`. | §2-0 |
 | `Resource` | SystemConcept | 서비스가 의존하는 자원. | §1 |
 | `StatefulResource` | Resource | 상태성 리소스(DB 커넥션풀·Redis 등). 스케일아웃이 역효과를 낼 수 있음. | §1-2, D2 |
 | `StatelessResource` | Resource | 무상태 리소스(CPU·메모리 등). 프로비저닝으로 완화 가능. | §2-B |
-| `ConnectionPool` | StatefulResource | 대표 상태성 병목. `cartservice→Redis` 경로에 구체화. | D2, §4-5 |
+| `ConnectionPool` | StatefulResource | 대표 상태성 병목. `cartservice→Redis`(1차)와 **Spring 노드→PostgreSQL HikariCP**(2차, Redirection 실증 대상)에 구체화. | D2, §4-5, B6 |
 | `SLO` | SystemConcept | 서비스 수준 목표(P99 지연·에러율 임계). 위반이 라벨 기준. | §4-2 |
 | `Topology` | SystemConcept | 서비스 간 논리적 호출 위상. 예측의 핵심 신호. | §1-3 |
+| `NodeType` | SystemConcept | 노드의 워크로드 유형. 조치 실행 방식과 `apply_point`가 여기서 분기. | §2-A, §2-C, E9 |
+| `GeneralService` | NodeType | 일반 마이크로서비스. 부하 대리지표가 RPS·CPU. | §2-A |
+| `LLMInferenceNode` | NodeType | LLM 추론 서비스(`assistantservice`). 지연이 토큰 길이·KV 캐시 점유·큐 깊이에 지배됨. **1개**. | §1, B7 |
+| `KVCache` | StatefulResource | LLM 추론의 유계 자원. 커넥션풀과 **동일 현상**(스케일아웃으로 해소되지 않는 포화)으로 f1에 통합 표현. | §2-A, E8 |
 
 > **핵심 제약**: `ServiceCallGraph` 는 정적. Pod 증감 등 물리적 변화는 그래프 구조가 아니라
-> `NodeFeature` 로 흡수된다(우려13). 위상 변경은 fine-tune으로 대응(실험 밖 논거).
+> `NodeFeature` 로 흡수된다(우려8). 위상 변경은 fine-tune으로 대응(실험 밖 논거).
 
 ---
 
@@ -96,6 +100,8 @@ PredictionModel
 | `NodeFeature` | PredictionConcept | 노드 입력 벡터 `x_v(t) ∈ ℝ^d`. **self-SLO 위반 이력 제외**(누수/지름길). | §2-0, §4-2, H5 |
 | `ResourceMetricFeature` | NodeFeature | 현재 CPU/메모리/지연/에러율/스레드풀·커넥션풀 지표. | §4-2 |
 | `TemporalStatisticFeature` | NodeFeature | 슬라이딩 윈도우 통계(평균·slope·std). **t 이전만**(라벨 누수 방지). TA-GAT의 실체. | §2-A, §4-2 |
+| `SemanticSlot` | NodeFeature | 노드 타입 간 **의미 기준으로 일반화된 공통 슬롯** 6종(상태성자원포화율·큐대기율·처리량대비용량비·지연분위수·자원사용률·에러율). 제로 패딩 대신 채택. | §2-A, E8 |
+| `NodeTypeEmbedding` | NodeFeature | 학습 가능한 노드 타입 표현(4~8차원). LLM 노드가 1개뿐이라 학습 신호 부족이 잔여 리스크. | §2-A, E8, G6 |
 | `Readout` | PredictionConcept | 노드 임베딩 → 예측 출력 변환. | §2-A |
 | `SharedPerNodeHead` | Readout | 모든 노드에 동일 MLP 적용. 파라미터가 노드 수와 무관. **채택**. | §2-A, E5 |
 | `FlattenReadout` | Readout | 노드 임베딩 flatten → FC. 파라미터가 노드 수에 선형. GRAF, 확장성 한계. | D13 |
@@ -120,6 +126,7 @@ PredictionModel
 | `ConfidenceTier` | DecisionConcept | 고/중/저 구간. 손으로 긋지 않고 θₐ에서 **유도**. | §2-B |
 | `SafetyGuard` | DecisionConcept | 저신뢰(u↑→p_eff↓) 시 극단조치 자동 보류. 비용함수에서 **유도**(하드코딩 아님). | §2-B, H3, G4 |
 | `CostVariable` | DecisionConcept | 비용함수 변수(L·Dₐ·Rₐ·mₐ·κ·θₐ). 개체는 individuals.md. | §2-B |
+| `ApplyPoint` | DecisionConcept | 조치를 실제로 적용할 노드 `apply_point(a,v)`. **위험 노드 v와 다를 수 있으며, (조치 종류 × 노드 타입)의 함수**다. | §2-C, §2-E, E7·E9 |
 | `Withhold` | DecisionConcept | 보류(조치 안 함). 저위험·저신뢰 노드가 귀결되는 곳. | §2-B, §2-E |
 
 ---
@@ -132,7 +139,7 @@ PredictionModel
 Actuator
 ├── CircuitBreaker    (비프로비저닝, Tier1+Tier2)
 ├── TrafficShedding   (비프로비저닝, Tier1+Tier2)
-├── ReadRedirection   (비프로비저닝, Tier2, 상태성 병목 완화)
+├── DegradedPathRedirection (비프로비저닝, Tier2, 상태성 병목 완화 + 모델 다운그레이드)
 ├── K8sScaleUp        (프로비저닝, Tier2, 상태성 병목서 역효과)
 └── Brownout          (비프로비저닝, Tier2, 품질 저하)
 ```
@@ -142,12 +149,14 @@ Actuator
 | `Actuator` | ActuationConcept | 실행 계층 조치. disruption·가역성·완화효과·전파속도·신뢰도구간 속성을 가짐. | §2-C |
 | `CircuitBreaker` | Actuator | 호출 차단. 즉시성 높음. Resilience4j `FORCED_OPEN`. | §2-C, §2-D |
 | `TrafficShedding` | Actuator | 요청 통째 거부. | §2-C |
-| `ReadRedirection` | Actuator | 읽기를 read-replica로 우회. **기능 유지+일관성 약화(stale read)**. Envoy `read_policy`. | §2-C, H2 |
+| `DegradedPathRedirection` | Actuator | **경로 변경** — 일반 서비스는 read-replica 우회(기능 유지 + 일관성 약화), LLM 노드는 소형 모델 라우팅. 종전 명칭 `ReadRedirection`은 DB 읽기 한정으로 읽혀 개명. | §2-C, H2, E9 |
 | `K8sScaleUp` | Actuator | Pod 증설(프로비저닝). 상태성 병목서 Thundering Herd 유발. | §2-C |
 | `Brownout` | Actuator | 비핵심(optional) 기능을 dimmer로 생략. `adservice`/`recommendationservice`. | §2-C, D14 |
 
-> **조치 이질성 축**: `ReadRedirection`(기능유지+일관성약화) ≠ `Brownout`(기능생략) ≠ `TrafficShedding`(요청거부).
+> **조치 이질성 축**: `DegradedPathRedirection`(경로 변경 — 다른 곳으로 옮김) ≠ `Brownout`(작업량 축소 — 없앰) ≠ `TrafficShedding`(요청 거부).
 > `isProvisioning` 으로 `K8sScaleUp`(프로비저닝) vs 나머지 4종(비프로비저닝) 구분 — FIRM 대비 신규 기여의 근거.
+>
+> **노드 타입별 분기**(E9): 5종은 개수를 유지하되 실행 방식이 노드 타입에 따라 갈린다. 일반 서비스에서 Redirection·Brownout은 **호출자** 측 레버지만(EnvoyFilter, dimmer), LLM 노드에서는 라우팅·`max_tokens`가 **서빙 노드 자신의 요청 파라미터**이므로 `apply_point = v`다.
 
 ### 5.2 제어 계층
 
@@ -178,7 +187,9 @@ Actuator
 | `Ablation` | ExperimentConcept | 스냅샷 전용 GAT vs TA-GAT 분리 측정. | §4-3 |
 | `TrafficProfile` | ExperimentConcept | 정상/버스트/점진증가 부하. Locust/k6. | §4-5, A4 |
 | `MitigationEffectMeasurement` | ExperimentConcept | mₐ를 (장애유형×조치) 대조로 추정, 조치 전후 SLO 회복분 대리지표. | §4-5 |
-| `Tool` | ExperimentConcept | 실험 도구(Locust/Istio/Chaos Mesh/Envoy/Resilience4j/PyG). | §4, A4 |
+| `FailureScenario` | ExperimentConcept | 장애 시나리오. 각각 **서로 다른 Actuator를 최적해로** 갖도록 설계(이질적 조치 공간 실증). | §4-6 |
+| `ExperimentValidityGate` | ExperimentConcept | 호스트 CPU·메모리 임계 초과 구간을 라벨링에서 제외하는 유효성 기준. CPU 경합에 의한 가짜 양성 차단. | A5, environment §4 |
+| `Tool` | ExperimentConcept | 실험 도구(Locust/Istio/Chaos Mesh/Envoy/Resilience4j/vLLM/PyG). | §4, A4 |
 
 ---
 
@@ -186,8 +197,11 @@ Actuator
 
 | 클래스 | ⊑ | 정의 | 근거 |
 |---|---|---|---|
-| `RelatedWork` | RelatedWorkConcept | 선행연구(GRAF/FIRM/AGQ/GraphGRU). 개체는 individuals.md. | §3 |
-| `ComparisonAxis` | RelatedWorkConcept | 비교 3축(위상인지 예측/조치공간 이질성/신뢰도 구간 대응). | §3 |
+| `RelatedWork` | RelatedWorkConcept | 검토 문헌 일반. **성격에 따라 3분할**(D20). 개체는 individuals.md. | §3 |
+| `ComparisonTarget` | RelatedWork | **3-1 비교 대상** — 같은 문제를 다루는 경쟁 연구 5편(GRAF/FIRM/DeepScaler/AGQ/GraphGRU). 5자 비교표. | §3-1, D16 |
+| `UtilizedTechnique` | RelatedWork | **3-2 활용 기법** — Actuator 구현 근거로 채택. 경쟁 대상 아님(FrugalGPT/RouteLLM). | §3-2, D17 |
+| `AdjacentWork` | RelatedWork | **3-3 인접 연구** — 키워드가 겹치나 문제 범위가 다름(HW-Router/GraphRouter/ORACL). | §3-3, D18·D19·D21 |
+| `ComparisonAxis` | RelatedWorkConcept | 비교 3축(위상인지 예측/조치공간 이질성/신뢰도 구간 대응). **LLM 라우팅 연구에는 이 축 자체가 정의되지 않아** 5자 비교표에 넣지 않는다. | §3, D20 |
 | `Contribution` | RelatedWorkConcept | 본 연구 기여. 세 축 교집합 = 신뢰도 구간별 대응. | §3 |
 
 ---
@@ -196,5 +210,5 @@ Actuator
 
 | 클래스 | ⊑ | 정의 | 근거 |
 |---|---|---|---|
-| `Concern` | DefenseConcept | 심사 예상 우려(6~13). 개체는 individuals.md. | §6 |
+| `Concern` | DefenseConcept | 심사 예상 우려(1~14). 1~8은 기본 설계, 9~14는 LLM 노드 확장 관련. 개체는 individuals.md. | §6 |
 | `DesignDecision` | DefenseConcept | 우려를 방어하는 설계 결정. | challenges D~H |

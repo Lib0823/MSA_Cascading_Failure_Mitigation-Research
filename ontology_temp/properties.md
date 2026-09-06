@@ -30,6 +30,8 @@
 |---|---|---|
 | `predictsRiskOf` | PredictionModel → Microservice | 모델이 노드 위험을 예측. |
 | `hasFeature` | Microservice → NodeFeature | 노드가 입력 feature를 가짐. |
+| `hasNodeType` | Microservice → NodeType | 노드의 워크로드 유형(GeneralService / LLMInferenceNode). 조치 실행 방식과 `appliesAt`이 여기서 분기. |
+| `mapsToSlot` | Microservice → SemanticSlot | 노드 타입별 원시 지표가 공통 슬롯에 사상됨(예: HikariCP active/max와 KV 캐시 점유율이 모두 f1). |
 | `usesReadout` | GNN → Readout | 모델이 readout 방식을 사용. |
 | `quantifiesUncertaintyVia` | PredictionModel → UncertaintyMethod | 불확실성 산출 기법. (GAT → DeepEnsemble) |
 | `producesOutput` | PredictionModel → PredictionOutput | 모델이 출력을 생성. |
@@ -48,7 +50,8 @@
 | `derivedFrom` | SafetyGuard → CostFunction | Safety Guard는 비용함수에서 유도(하드코딩 아님). |
 | `derivesTier` | CostFunction → ConfidenceTier | 신뢰도 구간이 θₐ에서 유도됨. |
 | `mitigates` | Actuator → FailureEvent | 조치가 장애를 완화. |
-| `targetsResource` | Actuator → Resource | 조치 대상 리소스. (ReadRedirection → ConnectionPool) |
+| `targetsResource` | Actuator → Resource | 조치 대상 리소스. (DegradedPathRedirection → ConnectionPool) |
+| `appliesAt` | Actuator → ApplyPoint | 조치를 실제로 적용할 노드. **(조치 종류 × 노드 타입)의 함수** — 위험 노드와 다를 수 있다(E9). |
 
 ### A.5 제어 계층
 
@@ -79,6 +82,8 @@
 | `lacksAxis` | RelatedWork → ComparisonAxis | 해당 축을 비움(차별점). |
 | `fills` | Contribution → ComparisonAxis | 본 연구가 채우는 축. |
 | `precedentFor` | RelatedWork → DesignDecision | 선례로만 인용(FIRM 전이학습 → 위상변경 대응). |
+| `justifies` | UtilizedTechnique → Actuator | 활용 기법이 조치 구현의 근거가 됨(FrugalGPT·RouteLLM → DegradedPathRedirection). 기여 주장 아님(D17). |
+| `distinguishedFrom` | Contribution → AdjacentWork | 인접 연구와의 구분선. 회피하지 않고 정면 기재(D18·D19·D21). |
 | `addressedBy` | Concern → DesignDecision | 우려가 설계 결정으로 방어됨. |
 | `defends` | DesignDecision → Contribution | 설계 결정이 기여를 방어. |
 
@@ -96,6 +101,7 @@
 | `targetPropagationSpeed` | Actuator | string(빠름/중/느림) | CB=빠름, ScaleUp=느림 |
 | `confidenceTierRequired` | Actuator | string | CB=중간에서도, ScaleUp=고신뢰도만 |
 | `isProvisioning` | Actuator | boolean | K8sScaleUp=true, 나머지 4종=false |
+| `nodeTypeScoped` | Actuator | boolean | 실행 방식이 노드 타입에 따라 갈리는가. Redirection·Brownout=true(`appliesAt`이 달라짐), CB·Shedding·ScaleUp=false |
 
 ### B.2 예측 모델
 
@@ -113,7 +119,7 @@
 | `venue` | RelatedWork | string | GRAF=CoNEXT'21/ToN'24, FIRM=OSDI'20 |
 | `year` | RelatedWork | integer | |
 | `actionSpaceKind` | RelatedWork | string | FIRM=자원 프로비저닝(5종), 본연구=이질(CB/Shed/Redirect/Scale/Brownout) |
-| `verifiedGraphSize` | RelatedWork | string | GRAF=6~10노드, AGQ=~13, 본연구=11 |
+| `verifiedGraphSize` | RelatedWork | string | GRAF=6~10노드, DeepScaler=10(Online Boutique), AGQ=~13, 본연구=13~14 |
 | `credibility` | RelatedWork | string | FIRM>GRAF>AGQ>GraphGRU |
 | `relevance` | RelatedWork | string | GraphGRU>AGQ>GRAF>FIRM |
 
@@ -121,8 +127,8 @@
 
 | 속성 | domain | range | 값 예 |
 |---|---|---|---|
-| `nodeCount` | Benchmark | integer | OnlineBoutique=11~12, SockShop=~13, TrainTicket=40~64 |
-| `hasBackingStore` | Microservice | string | cartservice=Redis, productcatalog=로컬JSON(복제본 불가) |
+| `nodeCount` | Benchmark | integer | OnlineBoutique=11~12(확장 구성 13~14), SockShop=~13, TrainTicket=40~64 |
+| `hasBackingStore` | Microservice | string | cartservice=Redis, productcatalog=로컬JSON(복제본 불가), orderservice(가칭)=PostgreSQL/HikariCP |
 | `symbol` | CostVariable | string | L, Dₐ, Rₐ, mₐ, κ, θₐ |
 | `tunedInExperiment` | CostVariable | boolean | true(실측 이월) |
 
@@ -139,3 +145,7 @@
 5. `GroundTruthLabel excludesFeature (self SLOViolation history)` — self-SLO feature 포함 시 위상 우회(위반).
 6. `EffectiveRisk` = `max(0, p̄_v − κ√u_v)` 이고 비용식의 `p` 는 반드시 이 값 — p를 "1−분산"으로 두면 위반(G4 버그 정정).
 7. `FailureProbability validates-by ECE`, `Uncertainty validates-by DropRate` — 두 축은 분리 검증(뭉뚱그리면 위반, H3).
+8. `Actuator` 는 정확히 **5종**이며 LLM 확장으로 개수가 바뀌지 않는다 — 노드 타입별로 갈리는 것은 `appliesAt`과 구현체이지 조치 자체가 아니다(E9). 4종으로 축소하면 위반.
+9. `CostFunction` 에 품질 축을 위한 별도 항을 두지 않는다 — 품질 저하 비용은 `Var_D`(disruption)에 들어간다. `w_q·Q` 형태의 신규 항을 두면 `θₐ` 유도가 깨지므로 위반(F4).
+10. 모든 `ComparisonTarget` 은 `lacksAxis ConfidenceTieredResponse` 여야 하고, `UtilizedTechnique`·`AdjacentWork` 는 세 비교축이 정의되지 않으므로 **5자 비교표에 넣지 않는다**(D20). 넣으면 같은 축 비교를 요구받아 위반.
+11. `LLMInferenceNode` 는 **검증 대상**이지 의사결정 주체가 아니다 — LLM이 조치를 결정하는 구조로 서술되면 위반(B7 방향 (A) 기각, D21).

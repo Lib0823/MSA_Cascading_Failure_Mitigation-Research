@@ -199,7 +199,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 - Brownout은 요청의 비핵심(optional) 부분을 dimmer로 차단해 품질을 낮추는 방식으로 부하를 던다. Traffic Shedding(요청 통째 거부)·Degraded-path Redirection(경로 변경)과 질적으로 다른 레버로, 조치 공간의 이질성을 넓힌다. Online Boutique에서는 frontend가 `adservice`/`recommendationservice`(비핵심 기능) 호출을 조건부로 생략하는 형태로 구현 가능하다 — 벤치마크에 실제 optional 경로가 존재해 실증 가능성이 높다(FIRM은 브라운아웃을 쓰지 않으며, 이 채택은 FIRM 근거와 무관하다. [challenges.md](../research/challenges.md) D14).
 - Degraded-path Redirection은 과부하 상태의 읽기 트래픽을 **읽기 전용 복제본(read-replica)으로 우회**해 primary 병목을 던다. Online Boutique에서 read-replica가 성립하는 지점은 `cartservice`가 backing store로 쓰는 **Redis**이다(`productcatalogservice`는 DB 없이 로컬 JSON을 읽어 복제본 개념이 성립하지 않으며, 이 경우 단순 스케일아웃과 구분되지 않는다). Redis primary/replica를 두고 **Envoy Redis proxy의 `read_policy`를 Istio EnvoyFilter로 주입**해 읽기를 replica로 라우팅하면 앱 코드 수정 없이(비침습) 조치가 트리거된다. 이는 primary에 커넥션을 더 쌓지 않고 상태성 읽기 병목을 더는 **비프로비저닝 조치**라, Scale-up이 역효과를 내는 상태성 병목(D2, §4-5)에서 대조적으로 효과를 낸다. Brownout(기능 자체를 생략)·Traffic Shedding(요청 거부)과 달리 **기능은 유지하되 일관성을 일시적으로 약화(stale read 허용)**하는 질적으로 다른 레버다. **단, Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시되어 있다.** Online Boutique의 `redis-cart`는 단일 인스턴스이므로, 이 경로를 쓰려면 **원본 서비스를 변형해야 한다** — `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다. 이는 §4-1이 확장 방식으로 (a)를 택하며 지킨 "원본 서비스와 호출 관계 보존" 전제(우려 6 방어의 토대)를 스스로 무너뜨린다. 따라서 **Degraded-path Redirection의 1차 실증 대상은 §4-1에서 추가하는 Postgres primary/replica**로 둔다 — 어차피 새로 붙이는 노드라 복제 구성이 원본 충실도를 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅은 표준 구성이다. Redis 경로는 Cluster 전환을 감수할 경우의 보조 대상으로 남긴다([challenges.md](../research/challenges.md) B6).
-- 시간이 부족할 경우 Circuit Breaker + Degraded-path Redirection 2종만 실증하고 나머지(Scale-up/Shedding/Brownout)는 "설계상 확장 가능"으로 남기는 옵션을 확보한다. 특히 Brownout은 앱 계측(필수/선택 분리)이 필요하므로 실증 우선순위는 코어 조치(CB) 뒤에 둔다. Degraded-path Redirection은 Postgres read replica로 구현 경로를 확보했다(위 참조).
+- 시간이 부족할 경우 **Degraded-path Redirection + Circuit Breaker + Brownout 3종**만 실증하고 나머지(Scale-up/Shedding)는 "설계상 확장 가능"으로 남기는 옵션을 확보한다([timeline.md](../research/timeline.md) 컷 우선순위와 동일). 3종을 남기는 이유는 **서로 성격이 다르기 때문**이다 — 경로 변경 / 차단 / 품질 저하로 갈려야 축소 후에도 "이질적 조치 공간"의 최소 실증이 성립한다. Degraded-path Redirection은 Postgres read replica로 구현 경로를 확보했다(위 참조).
 
 **조치별 적용 지점(Application Point)**: 조치를 적용하는 노드는 위험이 예측된 노드와 항상 같지 않다. 유입 부하를 줄이는 조치는 병목 노드 자신이 아니라 **그 노드를 호출하는 쪽**에 걸어야 효과가 나기 때문이다. 적용 지점은 탐색 대상이 아니라 조치 종류에 따라 **구조적으로 결정**되므로, 후보 집합 탐색(k-hop 상류 등)을 도입하지 않고 아래 사상(mapping)으로 고정한다(§2-E의 `apply_point(a, v)`, 결정 근거는 [challenges.md](../research/challenges.md) E7).
 
@@ -257,7 +257,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 5. 만료된 lease 회수(미갱신 시 자동 복귀)
 ```
 
-> `apply_point(a, v)` = 조치 a를 실제로 적용할 노드(§2-C 표). 위험 노드 v와 같지 않을 수 있다 — 예: v=adservice에 Brownout이 선택되면 적용 지점은 frontend다. **예측은 v에 대해, 조치는 `apply_point(a*, v)`에 대해** 이루어진다.
+> `apply_point(a, v)` = 조치 a를 실제로 적용할 노드(§2-C 표). **조치 종류와 노드 타입의 함수**이며 위험 노드 v와 같지 않을 수 있다 — 예: v=adservice(일반 서비스)에 Brownout이 선택되면 적용 지점은 호출자인 frontend지만, v=assistantservice(LLM 노드)에 Brownout이 선택되면 `max_tokens`는 서빙 노드 자신의 요청 파라미터이므로 적용 지점은 v 자신이다. **예측은 v에 대해, 조치는 `apply_point(a*, v)`에 대해** 이루어진다.
 
 **Tier 1 — 로컬 반사 루프 (상시, ms)** — CB·Shedding, GNN과 독립
 ```
@@ -354,7 +354,16 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 **라벨 단위 — 노드 레벨**: 각 서비스(노드)마다 위험 여부를 예측한다. GAT가 산출하는 노드별 임베딩에 **공유 per-node head**(모든 노드에 동일한 MLP)를 적용해 파라미터가 노드 수와 무관하게 고정된다(§2-A, GRAF의 flatten과 대비되는 확장성 근거). 노드 레벨 출력은 Policy Engine이 "어느 서비스가 위험한지"를 모델에서 직접 얻게 하며(조치를 **적용할** 지점은 여기서 조치 종류에 따라 파생된다 — §2-C 적용 지점 표), 신뢰도 구간별 대응도 서비스 단위로 세밀화된다.
 
-**위험(positive) 정의 — SLO 위반**: 노드 v가 시점 t에 positive ⟺ [t, t+Δ] 안에 v가 SLO 위반(P99 지연 > 임계 또는 에러율 > 임계) 상태에 빠진다. 임계값은 서비스별 baseline으로 산정한다. CPU/메모리/요청률/스레드풀·커넥션풀 사용률 등 리소스 지표는 라벨이 아니라 **입력 feature**(선행 지표)로 두어 라벨-입력 누수를 피한다.
+**위험(positive) 정의 — SLO 위반**: 노드 v가 시점 t에 positive ⟺ [t, t+Δ] 안에 v가 SLO 위반 상태에 빠진다. **위반 판정 지표는 노드 타입에 따라 다르다.**
+
+| 노드 타입 | SLO 위반 판정 |
+|---|---|
+| 일반 서비스 | P99 응답시간 > 임계 **또는** 에러율 > 임계 |
+| LLM 추론 노드 | **TTFT** > 임계 **또는** **TPOT** > 임계 **또는** 추론 실패·타임아웃률 > 임계 |
+
+라벨 자체는 두 경우 모두 `y_v(t) ∈ {0,1}`의 동일한 이진값이므로 **공유 per-node head 구조가 그대로 유지된다** — 달라지는 것은 라벨을 산출하는 지표이지 라벨의 형태가 아니다. 이는 노드 피처를 의미 기준 공통 슬롯으로 통일한 것(§2-A)과 같은 원리다.
+
+임계값은 서비스별 baseline으로 산정한다. LLM 노드는 신규 노드라 원본 관측값이 없으므로 무부하 상태의 TTFT·TPOT 실측값의 일정 배수를 기준으로 삼고 근거를 §4-4에 명시한다. CPU/메모리/요청률/스레드풀·커넥션풀 사용률 등 리소스 지표는 라벨이 아니라 **입력 feature**(선행 지표)로 두어 라벨-입력 누수를 피한다.
 
 **전파성 조건(refinement)**: positive는 "전파에 기인한 위반"으로 한정한다 — v의 SLO 위반이 이웃(상류) 서비스의 선행 열화에 뒤따를 때만 positive로 본다. 랜덤 주입된 1차 장애의 onset(외생적이라 입력에 선행 신호가 없음)은 positive에서 제외/유예한다. 이로써 모델은 위상을 통해서만 예측 가능한 **전파 신호**를 학습하며, 이것이 시계열 전용 모델(LSTM) 대비 우위의 핵심 근거가 된다.
 
@@ -414,7 +423,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 | # | 시나리오 | 주입 방법 | 전파 경로 | 기대 최적 조치 | 검증 대상 |
 |---|---|---|---|---|---|
-| S1 | DB 커넥션풀 소진 | HikariCP `maximumPoolSize` 축소 + 슬로우 쿼리 | Spring/Postgres 노드 → 상류 | Degraded-path Redirection (replica 우회) | 자원할당 접근의 역효과 (Thundering Herd, D2) |
+| S1 | DB 커넥션풀 소진 (§4-5 상세) | HikariCP `maximumPoolSize` 축소 + 슬로우 쿼리 | Spring/Postgres 노드 → 상류 | Degraded-path Redirection (replica 우회) | 자원할당 접근의 역효과 (Thundering Herd, D2) |
 | S2 | LLM 노드 포화 | 긴 프롬프트 버스트 (Locust) | assistantservice → frontend 스레드풀 고갈 | `p_eff`가 낮을 때는 `θₐ`가 낮은 Brownout만 발동, 높아지면 Redirection·Shedding까지 열림 | 품질-지연 트레이드오프, `θₐ` 차등의 실효 |
 | S3 | 호출 증폭 연쇄 | 요청당 카탈로그 조회 횟수 `N` 증가 | assistantservice → 커넥션풀 → frontend (2단) | Circuit Breaker 또는 Shedding | **위상 인지 필요성 — `apply_point` ≠ 위험 노드** |
 
@@ -441,7 +450,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 ### 우려 6 — "왜 이렇게 작은 MSA 벤치마크를 썼는가?"
 
 3단 논리:
-1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했고, **DeepScaler(ASE 2023)도 Online Boutique(10개 서비스)를 3종 벤치마크 중 하나로 사용**했다 — 최상위 venue 두 곳에서 같은 벤치마크가 채택된 전례다. (본 연구는 원본 서비스와 호출 관계를 보존한 채 Spring/Postgres 노드 1개를 추가한 확장 구성이라, 원본 위상이 부분그래프로 그대로 남는다 — §4-1.) GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
+1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했고, **DeepScaler(ASE 2023)도 Online Boutique(10개 서비스)를 3종 벤치마크 중 하나로 사용**했다 — 최상위 venue 두 곳에서 같은 벤치마크가 채택된 전례다. (본 연구는 원본 서비스와 호출 관계를 보존한 채 Spring/Postgres 노드와 LLM 추론 노드를 각 1개씩 추가한 확장 구성이라, 원본 위상이 부분그래프로 그대로 남고 vanilla 구성을 병행 실행한다 — §4-1·§4-3.) GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
 2. **의도적 스코프 설정**: §5에 명시된 대로, 본 연구의 기여는 "위상 정보 반영의 효과 검증"이지 "초대규모 프로덕션 스케일링 검증"이 아니며, 후자는 후속 연구로 명시적으로 남긴다.
 3. **구조적 확장성**: GRAF는 readout에서 노드 임베딩을 flatten하는 방식이라 모델 파라미터가 노드 수에 선형 비례하고, 이를 스스로 확장성 한계로 인정한다(ToN 2024판 Discussion). 본 연구는 flatten이 아닌 공유 per-node head 기반 노드 레벨 예측을 채택해(§2-A 표) 그래프 크기가 달라져도 모델 구조·파라미터 수가 그대로 유지되도록 설계했다 — "검증은 작은 규모에서 했지만, 모델 구조 자체는 큰 규모에도 적용 가능하도록 설계했다"는 근거.
 

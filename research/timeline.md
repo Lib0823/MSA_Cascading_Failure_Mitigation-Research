@@ -56,7 +56,7 @@
 4. vanilla 커버리지 대조 ([challenges.md](challenges.md) C4)
 5. Actuator 5종 → 3종(Degraded-path Redirection + Circuit Breaker + Brownout)으로 축소, 나머지(Scale-up/Shedding)는 "확장 가능 설계"로만 서술. **남기는 조치는 서로 다른 성격**(경로 변경 / 차단 / 품질 저하)이어야 최소한의 이질성을 보인다.
 6. **장애 시나리오 S2(LLM 노드 포화)** — ⚠️ **여기까지 왔으면 컷이 아니라 LLM 확장 철회를 검토할 것.** S2는 LLM 확장의 유일한 고유 실증이며(S1·S3는 LLM 없이도 성립), 이것을 자르면 확장을 유지할 실익이 없다 ([docs/proposal.md](../docs/proposal.md) §4-6)
-5. 외부 피드백 반영으로 추가된 실증 항목([challenges.md](challenges.md) H) — 시계열 보강 GAT ablation(스냅샷 전용 대비), ECE/Drop Rate 측정, Degraded-path Redirection의 read replica 세팅(Postgres primary/replica — B6). 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택(이론적 필수는 아니나 실험 매트릭스를 키움).
+7. 외부 피드백 반영으로 추가된 실증 항목([challenges.md](challenges.md) H) — 시계열 보강 GAT ablation(스냅샷 전용 대비), ECE/Drop Rate 측정, Degraded-path Redirection의 read replica 세팅(Postgres primary/replica — B6). 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택(이론적 필수는 아니나 실험 매트릭스를 키움).
 
 ## 마일스톤
 

@@ -433,5 +433,6 @@ msacf:Concern10 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "모델 라
 msacf:Concern11 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "HW-Router와 뭐가 다른가 - 4축 구분 + S3 (D18)"@ko .
 msacf:Concern12 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "GraphRouter와 겹치지 않나 - 그래프 정의가 다름 (D19)"@ko .
 msacf:Concern13 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "소형 모델 실험이 일반화되나 - 검증 대상은 티어 간 상대적 격차 (5 한정)"@ko .
-msacf:Concern14 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "LLM 응답 품질을 어떻게 측정했나 - 측정 안 함. D_downgrade 정책 파라미터 + theta 교차점 (F4)"@ko .
+msacf:Concern14 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "LLM 응답 품질을 어떻게 측정했나 - 측정 안 함.
+msacf:Concern15 a owl:NamedIndividual , msacf:Concern ; rdfs:comment "LLM으로 오토스케일링을 결정하는 연구(ORACL)가 있는데 왜 GNN인가 - distinguishedFrom 5축으로 답 (D21)"@ko . D_downgrade 정책 파라미터 + theta 교차점 (F4)"@ko .
 msacf:DD_TwoTier a owl:NamedIndividual , msacf:DesignDecision ; rdfs:label "2계층 제어"@ko .

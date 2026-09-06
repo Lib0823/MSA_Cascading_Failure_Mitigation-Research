@@ -362,13 +362,15 @@ loadgenerator
 - Kabir, A., Xue, J., Zheng, M., Lou, Q. *HW-Router: Hardware-Aware Routing for Scalable Multi-LLM Serving.* Design Automation Conference (DAC). arXiv:2608.14575.
 - Feng, T., Shen, Y., You, J. (2025). *GraphRouter: A Graph-based Router for LLM Selections.* ICLR 2025. arXiv:2410.03834.
 
-**확인 대기 (낮은 우선순위)**
+**확인 완료 (2026-09-06) — 확인 대기 목록 해소**
 
-| 문헌 | 성격 |
-|---|---|
-| Graph-PHPA (CloudNet 2022) — LSTM+GNN 선제적 HPA | D1에서 언급, 원문 미확인 |
-| ORACL (2026) — LLM CoT 기반 마이크로서비스 오토스케일링 | 인접 |
-| MicroRemed 등 remediation 벤치마크 (2025~2026) | 인접 |
+| 문헌 | 확인 결과 | 처리 |
+|---|---|---|
+| **ORACL** (Bai, Islam, Xu, Buyya, IEEE TSC 2026, arXiv:2602.05292) | LLM CoT로 근본원인 식별 + 행동공간 가지치기 + 자원 할당 결정. **본 연구가 기각한 방향 (A)를 실제로 수행한 논문** | **인접 연구로 §3-3(c) 편입** (D21) |
+| **MicroRemed** (arXiv:2511.01166) | LLM remediation 능력 라이브 벤치마크. 최저 난이도에서도 단독 LLM 50% 미만 | 방향 (A) 기각의 **외부 근거**로 인용 (D21) |
+| **Graph-PHPA** (Nguyen et al., IEEE CloudNet 2022, arXiv:2209.02551) | LSTM+GNN 결합 선제적 HPA, Bookinfo, 규칙기반 baseline | **비교표 미편입.** LSTM 독립 baseline 설계의 대비 근거로 §4-3에 활용 (D22) |
+
+> 원문 미확인 상태로 남은 인용은 **없다**.
 
 ---
 

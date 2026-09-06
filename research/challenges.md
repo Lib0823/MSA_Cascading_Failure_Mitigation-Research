@@ -83,7 +83,7 @@
 
 ### B7. 벤치마크 확장 — LLM 추론 서비스(assistantservice) 추가 [채택]
 - **문제**: 대상 시스템을 일반 서비스만으로 둘지, LLM 추론 노드를 포함한 혼합 그래프로 둘지 결정.
-- **의사결정 과정**: 3안 비교. (A) LLM 에이전트를 Policy Engine으로 사용 — 비결정적 출력이라 반복 실험 기반 정량 비교·재현성 확보 불가, "GNN과 LLM을 왜 둘 다 쓰나"의 설계 정당화 곤란으로 **기각**. (B) LLM 서빙 인프라 전용 프레임워크로 전면 전환 — 연구 분야가 LLM serving systems(vLLM·SGLang 계열)로 이동해 기존 확정 사항 대부분(벤치마크·비교 논문 5편·커넥션풀 논거·GAT 근거)이 무효화되고 심사 요구 수준이 KCI 목표 대비 과도해져 **기각**. (C) 혼합 그래프(일반 서비스 + LLM 노드 1개) — **채택**.
+- **의사결정 과정**: 3안 비교. (A) LLM 에이전트를 Policy Engine으로 사용 — 비결정적 출력이라 반복 실험 기반 정량 비교·재현성 확보 불가, "GNN과 LLM을 왜 둘 다 쓰나"의 설계 정당화 곤란으로 **기각**. (사후 확인: 이 방향을 실제로 수행한 ORACL조차 LLM 결정을 행동 공간 가지치기와 정책 제약으로 감쌌고, MicroRemed 벤치마크는 단독 LLM의 remediation 정확도가 최저 난이도에서도 50% 미만임을 보고한다 — D21.) (B) LLM 서빙 인프라 전용 프레임워크로 전면 전환 — 연구 분야가 LLM serving systems(vLLM·SGLang 계열)로 이동해 기존 확정 사항 대부분(벤치마크·비교 논문 5편·커넥션풀 논거·GAT 근거)이 무효화되고 심사 요구 수준이 KCI 목표 대비 과도해져 **기각**. (C) 혼합 그래프(일반 서비스 + LLM 노드 1개) — **채택**.
 - **결론**: `assistantservice` 1개를 추가한다. frontend 하위 + productcatalog 상위에 배치해 상류(스레드풀 고갈)·하류(커넥션풀 소진) 양방향 전파 경로를 만든다. 원본 서비스와 호출 관계는 보존하므로 원본 위상이 부분그래프로 남아 우려 6 방어가 유지된다.
 - **주장 범위의 한정 (중요)**: 세 축은 **LLM 없이도 성립한다.** "LLM이 있어야 세 축이 필연이 된다"고 주장하지 않는다 — 심사에서 *"LLM 없이도 필요하다면서 왜 넣었나"*로 되돌아온다. 정확한 위치는 **"세 축의 적용 범위가 동질 워크로드에 한정되지 않음을 보이는 검증 대상"**이다. [docs/proposal.md](../docs/proposal.md) §1·§4-1에 반영.
 - **잔여(미확정)**: assistantservice 호출 비율, 프롬프트 소스·길이 분포, 카탈로그 조회 횟수 `N`의 정상 상태값.
@@ -236,6 +236,20 @@
 ### D20. 관련연구 3분할 구조 확정
 - **문제**: LLM 확장으로 검토 문헌이 5편 → 9편으로 늘었다. 성격이 다른 문헌을 하나의 비교표에 넣으면 같은 축으로 비교하라는 요구를 받아 방어 부담이 급증한다.
 - **결론**: 3분할로 격리한다 — **(1) 비교 대상**(GRAF·FIRM·DeepScaler·AGQ·GraphGRU, 5자 비교표) / **(2) 활용 기법**(FrugalGPT·RouteLLM) / **(3) 인접 연구**(HW-Router·GraphRouter). **5자 비교표에는 LLM 라우팅 연구를 추가하지 않는다** — 세 축 자체가 그들의 문제 설정에 정의되지 않기 때문이다. [docs/proposal.md](../docs/proposal.md) §3에 반영.
+
+### D21. ORACL(TSC 2026) — LLM 기반 오토스케일링 의사결정, 인접 연구로 구분
+- **문제**: LLM 확장(B7) 채택으로 "LLM + 마이크로서비스 오토스케일링" 교집합 문헌 확인이 필요해졌다. 확인 대기 목록의 ORACL이 여기 해당한다.
+- **확인 (원문 확인 완료, 2026-09-06)**: Bai, H., Islam, M. T., Xu, M., Buyya, R. *ORACL: Optimized Reasoning for Autoscaling via Chain of Thought with LLMs for Microservices.* **IEEE Transactions on Services Computing 2026**, arXiv:2602.05292 (Melbourne·SIAT). 런타임 텔레메트리를 자연어 상태 서술로 변환 → LLM이 추론 트레이스 생성 → 근본 원인 식별 + **행동 공간 가지치기** → 정책 제약 하 자원 할당. 근본원인 정확도 15%↑, 학습 24배 가속, QoS 6%↑.
+- **왜 중요한가**: 본 연구가 **B7에서 명시적으로 기각한 방향 (A)**("LLM 에이전트를 Policy Engine으로 사용")를 실제로 수행한 논문이다. 저자 Rajkumar Buyya는 클라우드 컴퓨팅 분야 최고 피인용 연구자 중 하나이고 TSC도 견실한 저널이라, 심사에서 *"LLM으로 의사결정하는 연구가 이미 있는데 왜 GNN인가"*가 제기될 수 있다.
+- **분석 — 오히려 기각 근거를 강화한다**: ORACL조차 LLM에 결정을 온전히 맡기지 않고 **행동 공간 가지치기 + 정책 제약**으로 감쌌다. 비결정적 출력을 제어 루프에 넣을 때의 부담을 보여준다. 구분선 5축 — 의사결정 주체(LLM 추론 vs 비용함수 argmin) / 조치 공간(자원 할당 vs 질적 이질 5종) / 신뢰도 축(없음 vs `θₐ`+Safety Guard) / 재현성(LLM 출력 의존 vs 결정적) / **LLM의 위치(의사결정 도구 vs 검증 대상 노드)**.
+- **보강 근거**: **MicroRemed**(arXiv:2511.01166) — LLM의 마이크로서비스 remediation 능력을 라이브 환경에서 평가하는 벤치마크로, **가장 쉬운 난이도에서도 단독 LLM이 50% 정확도를 넘지 못한다**고 보고. 조치 실행을 LLM에 맡기는 접근의 현재 한계를 보이는 실증이며 방향 (A) 기각의 외부 근거로 인용 가능하다. (후속 E2E-REME는 FSE 2026 게재 — 분야가 활발함을 보여준다.)
+- **결론**: 비교표에는 넣지 않고 **인접 연구로 §3-3(c)에 정면 기재**한다. 5축 구분표와 함께 "본 연구에서 LLM은 조치를 결정하는 주체가 아니라 예측·조치의 **대상이 되는 노드**"라는 위치 차이를 핵심 구분선으로 제시한다. [docs/proposal.md](../docs/proposal.md) §3-3(c)·참고문헌에 반영.
+
+### D22. Graph-PHPA(CloudNet 2022) — 확인 완료, 비교표 미편입
+- **문제**: D1에서 언급만 하고 원문을 확인하지 않은 채 남아 있던 문헌.
+- **확인 (2026-09-06)**: Nguyen et al. *Graph-PHPA: Graph-based Proactive Horizontal Pod Autoscaling for Microservices using LSTM-GNN.* IEEE CloudNet 2022, arXiv:2209.02551 (DCU). LSTM과 GNN을 결합해 선제적 HPA 수행. **Bookinfo** 벤치마크에서 규칙 기반 K8s를 baseline으로 평가.
+- **판정**: 축 ①(위상 인지 예측) + 자원 할당 단일 조치 + 신뢰도 없음으로 **GRAF·DeepScaler·AGQ·GraphGRU와 같은 위치**다. venue(CloudNet)와 검증 범위(Bookinfo, 규칙 기반 단일 baseline)가 이미 비교표에 있는 논문들보다 좁아 **비교표 편입은 불필요**하다 — D16(DeepScaler)과 달리 새로 채우는 자리가 없다.
+- **활용 가치**: Graph-PHPA는 LSTM과 GNN을 **결합**했으나 본 연구는 LSTM을 **독립 baseline**으로 둔다. 결합하면 개선이 시간성에서 온 것인지 위상에서 온 것인지 귀속할 수 없기 때문이며, 이 대비가 §4-3 baseline 3의 설계 근거가 된다. [docs/proposal.md](../docs/proposal.md) §4-3·참고문헌에 반영.
 
 ---
 

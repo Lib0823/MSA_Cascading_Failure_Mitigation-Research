@@ -314,6 +314,22 @@ venue가 DAC(하드웨어 설계 자동화)이고 대상이 서빙 플랫폼 내
 
 **(b) GraphRouter** (Feng, Shen, You / UIUC, ICLR 2025, arXiv:2410.03834): 태스크·질의·LLM 이종 그래프에 엣지 예측을 적용해 각 LLM 응답의 효과와 비용을 예측하는 inductive 프레임워크. 구분 논리는 *"GraphRouter의 그래프는 질의–모델 적합도 관계이며 서비스 호출 토폴로지가 아니다. 본 연구의 예측 대상은 라우팅 적합도가 아니라 SLO 위반 위험의 전파다."* 저자가 GNN 분야 저명 연구자이고 venue가 ICLR이므로 **구분 서술을 누락하면 리스크가 가장 큰 문헌**이다.
 
+**(c) LLM 기반 오토스케일링 의사결정 — ORACL** (Bai, Islam, Xu, Buyya / Melbourne·SIAT, IEEE Transactions on Services Computing 2026, arXiv:2602.05292): 런타임 텔레메트리(파드·레플리카·CPU·메모리·지연·SLO·장애 신호)를 자연어 상태 서술로 변환하고 LLM이 해석 가능한 중간 추론 트레이스를 생성해, 근본 원인을 식별하고 **행동 공간을 가지치기한 뒤** 정책 제약 하에서 자원 할당을 결정한다. 근본원인 식별 정확도 15% 향상, 학습 24배 가속, QoS 6% 개선을 보고한다.
+
+**이 연구가 가장 직접적으로 겹치는 지점**은 "LLM을 의사결정에 쓴다"는 발상이며, 본 연구가 [challenges.md](../research/challenges.md) B7에서 **명시적으로 기각한 방향 (A)**에 해당한다. 구분과 기각 근거는 아래와 같다.
+
+| 축 | ORACL | 본 연구 |
+|---|---|---|
+| 의사결정 주체 | LLM 추론 트레이스 | GNN 예측 + 비용함수 `argmin` |
+| 조치 공간 | 자원 할당(CPU·메모리·레플리카) | 질적 이질 5종(프로비저닝 + 비프로비저닝) |
+| 신뢰도 축 | 없음 | `θₐ` 유도 + Safety Guard |
+| 결정의 재현성 | LLM 출력에 의존 — 정책 제약으로 감싸야 함 | 결정적. 반복 실험 간 동일 입력 → 동일 조치 |
+| LLM의 위치 | **의사결정 도구** | **검증 대상 노드**(§1) |
+
+주목할 점은 ORACL조차 LLM에 결정을 온전히 맡기지 않고 **"행동 공간 가지치기 + 정책 제약"**으로 감쌌다는 것이다. 이는 비결정적 출력을 제어 루프에 넣을 때의 부담을 보여주며, 본 연구가 방향 (A)를 기각한 근거와 일치한다. 관련 벤치마크인 **MicroRemed**(arXiv:2511.01166)는 LLM의 마이크로서비스 remediation 능력을 라이브 환경에서 평가했는데, **가장 쉬운 난이도에서도 단독 LLM이 50% 정확도를 넘지 못했다**고 보고한다 — 조치 실행을 LLM에 맡기는 접근의 현재 한계를 보여주는 실증이다.
+
+> 본 연구에서 LLM은 **조치를 결정하는 주체가 아니라 예측·조치의 대상이 되는 노드**다. 이 위치 차이가 ORACL 계열과의 근본적 구분선이다.
+
 **선행연구 신뢰도 검증**
 
 - **GRAF**: KAIST INA Lab(지도교수 Dongsu Han), ACM CoNEXT 2021(승인율 22.7%) → IEEE/ACM Transactions on Networking 2024 확장 게재. 산업 협업(Toyota) 포함.
@@ -381,7 +397,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 1. 반응형 K8s HPA만 사용
 2. 규칙 기반 임계치 Policy
-3. LSTM 기반 예측 + 동일 Policy Engine (GNN 채택 근거 검증용)
+3. LSTM 기반 예측 + 동일 Policy Engine (GNN 채택 근거 검증용). **선행연구는 LSTM과 GNN을 결합하는 쪽을 택했으나**(Graph-PHPA, IEEE CloudNet 2022 — LSTM-GNN 기반 선제적 HPA), 본 연구는 **위상 정보의 기여를 분리 측정하기 위해 LSTM을 독립 baseline으로 둔다.** 결합하면 개선이 시간성에서 온 것인지 위상에서 온 것인지 귀속할 수 없기 때문이다(§4-3 ablation 8과 같은 통제 원리).
 4. GRAF류 baseline: 위험 감지 시 자원할당/스케일업만 수행하는 정책 — 커넥션풀 고갈 시나리오에서 본 연구의 Policy Engine과 비교해 "자원할당 중심 접근의 역효과"를 실증
 5. [선택, 시간 허용 시] FIRM류 baseline: 조치 공간은 본 연구와 같으나 위상(그래프)을 반영하지 않는 예측기로 구동하는 정책 — 위상 인지 여부의 기여를 독립적으로 검증하는 2×2 실험 설계 완성
 6. [Ablation] **신뢰도 미사용**: 동일 GNN 예측을 쓰되 `θₐ` 게이팅 없이 `p̄`만으로 argmin — 신뢰도 축의 단독 기여를 분리한다. 유일한 신규 축이므로 제거 시 성능 저하를 정량으로 보이는 것이 기여 입증의 핵심이며, **컷라인에서 가장 마지막에 잘라야 할 실험**이다.
@@ -581,6 +597,9 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 - **Gal & Ghahramani (2016)**, "Dropout as a Bayesian Approximation", ICML 2016. MC Dropout을 처음 제안한 논문. 신경망 추론 시 Dropout을 끄지 않고 유지한 채 여러 번 반복 추론함으로써 베이지안 근사 방식으로 모델의 불확실성을 추정하는 기법을 제안한다. 본 연구와의 관계: 신뢰도 산출 방식 후보 비교 시 MC Dropout 측 근거로 검토했으나, 추론 시 반복 순전파가 필요해 즉각 반응이 핵심인 본 연구에는 불리하다고 판단해 최종 미채택. [arXiv](https://arxiv.org/abs/1506.02142) · [PMLR](https://proceedings.mlr.press/v48/gal16.html)
 - **Lakshminarayanan, Pritzel & Blundell (2017)**, NeurIPS 2017. Deep Ensemble을 제안한 논문. 서로 다르게 초기화된 여러 신경망을 독립적으로 학습시킨 뒤 예측값들의 분산으로 불확실성을 추정하는 기법을 제시하며, MC Dropout과의 비교 실험을 통해 Deep Ensemble이 더 신뢰할 수 있는 불확실성 추정치를 제공함을 실증했다. 본 연구와의 관계: 신뢰도 산출 방식의 핵심 채택 근거 논문. [arXiv](https://arxiv.org/abs/1612.01474) · [NeurIPS](https://papers.nips.cc/paper/2017/hash/9ef2ed4b7fd2c810847ffa5fa85bce38-Abstract.html)
 - **Meng, C., Song, S., Tong, H., Pan, M. & Yu, Y. (2023)**, "DeepScaler: Holistic Autoscaling for Microservices Based on Spatiotemporal GNN with Adaptive Graph Learning", IEEE/ACM ASE 2023. EM 기반 adaptive graph learning으로 서비스 의존 그래프(affinity matrix)를 학습하고, attention 기반 GCN으로 시공간 특징을 추출해 상호작용 서비스의 자원을 동시에 재구성한다(의존관계로 인한 cascading effect 회피가 명시적 목표). Bookinfo·Online Boutique·Train-Ticket에서 SLA 위반 평균 41% 감소. 코드 공개. 본 연구와의 관계: **축 ①(위상 인지 예측)에서 가장 정교한 비교 대상**이며 벤치마크도 겹친다. 구분선은 (1) 예측 대상이 자원 수치 회귀 vs SLO 위반 위험 분류, (2) 조치 공간이 자원 프로비저닝 단일 vs 질적 이질 5종, (3) 신뢰도 축 부재다(우려 8, D16). [arXiv](https://arxiv.org/abs/2309.00859) · [ACM DL](https://dl.acm.org/doi/10.1109/ASE56229.2023.00038) · [코드](https://github.com/SYSU-Workflow-Lab/DeepScaler)
+- **Bai, H., Islam, M. T., Xu, M. & Buyya, R. (2026)**, "ORACL: Optimized Reasoning for Autoscaling via Chain of Thought with LLMs for Microservices", *IEEE Transactions on Services Computing*. 런타임 텔레메트리를 자연어로 변환해 LLM의 chain-of-thought 추론으로 근본 원인을 식별하고 자원 할당을 결정한다. 본 연구와의 관계: **인접 연구**(§3-3c). LLM을 의사결정 주체로 쓰는 방향이며, 본 연구가 B7에서 기각한 방향 (A)에 해당한다. 조치 공간이 자원 할당 단일이고 신뢰도 축이 없다는 점, LLM의 위치가 의사결정 도구 대 검증 대상 노드로 갈린다는 점이 구분선이다. [arXiv](https://arxiv.org/abs/2602.05292)
+- **"MicroRemed: Benchmarking LLMs in Microservices Remediation"** (arXiv:2511.01166). 진단 리포트에서 실행 가능한 Ansible 플레이북을 생성해 장애 시스템을 자율 복구하는 능력을 평가하는 **라이브 인터랙티브 벤치마크**. 실제 마이크로서비스를 기동하고 장애를 주입해 복구 후 검증까지 자동화한다. 가장 쉬운 난이도에서도 단독 LLM이 50% 정확도를 넘지 못한다고 보고. 본 연구와의 관계: 경쟁 프레임워크가 아니라, **조치 실행을 LLM에 맡기는 접근의 한계를 보이는 근거**로 §3-3(c)에서 인용. [arXiv](https://arxiv.org/abs/2511.01166)
+- **Nguyen et al. (2022)**, "Graph-PHPA: Graph-based Proactive Horizontal Pod Autoscaling for Microservices using LSTM-GNN", IEEE CloudNet 2022. LSTM과 GNN을 결합해 마이크로서비스 자원을 선제 할당한다. Bookinfo에서 규칙 기반 K8s 대비 평가. 본 연구와의 관계: 축 ①(위상 인지 예측) + 자원 할당 단일 조치로 GRAF·DeepScaler 계열과 같은 위치이며 비교표에 별도 편입하지 않는다. 다만 **LSTM과 GNN을 결합했다는 점**이 본 연구가 LSTM을 독립 baseline으로 두는 설계(§4-3)의 대비 근거가 된다. [arXiv](https://arxiv.org/abs/2209.02551)
 - **Chen, L., Zaharia, M. & Zou, J. (2024)**, "FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance", *Transactions on Machine Learning Research (TMLR)*. 저렴한 모델부터 순차 질의하고 응답 신뢰도가 임계값 미달일 때만 상위 모델로 escalate하는 LLM 캐스케이드. 본 연구와의 관계: **활용 기법**(§3-2) — Degraded-path Redirection의 구현 근거이며 경쟁 대상이 아니다. [arXiv](https://arxiv.org/abs/2305.05176)
 - **Ong, I., Almahairi, A., Wu, V., Chiang, W.-L., Wu, T., Gonzalez, J. E., Kadous, M. W. & Stoica, I. (2025)**, "RouteLLM: Learning to Route LLMs with Preference Data", ICLR 2025. 인간 선호도 데이터로 학습한 라우터가 강/약 모델을 이진 선택한다. 본 연구와의 관계: 위와 같은 활용 기법. 판단 근거가 질의 난이도이지 시스템 부하가 아니라는 점이 본 연구와의 경계다. [arXiv](https://arxiv.org/abs/2406.18665)
 - **Kabir, A., Xue, J., Zheng, M. & Lou, Q.**, "HW-Router: Hardware-Aware Routing for Scalable Multi-LLM Serving", Design Automation Conference (DAC). 큐 길이·KV 캐시 사용률·최근 TTFT/TPOT를 경량 지연 예측기에 입력해 SLO 인지 라우팅을 수행한다. 본 연구와의 관계: **인접 연구**(§3-3a). 관측 범위가 단일 LLM 서비스 내부이고 반응형이며 조치 공간이 라우팅 단일이다. [arXiv](https://arxiv.org/abs/2608.14575)

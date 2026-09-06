@@ -13,7 +13,7 @@
 
 ## 문제 정의
 
-관련 선행연구(GRAF, FIRM, AGQ, GraphGRU)를 "예측 모델의 위상 인지 여부", "조치 공간의 이질성", "신뢰도 구간별 대응 여부"라는 세 축으로 분해해 재검토한 결과, 네 연구 모두 세 축 중 최소 하나 이상을 다루지 않고 있음을 확인했다. 특히 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조이며, **신뢰도 구간별 대응**은 문헌상 비어 있는 자리다.
+관련 선행연구(GRAF, FIRM, AGQ, GraphGRU)를 "예측 모델의 위상 인지 여부", "조치 공간의 이질성", "신뢰도 구간별 대응 여부"라는 세 축으로 분해해 재검토한 결과, 네 연구 모두 세 축 중 최소 하나 이상을 다루지 않고 있음을 확인했다. 특히 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조이며, **신뢰도 구간별 대응**은 장애 예측·자원 관리 도메인에서 비어 있는 자리다.
 
 ## 연구 목적
 
@@ -22,9 +22,9 @@
 ## 연구 방법
 
 - **예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. 노드 feature에 시계열 통계량을 주입(TA-GAT)해 정적 그래프 위에서 시간성까지 학습.
-- **의사결정 계층**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine.
+- **의사결정 계층**: 기대비용 최소화 비용함수로 조치를 선택하는 Policy Engine. 신뢰도 구간(고/중/저)은 손으로 긋는 것이 아니라 조치별 임계값 `θₐ`가 비용함수에서 유도되어 자동 생성된다.
 - **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
-- **실험**: Online Boutique(11~12개 서비스) 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
+- **실험**: Online Boutique(11~12개 서비스) + Spring/PostgreSQL 서비스 1개 추가(총 12~13개) 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
 
 자세한 아키텍처 설계와 근거는 [docs/proposal.md](../docs/proposal.md) §2, 비교 실험 설계는 §4를 참고.
 

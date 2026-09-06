@@ -57,6 +57,19 @@
 - **확인(AGQ)**: 메인 비교 실험(Table 3, HAB/MMN/AWS/SLO 등 실제 경쟁 베이스라인과 신뢰구간까지 명시한 핵심 결과)은 Sock Shop(~13개 노드) 규모에서 수행. "수백 개 노드" 규모의 LinkedIn 실험은 메인 베이스라인이 아닌 DCRNN·T-GCN 두 GNN 모델과만 비교한 보조 실험이며, 실제 LinkedIn 데이터가 아니라 공개 아키텍처 설명을 참고해 자체 시뮬레이션한 비공개·비재현 환경.
 - **결론**: GNN 기반 선행연구(GRAF, AGQ)의 실질적 핵심 검증 규모는 모두 본 연구의 11개 노드와 같은 자릿수(6~13개)이며, 본 연구가 유독 작은 것이 아님. "AGQ는 대규모에서 검증했다"는 인상은 메인 결과가 아닌 비재현 보조 실험에서 비롯된 것이라 근거로서의 무게가 약함. [docs/proposal.md](../docs/proposal.md) §3, 우려 6에 반영.
 
+### B6. Spring/PostgreSQL 서비스 추가 — 스코프 정합 + 상태성 병목 이중화
+- **문제**: 세 가지가 걸려 있었다. **당초 이 항목의 출발점이었던 "Online Boutique에 상태성 병목을 실증할 대상이 없다"는 주장은 사실이 아니다** — §4-5에 cartservice→Redis 경로가 주입 방법까지 명시되어 있었다. 아래가 실제 문제다.
+  0. **Read Redirection의 구현 경로 미검증 (1순위 근거)**: [timeline.md](timeline.md) 컷 우선순위상 최후까지 남기는 Actuator 2종은 CB + Read Redirection이다. 그런데 Read Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 6 방어의 토대)과 정면으로 충돌한다. 즉 최소 실증 세트의 절반이, 원본을 건드려야만 성립하는 경로에 걸려 있었다. (하드웨어 부담이 아니라 **벤치마크 충실도**가 쟁점이다.)
+  1. **스코프 불일치**: [docs/proposal.md](../docs/proposal.md) §5는 "Thread-per-request 모델 한정 / Java·Spring 실증 한정"을 선언하고 §4-4는 평가지표에 "톰캣 스레드 덤프"를 넣었는데, **Online Boutique 원본에 이를 충족하는 서비스가 없다.** cartservice는 C#/.NET이고, 유일한 Java 서비스인 adservice는 gRPC라 서블릿 컨테이너가 아니다. 즉 현재 구성으로는 선언한 스코프와 지표를 실증할 수 없었다.
+  2. **상태성 병목 단일 지점**: 핵심 차별점(D2, Thundering Herd)의 실증 지점이 cartservice→Redis 하나뿐이라, 그 시나리오가 실패하면 대체재가 없다.
+- **확인**: Online Boutique 원본 서비스 구성 기준(frontend·checkoutservice·productcatalogservice·shippingservice는 Go, recommendationservice·emailservice는 Python, currencyservice·paymentservice는 Node.js, cartservice는 C#, adservice는 Java/gRPC). **본 확인은 벤치마크 서비스 목록 기준이며, 실증 착수 전 저장소에서 재확인 대상.**
+- **의사결정 과정**: 도입 방식 2안 비교.
+  - **(a) 신규 서비스 추가** — Spring + HikariCP + Postgres 서비스를 별도 노드로 붙인다. 원본 미변형, 구현 단순, §5 스코프 충족. 단 fan-in이 낮아 전파 경로가 짧다.
+  - (b) productcatalogservice 교체 — Go 구현을 Spring+MyBatis+Postgres로 교체. fan-in 3(frontend·checkout·recommendation)으로 다중 전파가 생기나, 원본 변형 + Go→JVM 지연 특성 변화 + 벤치마크 대표성 지적 소지.
+- **결론**: **(a) 신규 서비스 추가로 확정.** 판단 기준은 "fan-in 크기"가 아니라 **"Read Redirection의 구현 경로를 확보하는가"**이며, 이 기준에서 (a)로 충분하다. Postgres primary/replica는 **어차피 새로 붙이는 노드**라 복제 구성이 원본 충실도를 전혀 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅이 표준 구성이라 구현 부담도 낮다. 조치 적용 지점 문제는 E7에서 별도로 다뤄지므로 (b)의 추가 이득이 크지 않은 반면, 원본 변형 비용(우려 6의 "GRAF와 동일 벤치마크" 논거 약화)은 실재한다. 원본 서비스와 호출 관계를 보존하므로 원본 위상이 부분그래프로 남아 우려 6 방어가 유지된다. [docs/proposal.md](../docs/proposal.md) §4-1·§4-5·§5·우려 6에 반영.
+- **부수 효과**: Redis 경로는 폐기하지 않는다. 1차 상태성 병목(§4-5)으로 그대로 유지하고, Read Redirection만 Postgres를 1차 대상으로 옮긴다. Redis Cluster 구성이 가능해지면 Redis 경로도 보조 실증으로 살릴 수 있다.
+- **잔여(미확정)**: 추가 서비스의 **배치(어느 서비스가 호출하는가)·명칭·API 미정.** 배치에 따라 fan-in과 전파 경로가 달라지므로 실험 환경 구축 착수 전 확정 필요. 확정 후 노드 수 표기(현재 "12~13개")를 최종값으로 고정한다.
+
 ---
 
 ## C. 스코프 및 일정
@@ -131,7 +144,7 @@
 ### D12. 선행연구 3개의 신뢰도 산출 방식 팩트체크
 - **문제**: GRAF·FIRM·AGQ가 각자 신뢰도/불확실성을 어떻게 산출했는지 확인 필요(신뢰도 산출 방식 논의를 위한 선행 조사).
 - **확인**: 세 논문 모두 명시적인 신뢰도 산출을 하지 않음. GRAF는 GNN 예측값을 점 추정치로 그대로 자원 할당에 사용, FIRM은 SVM 이분법 분류 + RL argmax 액션 선택을 그대로 실행, AGQ는 Q-learning의 ε-greedy 탐색 확률(ε)을 예측 신뢰도가 아닌 탐색-활용 균형용 하이퍼파라미터로만 사용.
-- **결론**: 신뢰도 구간별 대응(축 ③)이 문헌상 완전히 비어 있는 자리임을 재확인. 동시에 신뢰도 산출 방식은 이 세 논문에서 참고할 선례가 없어, 불확실성 정량화라는 별도 분야의 표준 문헌(Gal & Ghahramani 2016; Lakshminarayanan et al. 2017)에서 근거를 가져와야 함을 확인.
+- **결론**: 신뢰도 구간별 대응(축 ③)이 **장애 예측·자원 관리 도메인의 선행연구에서** 비어 있는 자리임을 재확인. (당초 "문헌상 완전히 비어 있다"로 적었으나 검증 범위가 이 3편이므로 도메인 한정 표현으로 정정 — D15.) 동시에 신뢰도 산출 방식은 이 세 논문에서 참고할 선례가 없어, 불확실성 정량화라는 별도 분야의 표준 문헌(Gal & Ghahramani 2016; Lakshminarayanan et al. 2017)에서 근거를 가져와야 함을 확인.
 
 ### D13. GRAF Discussion — 확장성 한계 자인 문구 확인
 - **확인**: GRAF ToN 2024판 Discussion에서 "the readout phase's neural network input node dimension is linearly dependent on the number of microservices in an application... GRAF's performance may degrade when applied to applications composed of hundreds to thousands of microservices"라고 직접 명시. 원인은 readout 단계에서 노드 임베딩을 flatten해 FC 신경망에 입력하는 구조.
@@ -144,6 +157,24 @@
   1. **정정**: 기존 D4·proposal의 'FIRM 브라운아웃 포함' 및 'FIRM 이질적 조치'는 오기재로 정정. FIRM 조치 공간 = 다차원이지만 전부 자원 프로비저닝(비프로비저닝 조치 없음).
   2. **차별점 강화**: 따라서 상태성 병목(커넥션풀/Thundering Herd, D2) 시나리오는 GRAF·AGQ뿐 아니라 **FIRM도 다루지 못함** → 본 연구의 비프로비저닝 조치가 FIRM 대비로도 신규 기여임을 [docs/proposal.md](../docs/proposal.md) 우려 7·§3에 반영.
   3. **Brownout 채택(5번째 조치)**: 브라운아웃은 FIRM 근거와 **무관하게**, Online Boutique의 `adservice`/`recommendationservice`(비핵심 기능)를 dimmer로 차단하는 형태로 **벤치마크에서 실제 구현 가능**하다는 근거로 본 연구의 정식 5번째 조치로 채택(CB/Shedding/Redirection/Scale-up/Brownout). Traffic Shedding(요청 통째 거부)과 달리 요청을 받되 품질만 낮추는 질적으로 다른 레버라 조치 공간 이질성을 넓힘. 단 앱 계측(필수/선택 분리)이 필요해 실증 우선순위는 코어 조치 뒤([timeline.md](timeline.md) 컷 우선순위). [docs/proposal.md](../docs/proposal.md) §2-B·§2-C 반영.
+
+### D15. 신뢰도 축 유일성 — 검증 범위 한정 및 주장 수위 조정
+- **문제**: D12의 검증 범위는 GRAF·FIRM·AGQ 3편이었는데 결론은 "문헌상 완전히 비어 있다"는 무한정 주장이었다. 다른 도메인에 "불확실성으로 조치를 가른다"는 선례가 있으면 핵심 기여 축이 심사에서 흔들린다.
+- **확인 (2026-09-06, 원문 확인 완료)**: 아래 2편이 표현상 본 연구의 신뢰도 축과 겹친다. 서지사항부터 당초 기재와 달랐다.
+  - **CP-Router** — Su, J. et al. *CP-Router: An Uncertainty-Aware Router Between LLM and LRM.* **AAAI 2026**, arXiv:2505.19970. (당초 arXiv ID 미기재였음)
+  - **Ramírez, G., Birch, A., Titov, I.** *Optimising Calls to Large Language Models with Uncertainty-Based Two-Tier Selection.* **COLM 2024**, arXiv:2405.02134. — **당초 "arXiv 프리프린트"로 적었으나 COLM 2024 정식 게재. 프리프린트로 낮춰 보면 안 된다.**
+- **확인 결과 — 당초 구분 논리 1번은 틀렸다 🔺**: "2티어 선택류는 임계값을 손으로 긋는다"고 적었으나 **사실이 아니다.**
+  - CP-Router는 **conformal prediction으로 임계값을 유도**하며 커버리지 보장을 갖는다. FBE(Full and Binary Entropy)로 CP 임계값을 적응적으로 선택하기까지 한다. 손으로 긋지 않는다.
+  - Ramírez는 초기 10개 질의로 임계값을 잡은 뒤 **동적 보정**하며, 목표는 비용식 `c = ĉ_s + p_c·ĉ_l`가 정한 예산이다. 불확실성 측도는 margin sampling(최상위 두 토큰 확률 차). 역시 손으로 긋지 않는다.
+  - 즉 "불확실성 임계값을 원리적으로 유도한다"는 것만으로는 본 연구의 신규성이 되지 못한다. **이 논거를 그대로 심사에서 쓰면 반박당한다.**
+- **살아남은 구분선 (재정의)**: 원문 확인으로 오히려 더 정확한 선이 잡혔다.
+  1. **임계값의 개수와 유도 근거** — 두 선례는 단일 불확실성 축 위에 임계값을 **하나** 두고, 그 근거는 통계적 커버리지(CP-Router) 또는 비용 예산(Ramírez)이다. 본 연구는 **조치마다 다른** `θₐ = Dₐ·Rₐ / (mₐ·L − Dₐ(1−Rₐ))`가 유도되며, 근거는 커버리지도 예산도 아닌 **조치별 `mₐ`·`Rₐ`·`Dₐ` 트레이드오프**다(G1). 결과적으로 *장애 유형이 바뀌면 같은 신뢰도에서도 선택이 달라진다*(상태성 병목에서 `m_scale-up` 급락 → Scale-up 자동 배제, D2). 선택지 간 완화효과 차이가 없는 2티어 구조에서는 원리적으로 불가능한 거동이며, **이것이 가장 방어력 있는 선이다.**
+  2. **조치 공간** — 확인 결과 두 선례 모두 **이진 동질**(CP-Router는 LLM↔LRM, Ramírez는 small↔large). "무엇을 할까"가 아니라 "누구에게 시킬까"만 고른다. 본 연구는 질적 이질 5종(D14). **이 논거는 확인 후에도 그대로 유효하다.**
+  3. **도메인** (1차 방어선) — 두 선례의 과제는 MCQA·QA(수학·논리추론 등)이고 조치 대상은 자기 자신의 추론 경로다. 본 연구는 장애 예측·자원 관리이고 조치 대상은 그래프 상의 다른 노드다(E7). 문제 설정이 겹치지 않는다.
+  4. (보조) 불확실성의 종류 — margin sampling·CP 집합 크기(출력 단위 신뢰도) vs Deep Ensemble 분산(에피스테믹). 대상 차이일 뿐이므로 주 논거로 쓰지 않는다.
+- **결론**: 주장을 좁힌다. 도메인 무한정 주장("문헌상 완전히 비어 있다")을 폐기하고, **"장애 예측·자원 관리 도메인에서 비어 있다"** + **"이질적 조치 공간 위에서 조치별 임계값이 완화효과·가역성 트레이드오프로부터 유도되는 구조는 비어 있다"**로 한정한다. 두 논문은 경쟁 논문이 아니라 **인접 연구로 관련연구에 명시**하고, 회피하지 않고 정면으로 구분한다(숨기면 "몰랐거나 숨겼다"로 읽힌다). D12 결론, [docs/proposal.md](../docs/proposal.md) §3·참고문헌, [README.md](../README.md), [overview.md](overview.md)에 반영.
+- **핵심 교훈**: 원문을 확인하지 않은 채 세운 구분 논리("저쪽은 임계값을 손으로 긋는다")가 **사실과 반대**였다. 확인 없이 심사에 들고 갔으면 핵심 기여 축에서 반박당했을 항목이다. D14(FIRM 브라운아웃 오기재)와 같은 유형의 사고이며, 원문 우선 원칙을 재확인시킨다.
+- **잔여**: 없음(확인 완료). 다만 LLM 라우팅 분야는 신규 논문 유입이 빠르므로, 심사 직전 재검색 1회를 권장한다.
 
 ---
 
@@ -179,6 +210,11 @@
   4. **예측 지평(갈래 3)**: 단일 고정 Δ 이진 채택(다중 지평은 후속 확장, 정적 GAT·분류 결정과 정합). Δ 하한=폐루프 응답시간(§2-D), 값은 실측 튜닝.
   5. **파이프라인(갈래 4)**: 장애주입+트래픽 → 지표 시계열·스냅샷 기록 → 자동 역라벨링(수작업 없음, 재현 가능). 클래스 불균형 대응 + 장애주입 커버리지(커넥션풀 시나리오 필수, mₐ 측정과 동일 실험).
 - **결론**: 위 4갈래로 §4-2 확정. 노드 레벨 결정에 따라 E5(출력 방식)를 pooling → 공유 per-node head로 갱신. 구체 수치(Δ, 임계값, 샘플링 간격, 장애 파라미터)는 §4-5 실측 이월. 신뢰도는 지도 라벨이 없어 calibration으로 간접 검증. [docs/proposal.md](../docs/proposal.md) §4-2·§2-A에 반영.
+
+### E7. 조치 적용 지점(apply_point) 명시 — §2-C와 §2-E 알고리즘의 불일치 해소
+- **문제**: [docs/proposal.md](../docs/proposal.md) §2-E 의사코드는 `emit(대상=v, …)`로 조치 대상을 **위험 노드 자신**으로 고정했다. 그러나 §2-C의 Actuator 서술은 이미 "조치 지점 ≠ 위험 지점"이었다 — Brownout은 위험 노드(adservice·recommendationservice)가 아니라 **frontend**가 호출을 생략하는 방식이고, Read Redirection은 병목(Redis primary)이 아니라 **cartservice** 이그레스에 EnvoyFilter를 주입한다. Circuit Breaker도 Resilience4j 특성상 호출자 측에 있다. 즉 같은 문서 안에서 알고리즘과 구현 서술이 어긋나 있었고, 심사에서 의사코드를 제시하면 "Brownout을 adservice에 겁니까"라는 자기모순이 드러난다.
+- **의사결정 과정**: (조치, 대상 노드) 쌍을 후보 집합 위에서 탐색하는 안(예: 위험 노드의 k-hop 상류를 후보로 두고 순이득 argmax)을 검토했으나 **기각**. 이유 두 가지. (1) 조치별 적용 지점은 탐색 대상이 아니라 조치 종류에 따라 **구조적으로 결정**된다 — 이미 결정된 것을 다시 탐색하는 과잉 설계다. (2) 순이득 argmax 형태는 현재 `argmin E[비용]` 구조와 달라, 채택하면 `θₐ` 유도와 Safety Guard를 함께 버려야 한다(G1·G4 역행).
+- **결론**: 사상(mapping) `apply_point(a, v)`를 §2-C에 표로 명시하고, §2-E 의사코드를 `emit(대상=apply_point(a*, v), …)`로 고친다. CB·Shedding·Redirection·Brownout은 호출자/인그레스 측, Scale-up만 위험 노드 자신. **비용함수는 불변**(`p̄_v`·`u_v`·`p_eff`·`θₐ`·`mₐ` 그대로). 부수 효과로 "위상 인지가 예측에만 쓰이고 조치 선택에는 안 쓰인다"는 예상 반론에 대한 답이 생긴다. §4-2의 "어느 서비스에 조치할지" 문구도 "어느 서비스가 위험한지"로 정정(예측 대상과 적용 지점의 분리). [docs/proposal.md](../docs/proposal.md) §2-C·§2-E·§4-2에 반영.
 
 ---
 
@@ -235,9 +271,15 @@
 - **A(알고리즘)**: Tier2 선제 루프(앙상블 추론→집계→p_eff→비용함수 argmin→escalate+lease) + Tier1 반사 루프 + OR/escalate-only/lease 병합을 단일 의사코드로. 심사의 "실제로 어떻게 동작하냐"에 대한 단일 답.
 - **반영**: [docs/proposal.md](../docs/proposal.md) §2-0(문제정의) 신설, §2-B(변수표 정정+p_eff+Safety Guard), §2-E(알고리즘) 신설. **설계 변경이 아니라 기존 결정의 형식화 + 표기 버그 정정**(G1 골격·조치 5종·2계층 모두 불변).
 
+### G5. 조치 실행 리드타임(ℓₐ)의 비용함수 반영 — [이관] 실험 단계
+- **이슈**: G1의 비용식에서 `Dₐ`(disruption)·`Rₐ`(가역성)·`mₐ`(완화효과)는 모두 조치의 *결과*를 다루며, 조치가 실제로 완료되기까지 걸리는 **실행 리드타임**이 들어 있지 않다. §2-B 표의 "대상 전파속도" 열은 장애 쪽 속도이지 조치 쪽 속도가 아니다. 리드타임이 긴 조치(K8s Scale-up: 인스턴스 기동·워밍업)는 `θₐ`를 넘긴 시점에 발동해도 완료 시점에는 이미 늦을 수 있다.
+- **검토 방향**: 신뢰도 티어 표를 손으로 다시 긋는 방식은 채택하지 않는다(G1의 "구간을 손으로 긋지 않고 유도" 철학에 역행). 대신 조치별 리드타임 `ℓₐ`를 예측 지평 `Δ`와 비교하는 제약(`ℓₐ < Δ`)으로 넣는다 — §4-2가 이미 "Δ의 하한 = 폐루프 응답시간"이라 적고 있으므로, 이를 **조치별로 분해**하는 자연스러운 확장이 된다.
+- **결론**: `ℓₐ`는 조치별 실측 없이 확정할 수 없으므로 **실험 설계로 이관**(G3와 동일 논리 — 실측 없이 미리 확정하면 근거가 약한 값이 된다). 프로포절 심사 필수 항목은 아니다. [docs/proposal.md](../docs/proposal.md) §2-B에 미반영 항목으로 명시.
+- **확인 필요**: 관련 논거로 "GRAF가 인스턴스 생성 평균 5.5초 + 오토스케일러 결정 주기와 맞물린 cascading effect를 관측했다"는 수치가 거론되었으나 **원문 미확인**이다. 본문 인용 전 GRAF 원문(CoNEXT'21 / ToN'24) 확인 필요 — 확인 전에는 논거로 쓰지 않는다(D14의 원문 우선 원칙).
+
 ---
 
-## H. 외부 피드백 검토 (2026-08, [docs/feedback-0802.md](../docs/feedback-0802.md))
+## H. 외부 피드백 검토 (2026-08, [docs/feedback/0802_optimization.md](../docs/feedback/0802_optimization.md))
 
 선행연구 4편 기반으로 받은 외부 피드백 5건을 원문·자체 설계와 대조해 하나씩 검토했다. 수치는 선행연구 기반 팩트로 전제하되, attribution·타깃·프레이밍은 우리 설계에 맞게 교정해 조건부로 전부 반영했다. **핵심 원칙: 피드백을 100% 수용하지 않고, 우리 확정 설계(F1/G1/G2/GT)와 충돌·자해 지점을 교정한 뒤 채택.**
 

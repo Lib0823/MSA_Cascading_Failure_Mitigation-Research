@@ -14,6 +14,7 @@
 | GNN 모델 학습 (GAT, Deep Ensemble N=5) | 1~2개월 | - |
 | LSTM baseline 학습 | +2~4주 | GNN과 병행 가능 |
 | Policy Engine 비용함수/의사결정 로직 구현 | 1~2개월 | - |
+| Spring/HikariCP/PostgreSQL 서비스 구현 + 벤치마크 통합 | 2~3주 | 가능 (주력 스택) |
 | Actuator 통합 (2~5종) | 1~1.5개월 | 부분 병행 가능 |
 | 실험 환경 구축 + 반복실험 + 임계치 튜닝 | 1~2개월 (보통 예상보다 오래 걸림) | - |
 | 논문 작성 | 1~1.5개월 | - |
@@ -25,8 +26,8 @@
 
 ### ① 모델 스모크 테스트 — 코드 실현 가능성
 - **목적**: 설계(노드 레벨 GAT + Deep Ensemble + 공유 per-node head, [docs/proposal.md](../docs/proposal.md) §2-A·§4-2)가 코드로 성립하는지 확인.
-- **방법**: 가짜 11노드 그래프 + 랜덤 feature로 forward pass. Online Boutique·K8s 불필요.
-- **확인 항목**: 텐서 shape 정합 / 노드별 위험도 + 신뢰도(앙상블 분산) 출력 / 11→20노드로 바꿔도 파라미터 불변(확장성 주장 검증, 우려 6·10).
+- **방법**: 가짜 12~13노드 그래프 + 랜덤 feature로 forward pass. Online Boutique·K8s 불필요.
+- **확인 항목**: 텐서 shape 정합 / 노드별 위험도 + 신뢰도(앙상블 분산) 출력 / 13→20노드로 바꿔도 파라미터 불변(확장성 주장 검증, 우려 6·10).
 - **비용**: 몇 시간, 로컬 CPU. **성능·정확도는 검증 대상 아님**(랜덤 데이터).
 - **게이트**: 통과해야 ②의 GAT 입력 스펙(feature 차원·그래프 포맷)이 확정됨.
 
@@ -51,7 +52,7 @@
 2. FIRM류 baseline 추가 (GRAF류 baseline + LSTM baseline만으로도 최소 방어 가능)
 3. Actuator 5종 → 2종(Circuit Breaker + Read Redirection)으로 축소, 나머지(Scale-up/Shedding/Brownout)는 "확장 가능 설계"로만 서술. 특히 Brownout은 앱 계측(필수/선택 분리)이 필요해 컷 우선순위가 가장 높음.
 4. 부하 스케일업 실험(동시 사용자 수 변화 실험) — 그래도 시간이 없으면 생략 가능하나 §4-4 방어력이 약해짐에 유의
-5. 외부 피드백 반영으로 추가된 실증 항목([challenges.md](challenges.md) H) — 시계열 보강 GAT ablation(스냅샷 전용 대비), ECE/Drop Rate 측정, Read Redirection의 Redis replica+EnvoyFilter 세팅. 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택(이론적 필수는 아니나 실험 매트릭스를 키움).
+5. 외부 피드백 반영으로 추가된 실증 항목([challenges.md](challenges.md) H) — 시계열 보강 GAT ablation(스냅샷 전용 대비), ECE/Drop Rate 측정, Read Redirection의 read replica 세팅(Postgres primary/replica — B6). 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택(이론적 필수는 아니나 실험 매트릭스를 키움).
 
 ## 마일스톤
 
@@ -62,6 +63,8 @@
 - [x] 벤치마크 최종 확정 — Online Boutique 메인
 - [x] GNN 추론 레이턴시 vs 반응속도 이슈 해법 방향 결정 — 2계층 제어(로컬 반사 + GNN 선제)로 확정 ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
 - [x] 문제 정의(§2-0) + Policy Engine 알고리즘(§2-E) 정형화, 비용함수 p 정의 정정 ([challenges.md](challenges.md) G4)
+- [x] **CP-Router·Ramírez 원문 확인 + 신뢰도 축 주장 수위 확정** ([challenges.md](challenges.md) D15) — 확인 결과 당초 구분 논리 1번이 사실과 반대여서 재정의함
+- [ ] 추가 서비스(Spring/Postgres) 배치·명칭·API 확정 ([challenges.md](challenges.md) B6) — 실험 환경 구축 착수 전
 
 **프로포절 심사** (약 3학기차)
 
@@ -79,9 +82,12 @@
 
 상세 배경과 팩트체크 근거는 [challenges.md](challenges.md) "G. 오픈 이슈 및 해소 기록" 참고.
 
-**프로포절 심사 대비 미결정 설계 이슈: 없음.**
+**프로포절 심사 대비 미결정 설계 이슈: 없음.** (G5는 실험 단계 이월, B6의 배치 확정은 실험 환경 구축 항목, D15는 문헌 확인 항목으로 설계 이슈 아님)
 
 - [해결] 신뢰도 산출 방식 — Deep Ensemble(N=5) ([challenges.md](challenges.md) F1)
 - [해결] 비용함수 수식화(G1) — 기대비용 최소화형 ([challenges.md](challenges.md) G1, [docs/proposal.md](../docs/proposal.md) §2-B)
 - [해결] 추론 레이턴시 vs 즉각반응(G2) — 2계층 제어(로컬 반사 + GNN 선제) ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
+- [이관] 조치 실행 리드타임 ℓₐ의 비용함수 반영(G5) — 조치별 실측 필요, 실험 단계 ([challenges.md](challenges.md) G5)
+- [해결] 신뢰도 축 유일성 — CP-Router(AAAI 2026)·Ramírez(COLM 2024) 원문 확인, 구분선 재정의 ([challenges.md](challenges.md) D15)
+- [미확정] 추가 서비스 배치·명칭·API ([challenges.md](challenges.md) B6)
 - [이관] 트래픽 프로파일 파라미터 + mₐ 측정(G3) — 실험 설계 [docs/proposal.md](../docs/proposal.md) §4-5로 이동(심사 필수 아님, 실측 기반 확정)

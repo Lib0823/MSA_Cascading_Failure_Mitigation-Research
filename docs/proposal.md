@@ -43,7 +43,7 @@ GNN은 사전학습된 범용 모델이 존재하지 않는 영역이다. 본 �
 | GCN vs GAT | **GAT 채택** | GRAF(MPNN, 이웃 균등 집계)와 AGQ(ChebConv, 스펙트럴 방식) 모두 이웃 노드 간 차등적 중요도를 학습하지 못한다. 마이크로서비스 의존관계는 서비스별 중요도가 균일하지 않으므로(예: 결제 서비스 대비 로깅 서비스), attention 기반 차등 집계가 구조적으로 더 적합하다. |
 | 강화학습(RL) 결합 | 미채택 | Policy Engine이 이미 신뢰도 구간별 정책에 따라 조치를 선택하는 구조이므로, 액션 선택까지 RL로 재학습시킬 필요가 없다. RL 없이도 결정 로직이 해석 가능하다는 점이 오히려 설명 가능성 측면의 강점이다. |
 | 시계열 결합 (STGNN) | STGNN 구조 미채택 / **입력 레벨 시간성 보강은 채택** | 본 연구의 목표는 "미래의 연속적 수치를 정확히 예측"(AGQ·GraphGRU의 목표)이 아니라 "현재 상태의 위험 여부와 확신도를 즉각 판단"하는 것이다. 무거운 STGNN 레이어(시간축 attention·버퍼링)는 추론 지연을 늘려 즉각 대응·앙상블 병렬성과 상충하므로 미채택한다(G2는 2계층 제어 §2-D로 해소). 다만 최근 시점들의 흐름을 버리지 않기 위해, 모델 구조는 가벼운 정적 GAT를 유지하되 **노드 feature 벡터에 슬라이딩 윈도우 시계열 통계량(최근 평균·변화율(slope)·표준편차 등 선행 지표)을 주입**하는 입력 레벨 보강을 채택한다(서술 편의상 **TA-GAT**로 지칭하되, 신규 모델이 아니라 feature 설계이며 핵심 기여는 어디까지나 신뢰도 구간별 대응이다). 이로써 정적 그래프 구조 위에서 시간적 추세(temporal)와 위상적 전파(spatial)를 함께 학습한다. 스냅샷 전용 GAT는 이 시간성 보강의 기여를 분리 측정하는 ablation baseline으로 남긴다(§4-2·§4-3). 단 self의 SLO 위반 이력은 라벨(§4-2)과의 누수·위상 우회를 막기 위해 입력에서 제외한다. |
-| 신뢰도 산출 방식 | **Deep Ensemble(N=5) 채택** | 후보(MC Dropout/Deep Ensemble/Softmax Entropy) 중, Lakshminarayanan et al.(2017)이 MC Dropout 대비 더 신뢰할 수 있는 불확실성 추정치를 제공함을 실증한 결과를 1차 근거로 채택한다. MC Dropout은 추론 시 동일 모델에 대한 N회 반복 순전파가 필요해 지연 시간이 증가하는 반면, Deep Ensemble은 N개 모델을 병렬 배치하여 추론할 수 있어 즉각 대응이 핵심인 본 시스템에 구조적으로 더 적합하다. 그래프 규모가 작아(11개 노드) N=5 모델 학습에 따른 비용 부담도 낮다. |
+| 신뢰도 산출 방식 | **Deep Ensemble(N=5) 채택** | 후보(MC Dropout/Deep Ensemble/Softmax Entropy) 중, Lakshminarayanan et al.(2017)이 MC Dropout 대비 더 신뢰할 수 있는 불확실성 추정치를 제공함을 실증한 결과를 1차 근거로 채택한다. MC Dropout은 추론 시 동일 모델에 대한 N회 반복 순전파가 필요해 지연 시간이 증가하는 반면, Deep Ensemble은 N개 모델을 병렬 배치하여 추론할 수 있어 즉각 대응이 핵심인 본 시스템에 구조적으로 더 적합하다. 그래프 규모가 작아(12~13개 노드) N=5 모델 학습에 따른 비용 부담도 낮다. |
 | [신규] 출력(Readout) 방식 | **노드 레벨 + 공유 per-node head (Flatten 미채택)** | GRAF는 readout 단계에서 각 노드 임베딩을 flatten해 완전연결(FC) 신경망에 통째로 입력하는 구조를 사용하며, 이로 인해 FC 입력 차원과 파라미터 수가 노드 수에 선형 비례한다. GRAF 스스로(ToN 2024판 Discussion) "readout phase's neural network input node dimension is linearly dependent on the number of microservices"이며 "performance may degrade when applied to applications composed of hundreds to thousands of microservices"라고 확장성 한계를 인정한다. 본 연구는 flatten 대신 **모든 노드에 동일한 head(공유 MLP)를 적용하는 노드 레벨 예측**을 채택해, 파라미터·출력 구조가 노드 수와 무관하게 고정되도록 설계한다(서비스별 위험도 산출 → Actuator 타겟팅과 직결, §4-2). |
 
 ### B. 의사결정 계층 — Policy Engine (핵심 Contribution)
@@ -58,7 +58,7 @@ GNN은 사전학습된 범용 모델이 존재하지 않는 영역이다. 본 �
 | 조치 공간 | 자원 할당(스칼라) | 자원 재할당 다차원(CPU/Mem/LLC/IO/Net + 수평 스케일, 전부 프로비저닝) | 자원 할당(스칼라) | 없음(예측만) | 질적 이질(CB/Shedding/Scale/Redirect/Brownout, 프로비저닝+비프로비저닝) |
 | 신뢰도 구간별 대응 | 없음 | 없음 | 없음 | 없음 | **있음 (신규 기여)** |
 
-- 신뢰도 구간별 대응 전략: 고신뢰도 = 적극적 조치 / 중간신뢰도 = 저비용·가역적 조치 / 저신뢰도 = 보류.
+- 신뢰도 구간별 대응 전략: 구간(고/중/저)을 **손으로 긋지 않는다.** 아래 비용함수에서 조치별 임계값 `θₐ`가 유도되어 구간이 자동 생성되며, "고신뢰도=적극적 조치 / 중간=저비용·가역적 / 저=보류"는 그 유도의 *결과*를 요약한 표현이지 정의가 아니다.
 - 런타임 독립성 주장 유지.
 
 #### 비용함수(Cost Function) — 신뢰도 구간별 대응의 형식화
@@ -106,6 +106,8 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 **커넥션풀 차별점의 수식적 표현**: 병목이 DB 커넥션풀 등 상태성 리소스일 때 Scale-up의 mₐ가 급락(오히려 L 증가 = Thundering Herd)하여 θ_scale-up의 분모가 음수가 되고, 비용함수가 Scale-up을 자동 배제하고 CB/Redirection을 선택한다. mₐ(장애 유형 인지)를 변수로 둠으로써 GRAF류(자원할당 중심)와의 차별점(§4-3 baseline 비교)이 비용함수 내부에서 유도되며, 외부 하드코딩 규칙에 의존하지 않는다. 실증에서 이 상태성 병목은 Online Boutique의 **cartservice→Redis 커넥션 경로**에 구체화한다(§4-5) — 같은 병목에서 Scale-up은 mₐ가 낮고(역효과) Read Redirection(§2-C, Redis replica 우회)은 mₐ가 높게 나오는 대조를 한 실험에서 확인해, 조치 레벨에서 차별점을 실증한다.
 
+**미반영 항목 — 조치 실행 리드타임 `ℓₐ`**: 현재 비용식의 `Dₐ`·`Rₐ`·`mₐ`는 모두 조치의 *결과*를 다루며, 조치가 실제로 완료되기까지 걸리는 **실행 리드타임**은 들어 있지 않다(위 표의 "대상 전파속도"는 장애 쪽 속도이지 조치 쪽 속도가 아니다). 리드타임이 긴 조치(Scale-up 등)는 `θₐ`를 넘긴 시점에 발동해도 완료 시점에는 이미 늦을 수 있다. 방향은 티어 표를 손으로 다시 긋는 것이 아니라, 조치별 리드타임 `ℓₐ`를 예측 지평 `Δ`와 비교하는 제약(`ℓₐ < Δ`)으로 넣는 것이다 — §4-2의 "Δ 하한 = 폐루프 응답시간"을 조치별로 분해하는 형태가 된다. 실측 없이는 확정할 수 없으므로 실험 단계로 이월한다([challenges.md](../research/challenges.md) G5).
+
 **초안 범위**: 본 프로포절 단계에서는 위 골격(변수 정의·기대비용 식·θₐ 유도 구조)까지를 확정한다. L·Dₐ·Rₐ·mₐ의 실제 수치는 실험 튜닝으로 이월하며, 특히 mₐ는 병목 유형(상태성/무상태)에 따른 정성적 구간 지정으로 두고 구체적 측정 방식은 §4-5(실험 트래픽 프로파일 및 mₐ 측정)에서 정의한다.
 
 ### C. 실행 계층 — Actuator
@@ -113,8 +115,20 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 5종: **Circuit Breaker / Traffic Shedding / Read Redirection / K8s Scale-up / Brownout(Graceful Degradation)**
 
 - Brownout은 요청의 비핵심(optional) 부분을 dimmer로 차단해 품질을 낮추는 방식으로 부하를 던다. Traffic Shedding(요청 통째 거부)·Read Redirection(경로 변경)과 질적으로 다른 레버로, 조치 공간의 이질성을 넓힌다. Online Boutique에서는 frontend가 `adservice`/`recommendationservice`(비핵심 기능) 호출을 조건부로 생략하는 형태로 구현 가능하다 — 벤치마크에 실제 optional 경로가 존재해 실증 가능성이 높다(FIRM은 브라운아웃을 쓰지 않으며, 이 채택은 FIRM 근거와 무관하다. [challenges.md](../research/challenges.md) D14).
-- Read Redirection은 과부하 상태의 읽기 트래픽을 **읽기 전용 복제본(read-replica)으로 우회**해 primary 병목을 던다. Online Boutique에서 read-replica가 성립하는 지점은 `cartservice`가 backing store로 쓰는 **Redis**이다(`productcatalogservice`는 DB 없이 로컬 JSON을 읽어 복제본 개념이 성립하지 않으며, 이 경우 단순 스케일아웃과 구분되지 않는다). Redis primary/replica를 두고 **Envoy Redis proxy의 `read_policy`를 Istio EnvoyFilter로 주입**해 읽기를 replica로 라우팅하면 앱 코드 수정 없이(비침습) 조치가 트리거된다. 이는 primary에 커넥션을 더 쌓지 않고 상태성 읽기 병목을 더는 **비프로비저닝 조치**라, Scale-up이 역효과를 내는 상태성 병목(D2, §4-5)에서 대조적으로 효과를 낸다. Brownout(기능 자체를 생략)·Traffic Shedding(요청 거부)과 달리 **기능은 유지하되 일관성을 일시적으로 약화(stale read 허용)**하는 질적으로 다른 레버다. (Envoy `read_policy`의 read/write 분리 지원 여부는 실증 착수 전 재확인 대상.)
-- 시간이 부족할 경우 Circuit Breaker + Read Redirection 2종만 실증하고 나머지(Scale-up/Shedding/Brownout)는 "설계상 확장 가능"으로 남기는 옵션을 확보한다. 특히 Brownout은 앱 계측(필수/선택 분리)이, Read Redirection은 Redis replica+EnvoyFilter 세팅이 필요하므로 실증 우선순위는 코어 조치(CB) 뒤에 둔다.
+- Read Redirection은 과부하 상태의 읽기 트래픽을 **읽기 전용 복제본(read-replica)으로 우회**해 primary 병목을 던다. Online Boutique에서 read-replica가 성립하는 지점은 `cartservice`가 backing store로 쓰는 **Redis**이다(`productcatalogservice`는 DB 없이 로컬 JSON을 읽어 복제본 개념이 성립하지 않으며, 이 경우 단순 스케일아웃과 구분되지 않는다). Redis primary/replica를 두고 **Envoy Redis proxy의 `read_policy`를 Istio EnvoyFilter로 주입**해 읽기를 replica로 라우팅하면 앱 코드 수정 없이(비침습) 조치가 트리거된다. 이는 primary에 커넥션을 더 쌓지 않고 상태성 읽기 병목을 더는 **비프로비저닝 조치**라, Scale-up이 역효과를 내는 상태성 병목(D2, §4-5)에서 대조적으로 효과를 낸다. Brownout(기능 자체를 생략)·Traffic Shedding(요청 거부)과 달리 **기능은 유지하되 일관성을 일시적으로 약화(stale read 허용)**하는 질적으로 다른 레버다. **단, Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시되어 있다.** Online Boutique의 `redis-cart`는 단일 인스턴스이므로, 이 경로를 쓰려면 **원본 서비스를 변형해야 한다** — `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다. 이는 §4-1이 확장 방식으로 (a)를 택하며 지킨 "원본 서비스와 호출 관계 보존" 전제(우려 6 방어의 토대)를 스스로 무너뜨린다. 따라서 **Read Redirection의 1차 실증 대상은 §4-1에서 추가하는 Postgres primary/replica**로 둔다 — 어차피 새로 붙이는 노드라 복제 구성이 원본 충실도를 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅은 표준 구성이다. Redis 경로는 Cluster 전환을 감수할 경우의 보조 대상으로 남긴다([challenges.md](../research/challenges.md) B6).
+- 시간이 부족할 경우 Circuit Breaker + Read Redirection 2종만 실증하고 나머지(Scale-up/Shedding/Brownout)는 "설계상 확장 가능"으로 남기는 옵션을 확보한다. 특히 Brownout은 앱 계측(필수/선택 분리)이 필요하므로 실증 우선순위는 코어 조치(CB) 뒤에 둔다. Read Redirection은 Postgres read replica로 구현 경로를 확보했다(위 참조).
+
+**조치별 적용 지점(Application Point)**: 조치를 적용하는 노드는 위험이 예측된 노드와 항상 같지 않다. 유입 부하를 줄이는 조치는 병목 노드 자신이 아니라 **그 노드를 호출하는 쪽**에 걸어야 효과가 나기 때문이다. 적용 지점은 탐색 대상이 아니라 조치 종류에 따라 **구조적으로 결정**되므로, 후보 집합 탐색(k-hop 상류 등)을 도입하지 않고 아래 사상(mapping)으로 고정한다(§2-E의 `apply_point(a, v)`, 결정 근거는 [challenges.md](../research/challenges.md) E7).
+
+| 조치 | 위험 노드 v | 적용 지점 `apply_point(a, v)` | 근거 |
+|---|---|---|---|
+| Circuit Breaker | 피호출 노드 | **v의 호출자** | Resilience4j는 호출 측에 위치. §2-D Tier 1이 "자기 호출 통계"를 보는 구조와 동일 |
+| Traffic Shedding | 과부하 노드 | **v의 인그레스** (상류 게이트웨이 적용은 확장 옵션) | Tier 1 로컬 반사와 같은 지점 |
+| Read Redirection | 상태성 백엔드(Postgres primary, Redis primary) | **백엔드를 호출하는 서비스** (Spring 노드의 DataSource 라우팅 / cartservice 이그레스) | 읽기 경로를 돌릴 수 있는 지점이 호출자 측 |
+| Brownout | optional 기능 노드(adservice·recommendationservice) | **frontend** (호출을 조건부 생략) | dimmer가 호출자에 있다 |
+| K8s Scale-up | 자원 부족 노드 | **v 자신** | 5종 중 유일하게 적용 지점 = 위험 노드 |
+
+이 사상을 명시하지 않으면 §2-E의 조치 emit이 "위험 노드에 건다"로 읽혀, §2-C의 실제 구현(Brownout은 frontend, Read Redirection은 cartservice)과 어긋난다. 위상 인지가 **예측 단계뿐 아니라 조치 지점 결정에도** 쓰이는 지점이기도 하다.
 
 ### D. 제어 타이밍 — 2계층 제어 구조 (G2 대응)
 
@@ -152,11 +166,13 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
        cand ← { a∈A : E[비용|a](p_eff,v) < p_eff,v·L }        # ⟺ { a : p_eff,v > θₐ }
        if cand ≠ ∅:
            a* ← argmin_{a∈cand} E[비용|a](p_eff,v)
-           emit(대상=v, 조치=a*, TTL=lease)                    # escalate-only, 시한부
+           emit(대상=apply_point(a*, v), 조치=a*, TTL=lease)    # escalate-only, 시한부
        else:
            보류(v)                                            # 저위험·저신뢰 노드는 여기로
 5. 만료된 lease 회수(미갱신 시 자동 복귀)
 ```
+
+> `apply_point(a, v)` = 조치 a를 실제로 적용할 노드(§2-C 표). 위험 노드 v와 같지 않을 수 있다 — 예: v=adservice에 Brownout이 선택되면 적용 지점은 frontend다. **예측은 v에 대해, 조치는 `apply_point(a*, v)`에 대해** 이루어진다.
 
 **Tier 1 — 로컬 반사 루프 (상시, ms)** — CB·Shedding, GNN과 독립
 ```
@@ -179,7 +195,13 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 - FIRM은 SVM의 이분법적 분류 결과와 RL의 argmax 액션 선택을 그대로 실행한다.
 - AGQ는 Q-learning의 ε-greedy 탐색 확률(ε)을 예측 신뢰도가 아닌 탐색-활용 균형을 위한 하이퍼파라미터로만 사용한다.
 
-즉 세 논문 모두 "모델이 낸 답을 확신 정도와 무관하게 그대로 실행"하는 1단계 파이프라인이며, 이는 신뢰도 구간별 대응(축 ③)이 문헌상 완전히 비어 있는 자리임을 재확인시켜 준다.
+즉 세 논문 모두 "모델이 낸 답을 확신 정도와 무관하게 그대로 실행"하는 1단계 파이프라인이며, 이는 신뢰도 구간별 대응(축 ③)이 **장애 예측·자원 관리 도메인의 선행연구에서** 비어 있는 자리임을 재확인시켜 준다.
+
+**주장 범위의 한정**: "불확실성으로 조치를 가른다"는 발상 자체는 **다른 도메인에 이미 선례가 있다.** LLM 라우팅 분야의 CP-Router(AAAI 2026)와 Ramírez et al.(COLM 2024)이 대표적이며, 원문 확인 결과 둘 다 불확실성 추정치로 두 모델 중 하나를 고른다([challenges.md](../research/challenges.md) D15). 따라서 도메인을 넘어선 일반 주장("불확실성으로 조치를 가르는 연구가 없다")은 펴지 않고, 신규성을 아래 두 가지로 한정해 주장한다.
+1. **임계값의 개수와 유도 근거** — 두 선례는 단일 불확실성 축 위에 임계값을 **하나** 두며, 그 근거는 통계적 커버리지 보장(CP-Router의 conformal prediction) 또는 비용 예산 목표(Ramírez의 `c = ĉ_s + p_c·ĉ_l`)다. 본 연구는 **조치마다 서로 다른** `θₐ`가 유도되고, 그 근거는 커버리지도 예산도 아닌 **조치별 완화효과 `mₐ`·가역성 `Rₐ`·disruption `Dₐ`의 트레이드오프**다(§2-B). 그 결과 *장애 유형이 바뀌면 같은 신뢰도에서도 선택이 달라진다* — 상태성 병목에서 `m_scale-up`이 떨어져 Scale-up이 자동 배제되는 것이 그 예이며, 선택지 간 완화효과 차이가 없는 2티어 구조에서는 원리적으로 나올 수 없는 거동이다.
+2. **조치 공간** — 두 선례의 선택지는 이진 동질(LLM↔LRM, small↔large model)이라 "무엇을 할까"가 아니라 "누구에게 시킬까"만 고른다. 본 연구는 질적으로 이질적인 5종(차단·삭감·경로변경·품질저하·증설) 위에서 작동한다.
+
+> 보조 구분선: 불확실성의 종류도 다르다(두 선례는 토큰 확률 마진·conformal prediction 집합 크기 = 출력 단위 신뢰도, 본 연구는 Deep Ensemble 분산 = 에피스테믹 불확실성). 다만 이는 대상 차이일 뿐이라 주 논거로 쓰지 않는다.
 
 **차별점의 구체적 논거**: 단순 자원할당/오토스케일링 접근은 병목이 DB 커넥션풀 등 상태성 리소스일 때 스케일아웃이 오히려 상태를 악화시킬 수 있다(Thundering Herd) — 이것이 자원할당 중심 접근과의 실질적 차별점이며, §4-3에서 baseline 비교로 실증할 계획이다. 이 한계는 GRAF·AGQ뿐 아니라 원문 재확인 결과 조치가 전부 저수준 자원 재할당에 한정된 FIRM에도 적용되므로(D14), 상태성 병목 시나리오는 세 선행연구가 공통으로 다루지 못하는 지점이다.
 
@@ -200,8 +222,13 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 ### 4-1. 실험 환경
 
-- 벤치마크: **Online Boutique(11~12개 서비스)** 유지.
-- 가장 직접적인 비교 대상인 GRAF도 Online Boutique와 Social Network 두 벤치마크를 메인 실험에 사용했으며, 그중 Online Boutique와 동일한 벤치마크를 채택했다는 점을 근거로 명시한다 — "왜 이렇게 작은 벤치마크를 썼냐"는 질문에 대한 선제 방어.
+- 벤치마크: **Online Boutique(11~12개 서비스)** 유지 + **Spring/HikariCP/PostgreSQL 기반 서비스 1개 추가**(총 12~13개). 원본 서비스와 그 호출 관계는 **변형하지 않고 그대로 보존**하며, 추가 서비스는 별도 노드로 붙인다.
+  - **1순위 근거 — Read Redirection의 구현 경로 확보**: 컷 우선순위에서 최후까지 남기는 Actuator 2종이 CB + Read Redirection인데, Redis 경로는 Envoy `read_policy`가 Redis Cluster 전제라, 쓰려면 `redis-cart`와 `cartservice`를 손대야 해서 (a)가 지키려던 원본 보존 전제와 충돌한다(§2-C). Postgres primary/replica는 표준 구성으로 이 리스크를 없앤다.
+  - 2순위 — 상태성 병목이 cartservice→Redis 단일 지점이라 핵심 차별점(D2)이 한 실험에 걸려 있던 문제를 이중화한다(§4-5).
+  - 3순위 — §5가 선언한 "Thread-per-request / Java·Spring 실증 한정" 스코프와 §4-4의 톰캣 스레드 덤프 지표를 실제로 충족시키는 노드가 생긴다.
+  - 상세는 [challenges.md](../research/challenges.md) B6.
+- 가장 직접적인 비교 대상인 GRAF도 Online Boutique와 Social Network 두 벤치마크를 메인 실험에 사용했으며, 그중 Online Boutique와 동일한 벤치마크를 채택했다는 점을 근거로 명시한다 — "왜 이렇게 작은 벤치마크를 썼냐"는 질문에 대한 선제 방어. 추가 서비스는 원본 위상을 **부분그래프로 보존**하는 확장이므로 이 근거는 유지된다(우려 6).
+- ⚠️ **미확정**: 추가 서비스의 배치(어느 서비스가 호출하는가)·명칭·API는 아직 정하지 않았다. 배치에 따라 fan-in과 전파 경로가 달라지므로 실험 환경 구축 착수 전에 확정한다(B6).
 - **트래픽 생성 방식**: Chaos Mesh/Istio는 장애를 주입하는 도구이고 트래픽을 만들지는 않는다. Locust(또는 k6)로 정상/버스트/점진적 증가 트래픽 프로파일을 생성하고, 그 위에 Istio 내장 장애주입을 결합하는 2-레이어 구성으로 진행한다(구체 프로파일과 캘리브레이션은 §4-5).
 - **학습-실험 분리(로컬 리소스 관리용)**: K8s 클러스터+장애주입+트래픽 생성을 먼저 돌려 데이터를 수집·저장하고, 클러스터를 내린 뒤 별도로 GNN/LSTM 학습을 진행하는 방식으로 동시 부하를 줄인다.
 
@@ -209,7 +236,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호출 그래프 스냅샷)에 정답 라벨을 부여한다. 라벨 정의는 다음과 같이 확정한다(상세 의사결정은 [challenges.md](../research/challenges.md) E6).
 
-**라벨 단위 — 노드 레벨**: 각 서비스(노드)마다 위험 여부를 예측한다. GAT가 산출하는 노드별 임베딩에 **공유 per-node head**(모든 노드에 동일한 MLP)를 적용해 파라미터가 노드 수와 무관하게 고정된다(§2-A, GRAF의 flatten과 대비되는 확장성 근거). 노드 레벨 출력은 Policy Engine이 "어느 서비스에" 조치할지를 모델에서 직접 얻게 하며, 신뢰도 구간별 대응도 서비스 단위로 세밀화된다.
+**라벨 단위 — 노드 레벨**: 각 서비스(노드)마다 위험 여부를 예측한다. GAT가 산출하는 노드별 임베딩에 **공유 per-node head**(모든 노드에 동일한 MLP)를 적용해 파라미터가 노드 수와 무관하게 고정된다(§2-A, GRAF의 flatten과 대비되는 확장성 근거). 노드 레벨 출력은 Policy Engine이 "어느 서비스가 위험한지"를 모델에서 직접 얻게 하며(조치를 **적용할** 지점은 여기서 조치 종류에 따라 파생된다 — §2-C 적용 지점 표), 신뢰도 구간별 대응도 서비스 단위로 세밀화된다.
 
 **위험(positive) 정의 — SLO 위반**: 노드 v가 시점 t에 positive ⟺ [t, t+Δ] 안에 v가 SLO 위반(P99 지연 > 임계 또는 에러율 > 임계) 상태에 빠진다. 임계값은 서비스별 baseline으로 산정한다. CPU/메모리/요청률/스레드풀·커넥션풀 사용률 등 리소스 지표는 라벨이 아니라 **입력 feature**(선행 지표)로 두어 라벨-입력 누수를 피한다.
 
@@ -239,7 +266,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 - TPS 유지율, P99 Tail Latency, 신뢰도 임계치별 비교, Fail-safe 동작 여부, 톰캣 스레드 덤프
 - **신뢰도 지표 검증**: (1) **ECE + 신뢰도 다이어그램(reliability diagram)**으로 실패 확률 p의 보정을 평가한다 — positive가 희소(클래스 불균형, §4-2)해 확률 구간별 표본이 얇아질 수 있으므로 다이어그램을 병기하고 불균형을 감안해 해석한다. (2) **오탐/Drop Rate 비교**: 신뢰도 구간별 대응 ON vs OFF에서, 불필요한 Traffic Shedding으로 정상 요청이 차단되는 비율(drop rate)이 얼마나 감소하는지 대조한다 — 신뢰도 구간별 대응(핵심 기여)의 효과를 가장 직접적으로 정량화하는 지표.
 - 각 baseline 및 본 연구 방식은 동일 조건에서 N회(예: 5~10회) 반복 실행하며, TPS 유지율 등은 평균±표준편차로, 레이턴시는 P50/P90/P99 백분위수로 리포팅한다.
-- [선택, 저비용 보강] 부하 스케일업 실험: 동일 11-tier 위상에서 동시 사용자 수를 100→500→1000으로 늘려가며 정책이 유지되는지 확인.
+- [선택, 저비용 보강] 부하 스케일업 실험: 동일 12~13노드 위상에서 동시 사용자 수를 100→500→1000으로 늘려가며 정책이 유지되는지 확인.
 - [선택, 시간 허용 시] Train Ticket 서브셋 보조 실험: 예매→결제→환불 흐름에 관련된 서비스 15~25개만 부분 배포하여, 그래프가 커질수록 GNN vs LSTM 성능 격차가 벌어지는지 보조적으로 검증(VPS 단기 대여로 진행).
 
 ### 4-5. 실험 트래픽 프로파일 및 완화효과(mₐ) 측정
@@ -257,14 +284,16 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 **상태성 병목 시나리오의 구체화(D2 정렬)**: 위 상태성 병목은 Online Boutique의 **cartservice→Redis 커넥션 경로**에 구체화한다 — Redis `maxclients` 또는 cartservice 커넥션풀을 인위적으로 조여 병목을 유발한다(Redis는 자연 상태에서 잘 병목되지 않으므로 장애주입으로 조성). 같은 병목 위에서 K8s Scale-up(cartservice pod 증설 → primary Redis 커넥션 증가 → Thundering Herd)은 mₐ가 낮고, Read Redirection(§2-C, 읽기를 Redis replica로 우회)은 mₐ가 높게 나오는 대조를 한 실험에서 확인해, 비용함수의 조치 선택(§2-B)과 조치 레벨 차별점을 동시에 실증한다.
 
+**두 번째 상태성 병목(Postgres/HikariCP)**: Redis 경로 하나에만 의존하면 핵심 차별점(D2)의 실증이 단일 실험에 걸린다. §4-1에서 추가한 Spring 서비스의 **HikariCP 커넥션풀**(`maximumPoolSize` 축소 + 슬로우 쿼리 주입)을 두 번째 병목 지점으로 두어, 같은 대조(Scale-up은 `mₐ` 낮음 / 비프로비저닝 조치는 `mₐ` 높음)를 서로 다른 스택에서 재현한다. 이 노드는 §5의 "Thread-per-request·Java·Spring 한정" 스코프와 §4-4의 톰캣 스레드 덤프 지표가 실제로 성립하는 지점이자, **Read Redirection(primary→replica 우회)의 1차 실증 대상**이기도 하다(§2-C).
+
 ---
 
 ## 5. 연구 범위 (Scope) 명시
 
-1. Thread-per-request 모델 한정
-2. Java·Spring 실증 한정
+1. **Thread-per-request 모델 한정** — 스레드풀·커넥션풀 고갈을 다루므로 thread-per-request 스택을 전제한다. Online Boutique 원본에는 이 전제를 만족하는 서비스가 없으므로(cartservice는 C#/.NET이고, 유일한 Java 서비스인 adservice는 gRPC라 서블릿 컨테이너가 아니다), §4-1에서 추가하는 Spring 서비스가 이 스코프를 실제로 충족시키는 노드다(단 그 서비스의 1순위 도입 근거는 스코프가 아니라 Read Redirection 구현 경로 확보다 — B6).
+2. **Java·Spring 실증 한정** — 위와 같다. 나머지 노드는 그래프 위상과 전파 경로를 구성하되, 스레드풀·커넥션풀 수준의 상세 계측(§4-4 톰캣 스레드 덤프)은 Spring 노드에서 수행한다.
 3. 경량 CQRS
-4. **벤치마크 규모 한계 명시**: 본 연구는 11-tier 규모의 벤치마크에서 개념을 검증하며, 이는 가장 직접적인 비교 대상(GRAF)과 동일한 규모다. 수십~수백 개 서비스 규모의 프로덕션 환경에서의 확장성 검증은 후속 연구로 남긴다.
+4. **벤치마크 규모 한계 명시**: 본 연구는 12~13개 서비스 규모의 벤치마크에서 개념을 검증하며, 이는 가장 직접적인 비교 대상(GRAF)과 같은 자릿수다. 수십~수백 개 서비스 규모의 프로덕션 환경에서의 확장성 검증은 후속 연구로 남긴다.
 
 ---
 
@@ -273,7 +302,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 ### 우려 6 — "왜 이렇게 작은 MSA 벤치마크를 썼는가?"
 
 3단 논리:
-1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했다. GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
+1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했다(본 연구는 원본 서비스와 호출 관계를 보존한 채 Spring/Postgres 노드 1개를 추가한 확장 구성이라, 원본 위상이 부분그래프로 그대로 남는다 — §4-1). GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
 2. **의도적 스코프 설정**: §5에 명시된 대로, 본 연구의 기여는 "위상 정보 반영의 효과 검증"이지 "초대규모 프로덕션 스케일링 검증"이 아니며, 후자는 후속 연구로 명시적으로 남긴다.
 3. **구조적 확장성**: GRAF는 readout에서 노드 임베딩을 flatten하는 방식이라 모델 파라미터가 노드 수에 선형 비례하고, 이를 스스로 확장성 한계로 인정한다(ToN 2024판 Discussion). 본 연구는 flatten이 아닌 공유 per-node head 기반 노드 레벨 예측을 채택해(§2-A 표) 그래프 크기가 달라져도 모델 구조·파라미터 수가 그대로 유지되도록 설계했다 — "검증은 작은 규모에서 했지만, 모델 구조 자체는 큰 규모에도 적용 가능하도록 설계했다"는 근거.
 
@@ -305,7 +334,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 예상 후속 질문:
 - "Deep Ensemble이 왜 더 신뢰도가 높은가?" → N개의 서로 다르게 초기화된 모델이 각기 다른 국소 최적점(local optimum)에 수렴해, MC Dropout(동일 모델에서 일부 뉴런만 제거)보다 더 다양한 관점(diversity)을 확보하기 때문.
-- "학습 비용이 N배 늘어나는 것 아닌가?" → 벤치마크 그래프가 11개 노드로 작아 N=5 모델 학습 비용 자체가 가볍다.
+- "학습 비용이 N배 늘어나는 것 아닌가?" → 벤치마크 그래프가 12~13개 노드로 작아 N=5 모델 학습 비용 자체가 가볍다.
 - "선행연구는 이 방식을 어떻게 검증했는가?" → GRAF·FIRM·AGQ 모두 신뢰도 산출 자체를 하지 않아 참고할 선례가 없다. 불확실성 정량화라는 별도 분야의 표준 문헌(Gal & Ghahramani 2016; Lakshminarayanan et al. 2017)에 근거를 둔다.
 
 ### 우려 10 — "그래프(데이터셋)가 커지면 학습이 오래 걸리지 않는가?"
@@ -327,7 +356,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 전제 교정 + 3단 방어:
 1. **골든타임 경로에 GNN이 없다(전제 교정)**: 초 단위 급속 장애의 즉시 대응은 Tier 1 로컬 반사(§2-D)가 담당한다. GNN(Tier 2)은 리드타임이 있는 장애를 **선제 예측**하는 층이라, 골든타임(ms) 안에 추론을 끝내야 한다는 요구 자체가 성립하지 않는다.
-2. **경쟁 기준선은 GRAF의 결정 시간**: 위상 인지형 선행연구 중 실제 결정 지연이 보고된 GRAF는 configuration solver(gradient descent)가 tolerance에 수렴하는 데 **90퍼센타일 약 6.7초**가 걸린다(원문 ToN'24 §V 확인 — 이는 자원할당 최적화 수렴 시간이지 GNN 추론 시간이 아니다). 11노드 GAT 앙상블의 단일 forward pass는 이보다 수 자릿수 빠르므로 Tier 2 선제 주기(N초) 안에 충분히 들어온다. (참고 지연 수치: FIRM 순수 추론 1.2ms, AGQ 추론+스케줄링 0.4s — 모두 본 연구가 목표하는 결정 지연대와 같거나 느슨하다.)
+2. **경쟁 기준선은 GRAF의 결정 시간**: 위상 인지형 선행연구 중 실제 결정 지연이 보고된 GRAF는 configuration solver(gradient descent)가 tolerance에 수렴하는 데 **90퍼센타일 약 6.7초**가 걸린다(원문 ToN'24 §V 확인 — 이는 자원할당 최적화 수렴 시간이지 GNN 추론 시간이 아니다). 12~13노드 GAT 앙상블의 단일 forward pass는 이보다 수 자릿수 빠르므로 Tier 2 선제 주기(N초) 안에 충분히 들어온다. (참고 지연 수치: FIRM 순수 추론 1.2ms, AGQ 추론+스케줄링 0.4s — 모두 본 연구가 목표하는 결정 지연대와 같거나 느슨하다.)
 3. **병렬 앙상블**: N=5 모델은 독립 프로세스로 병렬 추론하므로 전체 지연이 단일 모델 수준으로 억제된다(§2-A Deep Ensemble 채택 근거와 정합).
 
 예상 후속 질문:
@@ -340,7 +369,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 2. **드문 위상 변경도 전면 재학습이 아니다**: 서비스 추가/삭제로 위상이 실제로 바뀌어도 기존 학습 가중치에서 **fine-tune(전이학습)**하면 되며 밑바닥부터 재학습할 필요가 없다.
 3. **선례**: 전이학습으로 MSA 모델 적응 비용을 낮추는 접근은 FIRM(OSDI'20)이 이미 보여준다 — FIRM은 마이크로서비스별 RL 에이전트를 이전 경험으로부터 전이 학습해 from-scratch보다 빠르게 수렴시켰다(원문 확인). 단 FIRM은 GNN이 아니므로(SVM+RL), 이는 "FIRM이 GNN 위상 변경에 전이학습을 썼다"는 뜻이 아니라 **전이학습이 MSA 도메인에서 재학습을 회피하는 유효한 방향이라는 선례**로만 인용한다. 본 연구는 그 개념을 GAT 가중치 fine-tuning에 적용한다.
 
-(주의: 본 연구 벤치마크는 고정 11노드 위상이라 위상 변경은 실험 과제가 아니라 프로덕션 확장 시 대응 논거다.)
+(주의: 본 연구 벤치마크는 고정 12~13노드 위상이라 위상 변경은 실험 과제가 아니라 프로덕션 확장 시 대응 논거다.)
 
 ---
 
@@ -388,6 +417,8 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 - **Gal & Ghahramani (2016)**, "Dropout as a Bayesian Approximation", ICML 2016. MC Dropout을 처음 제안한 논문. 신경망 추론 시 Dropout을 끄지 않고 유지한 채 여러 번 반복 추론함으로써 베이지안 근사 방식으로 모델의 불확실성을 추정하는 기법을 제안한다. 본 연구와의 관계: 신뢰도 산출 방식 후보 비교 시 MC Dropout 측 근거로 검토했으나, 추론 시 반복 순전파가 필요해 즉각 반응이 핵심인 본 연구에는 불리하다고 판단해 최종 미채택. [arXiv](https://arxiv.org/abs/1506.02142) · [PMLR](https://proceedings.mlr.press/v48/gal16.html)
 - **Lakshminarayanan, Pritzel & Blundell (2017)**, NeurIPS 2017. Deep Ensemble을 제안한 논문. 서로 다르게 초기화된 여러 신경망을 독립적으로 학습시킨 뒤 예측값들의 분산으로 불확실성을 추정하는 기법을 제시하며, MC Dropout과의 비교 실험을 통해 Deep Ensemble이 더 신뢰할 수 있는 불확실성 추정치를 제공함을 실증했다. 본 연구와의 관계: 신뢰도 산출 방식의 핵심 채택 근거 논문. [arXiv](https://arxiv.org/abs/1612.01474) · [NeurIPS](https://papers.nips.cc/paper/2017/hash/9ef2ed4b7fd2c810847ffa5fa85bce38-Abstract.html)
+- **Su, J. et al. (2026)**, "CP-Router: An Uncertainty-Aware Router Between LLM and LRM", AAAI 2026. Conformal Prediction으로 예측 불확실성을 추정하고, 예측 집합 크기가 작으면(불확실성 낮음) LLM, 크면 LRM으로 라우팅하는 학습 불필요 프레임워크. FBE(Full and Binary Entropy)로 CP 임계값을 적응적으로 선택한다. 본 연구와의 관계: **불확실성으로 조치를 가른다는 메커니즘이 표면적으로 겹치는 인접 연구.** 구분선은 (1) 임계값이 하나이며 근거가 통계적 커버리지 보장인 점, (2) 선택지가 이진 동질(LLM↔LRM)인 점, (3) 도메인이 MCQA·QA인 점이다(D15). [arXiv](https://arxiv.org/abs/2505.19970) · [AAAI](https://ojs.aaai.org/index.php/AAAI/article/view/40589)
+- **Ramírez, G., Birch, A. & Titov, I. (2024)**, "Optimising Calls to Large Language Models with Uncertainty-Based Two-Tier Selection", COLM 2024. 소형 LLM 생성의 불확실성(margin sampling)만으로 대형 LLM 호출 여부를 결정하며, 추가 신경망이 필요한 캐스케이드·라우팅 기법 대비 27개 설정 중 25개에서 우위. 임계값은 초기 질의로 잡은 뒤 비용식 `c = ĉ_s + p_c·ĉ_l`의 예산 목표에 맞춰 동적 보정한다. 본 연구와의 관계: 위와 같은 인접 연구이며 구분선도 동일하다(D15). **arXiv 프리프린트가 아니라 COLM 2024 정식 게재이므로 인용 시 venue를 정확히 적을 것.** [arXiv](https://arxiv.org/abs/2405.02134) · [OpenReview](https://openreview.net/forum?id=T9cOYH0wGF)
 
 **[GNN 모델 선정]**
 

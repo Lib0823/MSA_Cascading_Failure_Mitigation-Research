@@ -12,7 +12,7 @@
 
 - 모놀리식 → K8s 분산 전환 시 연쇄 장애 위험 급증
 - 기존 K8s HPA의 4가지 한계: 사후반응성 / Thundering Herd 유발 가능성 / 위상 정보 부재 / 시계열 전용 모델의 전파경로 포착 실패
-- 선행연구(GRAF·FIRM·AGQ·GraphGRU)를 원문까지 재확인한 결과, 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조 — **신뢰도 구간별 대응**은 문헌상 비어 있는 자리
+- 선행연구(GRAF·FIRM·AGQ·GraphGRU)를 원문까지 재확인한 결과, 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조 — **신뢰도 구간별 대응**은 장애 예측·자원 관리 도메인에서 비어 있는 자리
 
 ## Research Goal
 
@@ -27,9 +27,9 @@
 ## Method
 
 - **AI 예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. 무거운 STGNN 대신 노드 feature에 슬라이딩 윈도우 시계열 통계량을 주입해(TA-GAT) 정적 그래프 위에서 시간적 추세와 위상 전파를 함께 학습. 출력은 flatten이 아닌 공유 per-node head 기반 노드 레벨 예측 채택(서비스별 위험도 산출, 그래프 크기 확장에도 파라미터 구조 유지).
-- **의사결정 계층 (핵심 Contribution)**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine. 고신뢰도=적극적 조치 / 중간신뢰도=저비용·가역적 조치 / 저신뢰도=보류.
+- **의사결정 계층 (핵심 Contribution)**: 위험 확률과 불확실성을 함께 넣은 기대비용 최소화 비용함수로 조치를 선택하는 Policy Engine. 신뢰도 구간(고/중/저)을 손으로 긋지 않고 **조치별 임계값 `θₐ`가 비용함수에서 유도**되며, 그 결과로 "고신뢰도=적극적 조치 / 중간=저비용·가역적 / 저=보류"가 자동 생성된다.
 - **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
-- **실험**: Online Boutique(11~12개 서비스) 벤치마크, Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
+- **실험**: Online Boutique(11~12개 서비스) + Spring/HikariCP/PostgreSQL 서비스 1개 추가(총 12~13개) 벤치마크, Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
 
 자세한 아키텍처 설계 근거와 심사 방어 논리는 [docs/proposal.md](docs/proposal.md)를 참고.
 

@@ -366,8 +366,8 @@ entities:
     source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: ReadRedirection
-    aliases: [Read Redirection]
+  - name: DegradedPathRedirection
+    aliases: [Degraded-path Redirection, DegradedPathRedirection]
     attributes: []
     source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
@@ -548,8 +548,8 @@ entities:
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: ReadRedirection_i
-    aliases: [Read Redirection 개체]
+  - name: DegradedPathRedirection_i
+    aliases: [Degraded-path Redirection 개체]
     attributes: [disruption=낮음, reversibility=낮음, mitigationEffect=중, targetPropagationSpeed=중, confidenceTierRequired=낮음~중, isProvisioning=false]
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
@@ -858,54 +858,187 @@ entities:
     manual: false
 
   # ===== Individuals — Concerns =====
-  - name: Concern6
+  - name: Concern1
     aliases: ["작은 벤치마크?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern7
+  - name: Concern2
     aliases: ["FIRM과 차이?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern8
+  - name: Concern3
     aliases: ["왜 정적 GAT?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern9
+  - name: Concern4
     aliases: ["왜 Deep Ensemble?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern10
+  - name: Concern5
     aliases: ["그래프 커지면 학습?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern11
+  - name: Concern6
     aliases: ["즉각조치를 GNN에 묶으면?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern12
+  - name: Concern7
     aliases: ["N=5 골든타임?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
-  - name: Concern13
+  - name: Concern8
     aliases: ["정적 위상 유효?"]
     attributes: []
     source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
     confidence: EXTRACTED
     manual: false
+
+  - name: NodeType
+    aliases: [노드 타입]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: LLMInferenceNode
+    aliases: [LLM 추론 노드, assistantservice]
+    attributes: [count=1, servingTier=2티어 캐스케이드]
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}, {type: doc, path: docs/proposal.md}]
+    confidence: CONFIRMED
+    manual: true
+  - name: GeneralService
+    aliases: [일반 서비스]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: KVCache
+    aliases: [KV 캐시]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: SemanticSlot
+    aliases: [의미 기준 공통 슬롯]
+    attributes: [slotCount=6]
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: NodeTypeEmbedding
+    aliases: [노드 타입 임베딩]
+    attributes: [dim=4~8]
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: ApplyPoint
+    aliases: [조치 적용 지점, apply_point]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: FailureScenario
+    aliases: [장애 시나리오]
+    attributes: [count=3]
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: ExperimentValidityGate
+    aliases: [실험 유효성 기준]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: ComparisonTarget
+    aliases: [비교 대상]
+    attributes: [count=5]
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: UtilizedTechnique
+    aliases: [활용 기법]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: AdjacentWork
+    aliases: [인접 연구]
+    attributes: []
+    source_refs: [{type: owl_class, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: DeepScaler
+    aliases: []
+    attributes: [venue=ASE'23]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: ORACL
+    aliases: []
+    attributes: [venue=IEEE TSC 2026]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: FrugalGPT
+    aliases: []
+    attributes: [venue=TMLR 2024]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: RouteLLM
+    aliases: []
+    attributes: [venue=ICLR 2025]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: HW_Router
+    aliases: [HW-Router]
+    attributes: [venue=DAC]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: GraphRouter
+    aliases: []
+    attributes: [venue=ICLR 2025]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: Graph_PHPA
+    aliases: [Graph-PHPA]
+    attributes: [venue=CloudNet 2022]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: ModelDowngrade_i
+    aliases: [모델 다운그레이드]
+    attributes: [disruption=중, reversibility=낮음, mitigationEffect=중~높음, isProvisioning=false]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: TokenBudgetCut_i
+    aliases: [max_tokens 상한, RAG top-k 축소]
+    attributes: [disruption=중, reversibility=낮음, mitigationEffect=중, isProvisioning=false]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
+  - name: InferenceCapacityUp_i
+    aliases: [vLLM 용량 파라미터 조정]
+    attributes: [disruption=높음, reversibility=높음, mitigationEffect=상황의존, isProvisioning=true]
+    source_refs: [{type: owl_individual, path: ontology_temp/ontology.ttl}]
+    confidence: CONFIRMED
+    manual: true
 
 relations:
   # ----- 클래스 계층 (rdfs:subClassOf → EXTENDS) -----
@@ -967,7 +1100,7 @@ relations:
   - {from: Actuator, to: ActuationConcept, type: EXTENDS, confidence: EXTRACTED, manual: false}
   - {from: CircuitBreaker, to: Actuator, type: EXTENDS, confidence: EXTRACTED, manual: false}
   - {from: TrafficShedding, to: Actuator, type: EXTENDS, confidence: EXTRACTED, manual: false}
-  - {from: ReadRedirection, to: Actuator, type: EXTENDS, confidence: EXTRACTED, manual: false}
+  - {from: DegradedPathRedirection, to: Actuator, type: EXTENDS, confidence: EXTRACTED, manual: false}
   - {from: K8sScaleUp, to: Actuator, type: EXTENDS, confidence: EXTRACTED, manual: false}
   - {from: Brownout, to: Actuator, type: EXTENDS, confidence: EXTRACTED, manual: false}
   - {from: ControlTier, to: ActuationConcept, type: EXTENDS, confidence: EXTRACTED, manual: false}
@@ -1042,7 +1175,7 @@ relations:
   # ----- 개체 → 클래스 (INSTANCE_OF) -----
   - {from: CircuitBreaker_i, to: CircuitBreaker, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: TrafficShedding_i, to: TrafficShedding, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
-  - {from: ReadRedirection_i, to: ReadRedirection, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
+  - {from: DegradedPathRedirection_i, to: DegradedPathRedirection, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: K8sScaleUp_i, to: K8sScaleUp, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: Brownout_i, to: Brownout, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: Withhold_i, to: Withhold, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
@@ -1091,22 +1224,22 @@ relations:
   - {from: Resilience4j, to: Tool, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: PyTorchGeometric, to: Tool, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: DGL, to: Tool, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
+  - {from: Concern1, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
+  - {from: Concern2, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
+  - {from: Concern3, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
+  - {from: Concern4, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
+  - {from: Concern5, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: Concern6, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: Concern7, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
   - {from: Concern8, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
-  - {from: Concern9, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
-  - {from: Concern10, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
-  - {from: Concern11, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
-  - {from: Concern12, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
-  - {from: Concern13, to: Concern, type: INSTANCE_OF, confidence: EXTRACTED, manual: false}
 
   # ----- 개체 간 실제 관계 (ontology.ttl 인스턴스 트리플) -----
   - {from: CircuitBreaker_i, to: Tier1_LocalReflex, type: triggeredBy, confidence: EXTRACTED, manual: false}
   - {from: CircuitBreaker_i, to: Tier2_GNNProactive, type: triggeredBy, confidence: EXTRACTED, manual: false}
   - {from: TrafficShedding_i, to: Tier1_LocalReflex, type: triggeredBy, confidence: EXTRACTED, manual: false}
   - {from: TrafficShedding_i, to: Tier2_GNNProactive, type: triggeredBy, confidence: EXTRACTED, manual: false}
-  - {from: ReadRedirection_i, to: Tier2_GNNProactive, type: triggeredBy, confidence: EXTRACTED, manual: false}
-  - {from: ReadRedirection_i, to: ConnectionPool, type: targetsResource, confidence: EXTRACTED, manual: false}
+  - {from: DegradedPathRedirection_i, to: Tier2_GNNProactive, type: triggeredBy, confidence: EXTRACTED, manual: false}
+  - {from: DegradedPathRedirection_i, to: ConnectionPool, type: targetsResource, confidence: EXTRACTED, manual: false}
   - {from: K8sScaleUp_i, to: Tier2_GNNProactive, type: triggeredBy, confidence: EXTRACTED, manual: false}
   - {from: Brownout_i, to: Tier2_GNNProactive, type: triggeredBy, confidence: EXTRACTED, manual: false}
   - {from: GRAF, to: MPNN, type: usesModel, confidence: EXTRACTED, manual: false}
@@ -1136,8 +1269,30 @@ relations:
   - {from: Tier2_GNNProactive, to: CR_EscalateOnly, type: resolvesConflictVia, confidence: EXTRACTED, manual: false}
   - {from: Tier2_GNNProactive, to: CR_Lease, type: resolvesConflictVia, confidence: EXTRACTED, manual: false}
   - {from: Tier2_GNNProactive, to: CR_Lease, type: hasLease, confidence: EXTRACTED, manual: false}
-  - {from: Concern12, to: DD_TwoTier, type: addressedBy, confidence: EXTRACTED, manual: false}
-  - {from: Concern13, to: DD_TransferLearning, type: addressedBy, confidence: EXTRACTED, manual: false}
+  - {from: Concern7, to: DD_TwoTier, type: addressedBy, confidence: EXTRACTED, manual: false}
+  - {from: Concern8, to: DD_TransferLearning, type: addressedBy, confidence: EXTRACTED, manual: false}
+
+  - {from: LLMInferenceNode, to: NodeType, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: GeneralService, to: NodeType, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: KVCache, to: StatefulResource, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: SemanticSlot, to: NodeFeature, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: NodeTypeEmbedding, to: NodeFeature, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: ComparisonTarget, to: RelatedWork, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: UtilizedTechnique, to: RelatedWork, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: AdjacentWork, to: RelatedWork, type: EXTENDS, confidence: CONFIRMED, manual: true}
+  - {from: DeepScaler, to: ComparisonTarget, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: FrugalGPT, to: UtilizedTechnique, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: RouteLLM, to: UtilizedTechnique, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: HW_Router, to: AdjacentWork, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: GraphRouter, to: AdjacentWork, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: ORACL, to: AdjacentWork, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: ModelDowngrade_i, to: DegradedPathRedirection, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: TokenBudgetCut_i, to: Brownout, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: InferenceCapacityUp_i, to: K8sScaleUp, type: INSTANCE_OF, confidence: CONFIRMED, manual: true}
+  - {from: FrugalGPT, to: DegradedPathRedirection, type: justifies, confidence: CONFIRMED, manual: true}
+  - {from: RouteLLM, to: DegradedPathRedirection, type: justifies, confidence: CONFIRMED, manual: true}
+  - {from: Actuator, to: ApplyPoint, type: appliesAt, confidence: CONFIRMED, manual: true}
+  - {from: Microservice, to: NodeType, type: hasNodeType, confidence: CONFIRMED, manual: true}
 
 rules:
   # ----- 정합성 규칙 (properties.md C, 설계 불변식) -----
@@ -1172,11 +1327,11 @@ rules:
 
   # ----- 핵심 설계 콜아웃 (classes.md/individuals.md 주석) -----
   - entity: ServiceCallGraph
-    text: "위상(ServiceCallGraph)은 정적. Pod 증감 등 물리적 변화는 그래프 구조가 아니라 NodeFeature로 흡수(우려13). 위상 변경은 fine-tune으로 대응"
+    text: "위상(ServiceCallGraph)은 정적. Pod 증감 등 물리적 변화는 그래프 구조가 아니라 NodeFeature로 흡수(우려8). 위상 변경은 fine-tune으로 대응"
     confidence: EXTRACTED
     manual: false
   - entity: Actuator
-    text: "조치 이질성 축: ReadRedirection(기능유지+일관성약화) ≠ Brownout(기능생략) ≠ TrafficShedding(요청거부). isProvisioning으로 K8sScaleUp(프로비저닝)만 나머지 4종과 구분"
+    text: "조치 이질성 축: DegradedPathRedirection(기능유지+일관성약화) ≠ Brownout(기능생략) ≠ TrafficShedding(요청거부). isProvisioning으로 K8sScaleUp(프로비저닝)만 나머지 4종과 구분"
     confidence: EXTRACTED
     manual: false
   - entity: TemporalStatisticFeature
@@ -1188,7 +1343,7 @@ rules:
     confidence: EXTRACTED
     manual: false
   - entity: CircuitBreaker_i
-    text: "컷 우선순위: 시간 부족 시 CircuitBreaker+ReadRedirection 2종만 실증, 나머지는 확장 가능 설계로 남김. Brownout은 앱 계측 필요로 컷 1순위"
+    text: "컷 우선순위: 시간 부족 시 CircuitBreaker+DegradedPathRedirection 2종만 실증, 나머지는 확장 가능 설계로 남김. Brownout은 앱 계측 필요로 컷 1순위"
     confidence: EXTRACTED
     manual: false
   - entity: OnlineBoutique
@@ -1197,35 +1352,35 @@ rules:
     manual: false
 
   # ----- 심사 우려 대응 (individuals.md §10) -----
-  - entity: Concern6
+  - entity: Concern1
     text: "왜 작은 벤치마크? → 선행 전례 + 의도적 스코프 + 공유 per-node head 확장성(D13)"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern7
+  - entity: Concern2
     text: "FIRM과 뭐가 다른가? → 위상 미반영 + 신뢰도구간 없음 + 비프로비저닝 조치(D14)"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern8
+  - entity: Concern3
     text: "왜 정적 GAT(시계열 결합 아님)? → 문제정의 다름(분류/신뢰도) + TA-GAT feature 보강 + ablation"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern9
+  - entity: Concern4
     text: "왜 Deep Ensemble(MC Dropout 아님)? → Lakshminarayanan 2017 선례 + 병렬추론 지연 우위"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern10
+  - entity: Concern5
     text: "그래프 커지면 학습 오래? → GAT sparse O(N+E) + 공유 head + 진짜 병목은 실측 수집"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern11
+  - entity: Concern6
     text: "즉각조치를 느린 GNN에 묶으면? → 2계층(Tier1 반사)으로 분리"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern12
+  - entity: Concern7
     text: "N=5 앙상블이 골든타임 안에? → 골든타임에 GNN 없음(Tier2 전용) + GRAF 6.7s 기준선 + 병렬추론"
     confidence: EXTRACTED
     manual: false
-  - entity: Concern13
+  - entity: Concern8
     text: "정적 위상이 변하는 MSA에 유효? → 논리 위상은 안정적 + 물리 변화는 feature로 흡수 + fine-tune(FIRM 전이학습 선례)"
     confidence: EXTRACTED
     manual: false

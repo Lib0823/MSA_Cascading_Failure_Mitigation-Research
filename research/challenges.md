@@ -70,25 +70,25 @@
 - **확인(GRAF, 2021 CoNEXT 원문 + 2024 ToN 확장판)**: GRAF는 2021년부터 Online Boutique와 Social Network 두 벤치마크를 함께 사용했으며 2024년 확장판에서 새로 추가된 것이 아님. 다만 GNN 입력으로 실제 사용한 그래프는 벤치마크 전체가 아니라 특정 요청 체인(critical chain)만 잘라낸 서브그래프: Online Boutique는 6개 노드(MS1~MS6, 카트 페이지 체인), Social Network는 10개 노드(MS1~MS10, post-compose 체인). 즉 본 연구가 채택한 11개 노드(Online Boutique 전체 위상)는 GRAF의 실제 GNN 입력 규모보다 오히려 크다.
 - **확인(FIRM)**: GNN을 사용하지 않고 SVM 기반 critical path 추출 + RL(actor-critic)로 저수준 자원(CPU/Mem/LLC/IO/Net) 한도 재할당을 선택하는 구조(조치 공간 상세는 D14). 그래프 임베딩 학습이 없어 노드 수 제약이 없고, DeathStarBench(Social Network 36, Media Service 38, Hotel Reservation 15) + Train-Ticket(41) 벤치마크의 전체 서비스 그래프를 그대로 사용.
 - **확인(AGQ)**: 메인 비교 실험(Table 3, HAB/MMN/AWS/SLO 등 실제 경쟁 베이스라인과 신뢰구간까지 명시한 핵심 결과)은 Sock Shop(~13개 노드) 규모에서 수행. "수백 개 노드" 규모의 LinkedIn 실험은 메인 베이스라인이 아닌 DCRNN·T-GCN 두 GNN 모델과만 비교한 보조 실험이며, 실제 LinkedIn 데이터가 아니라 공개 아키텍처 설명을 참고해 자체 시뮬레이션한 비공개·비재현 환경.
-- **결론**: GNN 기반 선행연구(GRAF, AGQ)의 실질적 핵심 검증 규모는 모두 본 연구의 11개 노드와 같은 자릿수(6~13개)이며, 본 연구가 유독 작은 것이 아님. "AGQ는 대규모에서 검증했다"는 인상은 메인 결과가 아닌 비재현 보조 실험에서 비롯된 것이라 근거로서의 무게가 약함. [docs/proposal.md](../docs/proposal.md) §3, 우려 6에 반영.
+- **결론**: GNN 기반 선행연구(GRAF, AGQ)의 실질적 핵심 검증 규모는 모두 본 연구의 11개 노드와 같은 자릿수(6~13개)이며, 본 연구가 유독 작은 것이 아님. "AGQ는 대규모에서 검증했다"는 인상은 메인 결과가 아닌 비재현 보조 실험에서 비롯된 것이라 근거로서의 무게가 약함. [docs/proposal.md](../docs/proposal.md) §3, 우려 1에 반영.
 
 ### B6. Spring/PostgreSQL 서비스 추가 — 스코프 정합 + 상태성 병목 이중화
 - **문제**: 세 가지가 걸려 있었다. **당초 이 항목의 출발점이었던 "Online Boutique에 상태성 병목을 실증할 대상이 없다"는 주장은 사실이 아니다** — §4-5에 cartservice→Redis 경로가 주입 방법까지 명시되어 있었다. 아래가 실제 문제다.
-  0. **Read Redirection의 구현 경로 미검증 (1순위 근거)**: [timeline.md](timeline.md) 컷 우선순위상 최후까지 남기는 Actuator 2종은 CB + Read Redirection이다. 그런데 Read Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 6 방어의 토대)과 정면으로 충돌한다. 즉 최소 실증 세트의 절반이, 원본을 건드려야만 성립하는 경로에 걸려 있었다. (하드웨어 부담이 아니라 **벤치마크 충실도**가 쟁점이다.)
+  0. **Read Redirection의 구현 경로 미검증 (1순위 근거)**: [timeline.md](timeline.md) 컷 우선순위상 최후까지 남기는 Actuator 2종은 CB + Read Redirection이다. 그런데 Read Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 1 방어의 토대)과 정면으로 충돌한다. 즉 최소 실증 세트의 절반이, 원본을 건드려야만 성립하는 경로에 걸려 있었다. (하드웨어 부담이 아니라 **벤치마크 충실도**가 쟁점이다.)
   1. **스코프 불일치**: [docs/proposal.md](../docs/proposal.md) §5는 "Thread-per-request 모델 한정 / Java·Spring 실증 한정"을 선언하고 §4-4는 평가지표에 "톰캣 스레드 덤프"를 넣었는데, **Online Boutique 원본에 이를 충족하는 서비스가 없다.** cartservice는 C#/.NET이고, 유일한 Java 서비스인 adservice는 gRPC라 서블릿 컨테이너가 아니다. 즉 현재 구성으로는 선언한 스코프와 지표를 실증할 수 없었다.
   2. **상태성 병목 단일 지점**: 핵심 차별점(D2, Thundering Herd)의 실증 지점이 cartservice→Redis 하나뿐이라, 그 시나리오가 실패하면 대체재가 없다.
 - **확인**: Online Boutique 원본 서비스 구성 기준(frontend·checkoutservice·productcatalogservice·shippingservice는 Go, recommendationservice·emailservice는 Python, currencyservice·paymentservice는 Node.js, cartservice는 C#, adservice는 Java/gRPC). **본 확인은 벤치마크 서비스 목록 기준이며, 실증 착수 전 저장소에서 재확인 대상.**
 - **의사결정 과정**: 도입 방식 2안 비교.
   - **(a) 신규 서비스 추가** — Spring + HikariCP + Postgres 서비스를 별도 노드로 붙인다. 원본 미변형, 구현 단순, §5 스코프 충족. 단 fan-in이 낮아 전파 경로가 짧다.
   - (b) productcatalogservice 교체 — Go 구현을 Spring+MyBatis+Postgres로 교체. fan-in 3(frontend·checkout·recommendation)으로 다중 전파가 생기나, 원본 변형 + Go→JVM 지연 특성 변화 + 벤치마크 대표성 지적 소지.
-- **결론**: **(a) 신규 서비스 추가로 확정.** 판단 기준은 "fan-in 크기"가 아니라 **"Read Redirection의 구현 경로를 확보하는가"**이며, 이 기준에서 (a)로 충분하다. Postgres primary/replica는 **어차피 새로 붙이는 노드**라 복제 구성이 원본 충실도를 전혀 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅이 표준 구성이라 구현 부담도 낮다. 조치 적용 지점 문제는 E7에서 별도로 다뤄지므로 (b)의 추가 이득이 크지 않은 반면, 원본 변형 비용(우려 6의 "GRAF와 동일 벤치마크" 논거 약화)은 실재한다. 원본 서비스와 호출 관계를 보존하므로 원본 위상이 부분그래프로 남아 우려 6 방어가 유지된다. [docs/proposal.md](../docs/proposal.md) §4-1·§4-5·§5·우려 6에 반영.
+- **결론**: **(a) 신규 서비스 추가로 확정.** 판단 기준은 "fan-in 크기"가 아니라 **"Read Redirection의 구현 경로를 확보하는가"**이며, 이 기준에서 (a)로 충분하다. Postgres primary/replica는 **어차피 새로 붙이는 노드**라 복제 구성이 원본 충실도를 전혀 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅이 표준 구성이라 구현 부담도 낮다. 조치 적용 지점 문제는 E7에서 별도로 다뤄지므로 (b)의 추가 이득이 크지 않은 반면, 원본 변형 비용(우려 1의 "GRAF와 동일 벤치마크" 논거 약화)은 실재한다. 원본 서비스와 호출 관계를 보존하므로 원본 위상이 부분그래프로 남아 우려 1 방어가 유지된다. [docs/proposal.md](../docs/proposal.md) §4-1·§4-5·§5·우려 1에 반영.
 - **부수 효과**: Redis 경로는 폐기하지 않는다. 1차 상태성 병목(§4-5)으로 그대로 유지하고, Read Redirection만 Postgres를 1차 대상으로 옮긴다. Redis Cluster 구성이 가능해지면 Redis 경로도 보조 실증으로 살릴 수 있다.
 - **잔여(미확정)**: 추가 서비스의 **배치(어느 서비스가 호출하는가)·명칭·API 미정.** 배치에 따라 fan-in과 전파 경로가 달라지므로 실험 환경 구축 착수 전 확정 필요. 확정 후 노드 수 표기(현재 "13~14개", LLM 노드 포함 — B7)를 최종값으로 고정한다.
 
 ### B7. 벤치마크 확장 — LLM 추론 서비스(assistantservice) 추가 [채택]
 - **문제**: 대상 시스템을 일반 서비스만으로 둘지, LLM 추론 노드를 포함한 혼합 그래프로 둘지 결정.
 - **의사결정 과정**: 3안 비교. (A) LLM 에이전트를 Policy Engine으로 사용 — 비결정적 출력이라 반복 실험 기반 정량 비교·재현성 확보 불가, "GNN과 LLM을 왜 둘 다 쓰나"의 설계 정당화 곤란으로 **기각**. (사후 확인: 이 방향을 실제로 수행한 ORACL조차 LLM 결정을 행동 공간 가지치기와 정책 제약으로 감쌌고, MicroRemed 벤치마크는 단독 LLM의 remediation 정확도가 최저 난이도에서도 50% 미만임을 보고한다 — D21.) (B) LLM 서빙 인프라 전용 프레임워크로 전면 전환 — 연구 분야가 LLM serving systems(vLLM·SGLang 계열)로 이동해 기존 확정 사항 대부분(벤치마크·비교 논문 5편·커넥션풀 논거·GAT 근거)이 무효화되고 심사 요구 수준이 KCI 목표 대비 과도해져 **기각**. (C) 혼합 그래프(일반 서비스 + LLM 노드 1개) — **채택**.
-- **결론**: `assistantservice` 1개를 추가한다. frontend 하위 + productcatalog 상위에 배치해 상류(스레드풀 고갈)·하류(커넥션풀 소진) 양방향 전파 경로를 만든다. 원본 서비스와 호출 관계는 보존하므로 원본 위상이 부분그래프로 남아 우려 6 방어가 유지된다.
+- **결론**: `assistantservice` 1개를 추가한다. frontend 하위 + productcatalog 상위에 배치해 상류(스레드풀 고갈)·하류(커넥션풀 소진) 양방향 전파 경로를 만든다. 원본 서비스와 호출 관계는 보존하므로 원본 위상이 부분그래프로 남아 우려 1 방어가 유지된다.
 - **주장 범위의 한정 (중요)**: 세 축은 **LLM 없이도 성립한다.** "LLM이 있어야 세 축이 필연이 된다"고 주장하지 않는다 — 심사에서 *"LLM 없이도 필요하다면서 왜 넣었나"*로 되돌아온다. 정확한 위치는 **"세 축의 적용 범위가 동질 워크로드에 한정되지 않음을 보이는 검증 대상"**이다. [docs/proposal.md](../docs/proposal.md) §1·§4-1에 반영.
 - **잔여(미확정)**: assistantservice 호출 비율, 프롬프트 소스·길이 분포, 카탈로그 조회 횟수 `N`의 정상 상태값.
 
@@ -177,14 +177,14 @@
 
 ### D13. GRAF Discussion — 확장성 한계 자인 문구 확인
 - **확인**: GRAF ToN 2024판 Discussion에서 "the readout phase's neural network input node dimension is linearly dependent on the number of microservices in an application... GRAF's performance may degrade when applied to applications composed of hundreds to thousands of microservices"라고 직접 명시. 원인은 readout 단계에서 노드 임베딩을 flatten해 FC 신경망에 입력하는 구조.
-- **결론**: 이 한계는 GNN 위상 인지 자체의 한계가 아니라 GRAF의 readout 설계(flatten) 선택에서 비롯된 것. 본 연구는 이를 반면교사로 삼아 공유 per-node head 기반 노드 레벨 예측을 채택(E5·E6)하고, 이를 [docs/proposal.md](../docs/proposal.md) 우려 6·10의 근거로 사용.
+- **결론**: 이 한계는 GNN 위상 인지 자체의 한계가 아니라 GRAF의 readout 설계(flatten) 선택에서 비롯된 것. 본 연구는 이를 반면교사로 삼아 공유 per-node head 기반 노드 레벨 예측을 채택(E5·E6)하고, 이를 [docs/proposal.md](../docs/proposal.md) 우려 1·5의 근거로 사용.
 
 ### D14. FIRM 원문 조치 공간 재확인 — 브라운아웃 오기재 정정 + 본 연구 조치 5종 확정
-- **문제**: FIRM이 실제로 브라운아웃을 조치로 사용하는지, "brownout으로 FIRM 우려 7을 방어한다"는 논거가 원문에 근거하는지 재확인 필요. (D4에 'FIRM = 수평/수직 스케일링 + 브라운아웃'으로 기재돼 있었음.)
+- **문제**: FIRM이 실제로 브라운아웃을 조치로 사용하는지, "brownout으로 FIRM 우려 2을 방어한다"는 논거가 원문에 근거하는지 재확인 필요. (D4에 'FIRM = 수평/수직 스케일링 + 브라운아웃'으로 기재돼 있었음.)
 - **확인**: FIRM 원문(arXiv 2008.08509) Table 3(State-action space)과 §3.4~3.5(Action Execution)를 직접 확인. FIRM의 RL(DDPG) Action Space는 **저수준 자원 5종의 한도 재할당** `RLTᵢ, i ∈ {CPU, Mem, LLC, IO, Net}`이며, 실행은 cgroups(`cpu.cfs_*`, `blkio`)·Intel MBA/CAT·HTB로 수행하고, 한도가 상·하한에 닿으면 수평 스케일아웃/인. **브라운아웃은 조치 공간에 없음.** 검색엔진 요약은 'horizontal/vertical scaling + brownout'이라 했으나 원문과 불일치 — 원문 우선(팩트체크 원칙).
 - **결론**:
   1. **정정**: 기존 D4·proposal의 'FIRM 브라운아웃 포함' 및 'FIRM 이질적 조치'는 오기재로 정정. FIRM 조치 공간 = 다차원이지만 전부 자원 프로비저닝(비프로비저닝 조치 없음).
-  2. **차별점 강화**: 따라서 상태성 병목(커넥션풀/Thundering Herd, D2) 시나리오는 GRAF·AGQ뿐 아니라 **FIRM도 다루지 못함** → 본 연구의 비프로비저닝 조치가 FIRM 대비로도 신규 기여임을 [docs/proposal.md](../docs/proposal.md) 우려 7·§3에 반영.
+  2. **차별점 강화**: 따라서 상태성 병목(커넥션풀/Thundering Herd, D2) 시나리오는 GRAF·AGQ뿐 아니라 **FIRM도 다루지 못함** → 본 연구의 비프로비저닝 조치가 FIRM 대비로도 신규 기여임을 [docs/proposal.md](../docs/proposal.md) 우려 2·§3에 반영.
   3. **Brownout 채택(5번째 조치)**: 브라운아웃은 FIRM 근거와 **무관하게**, Online Boutique의 `adservice`/`recommendationservice`(비핵심 기능)를 dimmer로 차단하는 형태로 **벤치마크에서 실제 구현 가능**하다는 근거로 본 연구의 정식 5번째 조치로 채택(CB/Shedding/Redirection/Scale-up/Brownout). Traffic Shedding(요청 통째 거부)과 달리 요청을 받되 품질만 낮추는 질적으로 다른 레버라 조치 공간 이질성을 넓힘. 단 앱 계측(필수/선택 분리)이 필요해 실증 우선순위는 코어 조치 뒤([timeline.md](timeline.md) 컷 우선순위). [docs/proposal.md](../docs/proposal.md) §2-B·§2-C 반영.
 
 ### D15. 신뢰도 축 유일성 — 검증 범위 한정 및 주장 수위 조정
@@ -217,9 +217,9 @@
   - 축 ①(위상 인지 예측)은 원래도 GRAF류가 차지한 자리로 인정해온 영역이므로 새로 잃는 것이 없다. DeepScaler는 그 자리를 더 정교하게 채운 논문이다.
   - 축 ②(이질적 조치)·축 ③(신뢰도)은 그대로 비어 있다.
   - E1(GAT 채택 논거)은 **무너지지 않는다.** E1의 주장은 "GRAF와 AGQ가 차등 집계를 못 한다"로 두 논문을 특정한 것이고, 비교표에 이미 GraphGRU(GAT)가 있어 애초에 "attention 선례가 없다"는 주장을 하고 있지 않았다.
-  - 오히려 우려 6(벤치마크 규모)에는 **유리하다** — 최상위 venue 두 곳(CoNEXT/ToN의 GRAF, ASE의 DeepScaler)이 같은 Online Boutique를 쓴 전례가 된다.
-- **새로 답해야 할 질문**: *"DeepScaler는 의존 그래프를 학습하는데 왜 정적 그래프인가."* 답변 — Istio 사이드카가 실제 호출 관계를 직접 제공하는 환경이라 그래프를 추정할 필요가 없고, 관측 가능한 구조를 추정하면 (a) 추정 오차가 예측 오차에 더해지며 (b) 학습된 인접행렬은 해석이 어려워 조치 근거 설명이 약해진다(E3의 RL 미채택 논거와 같은 축). 위상 변경 대응은 우려 13에서 별도로 다룬다. [docs/proposal.md](../docs/proposal.md) 우려 8에 반영.
-- **결론**: 4자 → **5자 비교표**로 확장하고 "예측 대상(회귀 vs 분류+불확실성)" 행을 신설해 구분을 명시. [docs/proposal.md](../docs/proposal.md) §2-B·§3·우려 6·우려 8·참고문헌, [README.md](../README.md), [overview.md](overview.md)에 반영.
+  - 오히려 우려 1(벤치마크 규모)에는 **유리하다** — 최상위 venue 두 곳(CoNEXT/ToN의 GRAF, ASE의 DeepScaler)이 같은 Online Boutique를 쓴 전례가 된다.
+- **새로 답해야 할 질문**: *"DeepScaler는 의존 그래프를 학습하는데 왜 정적 그래프인가."* 답변 — Istio 사이드카가 실제 호출 관계를 직접 제공하는 환경이라 그래프를 추정할 필요가 없고, 관측 가능한 구조를 추정하면 (a) 추정 오차가 예측 오차에 더해지며 (b) 학습된 인접행렬은 해석이 어려워 조치 근거 설명이 약해진다(E3의 RL 미채택 논거와 같은 축). 위상 변경 대응은 우려 8에서 별도로 다룬다. [docs/proposal.md](../docs/proposal.md) 우려 3에 반영.
+- **결론**: 4자 → **5자 비교표**로 확장하고 "예측 대상(회귀 vs 분류+불확실성)" 행을 신설해 구분을 명시. [docs/proposal.md](../docs/proposal.md) §2-B·§3·우려 1·우려 3·참고문헌, [README.md](../README.md), [overview.md](overview.md)에 반영.
 
 ### D17. LLM 캐스케이드·라우팅 — 경쟁이 아니라 활용 기법으로 채택
 - **확인 (원문·서지 확인 완료)**: FrugalGPT(Chen, Zaharia, Zou, **TMLR 2024**, arXiv:2305.05176) — 저렴한 모델부터 순차 질의하고 응답 신뢰도 미달 시 상위 모델로 escalate. RouteLLM(Ong et al., **ICLR 2025**, arXiv:2406.18665) — 선호도 데이터로 학습한 라우터가 강/약 모델을 이진 선택.
@@ -331,7 +331,7 @@
 - **결론**: 개선율 리포팅(기술통계)은 필수, 정식 유의성 검정(추론통계)은 KCI급에서 필수 아님(선택 보강). 반복 실행 간 안정성은 평균±표준편차(또는 5회 미만 시 min-max 범위)로, 레이턴시처럼 우측으로 꼬리가 긴 분포는 표준편차 대신 P50/P90/P99 백분위수로 리포팅한다.
 
 ### F3. 그래프(데이터셋) 규모 증가에 따른 학습 시간 영향 분석
-- **문제**: "데이터셋이 늘어날수록 학습이 오래 걸리는가?"에 대한 명확한 답 필요(우려 10 대응 근거).
+- **문제**: "데이터셋이 늘어날수록 학습이 오래 걸리는가?"에 대한 명확한 답 필요(우려 5 대응 근거).
 - **확인**: "그래프 크기(노드 수)"와 "학습 샘플 수"를 구분해서 봐야 함.
   1. **그래프 크기 증가**: GAT는 실제 엣지에 대해서만 attention을 계산하는 sparse 연산(PyTorch Geometric 기준)이라 레이어당 연산량이 노드/엣지 수에 대략 선형(O(N+E)). Deep Ensemble(N=5)도 단일 모델 학습시간의 상수배(×5)일 뿐 그래프 크기와 무관. E5·E6에서 공유 per-node head(노드 레벨 예측)를 채택했기 때문에 출력층 파라미터도 그래프 크기와 무관하게 고정됨.
   2. **학습 샘플 수 증가**: 통상적인 선형 스케일(에폭당 소요시간 증가)로, 배치 처리로 완화 가능.
@@ -363,7 +363,7 @@
 - **의사결정 과정**:
   1. 초안: "CB를 로컬 전용으로 빼고 GNN은 다른 조치만" 검토 → 이질적 조치가 차별점인데 CB를 조치 공간에서 빼는 것이 아깝다는 판단으로 기각.
   2. 대안: CB를 GNN 조치로 유지하되 로컬 반응층과 공존시키는 2계층 구조 채택. 두 층이 같은 액추에이터를 건드리는 중복 충돌 우려는 "OR 의미론 + GNN escalate-only + lease TTL" 규칙으로 해소(한 액추에이터에 사실상 단일 중재 보장). Resilience4j의 `FORCED_OPEN` 상태로 구현 가능해 이국적 메커니즘이 아님.
-- **결론**: 트리거 경로를 이원화한다. **Tier 1(로컬 반사, 상시 on)**이 CB·Shedding을 ms 단위로 반응시켜 급속 장애를 잡고, **Tier 2(GNN 선제, N초 주기)**가 위상 인지 예측 + 신뢰도 구간별 비용함수로 5종을 선택(CB·Shedding은 force-open/force-shed, Redirect/Scale/Brownout은 단독). **5종 이질적 조치는 CB 포함 그대로 유지.** CB 임계값 pre-arm은 확장 옵션. GNN 추론 주기 파라미터 실측 튜닝은 실험 이월. E4(시계열 미채택)와 정합. [docs/proposal.md](../docs/proposal.md) §2-D·우려 11에 반영.
+- **결론**: 트리거 경로를 이원화한다. **Tier 1(로컬 반사, 상시 on)**이 CB·Shedding을 ms 단위로 반응시켜 급속 장애를 잡고, **Tier 2(GNN 선제, N초 주기)**가 위상 인지 예측 + 신뢰도 구간별 비용함수로 5종을 선택(CB·Shedding은 force-open/force-shed, Redirect/Scale/Brownout은 단독). **5종 이질적 조치는 CB 포함 그대로 유지.** CB 임계값 pre-arm은 확장 옵션. GNN 추론 주기 파라미터 실측 튜닝은 실험 이월. E4(시계열 미채택)와 정합. [docs/proposal.md](../docs/proposal.md) §2-D·우려 6에 반영.
 
 ### G3. 트래픽 프로파일 파라미터 + mₐ 측정 — [이관] 실험 설계(§4-5)로 이동
 - **이슈**: A4에서 도구(Locust/k6 + Istio/Chaos Mesh)는 확정했으나 구체적 프로파일 조합(정상/버스트/점진증가 파라미터)이 미상세화. 여기에 G1에서 도입된 mₐ(완화효과)의 측정 방식도 연계됨.
@@ -411,7 +411,7 @@
 - **피드백**: N=5가 골든타임 안에 끝나는지 증명하라(FIRM 1.2ms, AGQ 0.4s, GRAF 6.7s 인용) + 병렬추론 + TensorRT/ONNX.
 - **교정**: "골든타임 sub-100ms 증명" 프레임은 G2(2계층 제어)와 층위가 안 맞음 — GNN은 골든타임 경로에 없고(Tier 1이 담당) Tier 2 선제 층이다. 따라서 프레임을 "GNN 결정지연 < GRAF 6.7초 기준선, N초 주기 안에 충분"으로 재해석해 흡수.
 - **팩트 확인**: GRAF 원문(ToN'24 PDF) 직접 확인 — "gradient descent algorithm's 90%-tile latency to reach the target tolerance threshold takes about **6.7 seconds**". 즉 6.7초 = 자원할당 최적화 solver 수렴 시간이지 GNN 추론 시간이 아님(피드백 프레이밍 교정의 근거). 병렬추론은 채택, TensorRT/ONNX는 후속 옵션 각주로만.
-- **반영**: [docs/proposal.md](../docs/proposal.md) 우려 12 신설.
+- **반영**: [docs/proposal.md](../docs/proposal.md) 우려 7 신설.
 
 ### H2. Read Redirection 비침습 구현 — [채택(a), 타깃·메커니즘 둘 다 교정]
 - **피드백**: ProductCatalog의 읽기 부하를 read-replica로, Istio VirtualService/DestinationRule 동적 변경으로 분산.
@@ -429,15 +429,15 @@
 ### H4. 정적 GAT(위상) 타당성 — [채택(A), FIRM attribution 교정]
 - **피드백**: 논리적 위상 안정성(GRAF·FIRM 증명) + 노드 feature에 상태 주입(AGQ식) + 대규모 변경 시 FIRM 전이학습.
 - **팩트 확인**: FIRM 전이학습 사용 여부 확인(D14 전례로 재검증) — FIRM은 실제로 전이학습 사용(마이크로서비스별 RL 에이전트를 이전 경험에서 전이, from-scratch보다 빠른 수렴). 단 **FIRM은 GNN이 아님(SVM+RL)**.
-- **교정**: 위상 안정성은 "GRAF·FIRM 증명"으로 과잉 귀속하지 않고 MSA 일반 성질로 서술. 전이학습은 "FIRM이 GNN에 했다"가 아니라 **선례로만 인용**하고 개념을 GAT fine-tuning에 적용(attribution 정확히 — D14 재발 방지). 이 우려는 우려 8(시간축 논쟁)과 다른 공간/위상 논쟁이라 별도 항목.
-- **반영**: [docs/proposal.md](../docs/proposal.md) 우려 13 신설 + FIRM 참고문헌 각주.
+- **교정**: 위상 안정성은 "GRAF·FIRM 증명"으로 과잉 귀속하지 않고 MSA 일반 성질로 서술. 전이학습은 "FIRM이 GNN에 했다"가 아니라 **선례로만 인용**하고 개념을 GAT fine-tuning에 적용(attribution 정확히 — D14 재발 방지). 이 우려는 우려 3(시간축 논쟁)과 다른 공간/위상 논쟁이라 별도 항목.
+- **반영**: [docs/proposal.md](../docs/proposal.md) 우려 8 신설 + FIRM 참고문헌 각주.
 
 ### H5. TA-GAT(시계열 통계 feature) — [채택, 브랜딩·자해 지점 교정]
 - **피드백**: 무거운 STGNN 대신 노드 feature에 슬라이딩 윈도우 통계량 주입([현재 부하, 최근 평균, slope, std, 직전 SLO 위반 여부]).
 - **평가**: 우리가 이미 열어둔 "입력 윈도우 확대"(E4)의 구체적 방법. 채택.
 - **교정 2건**: (1) **"TA-GAT" 명명은 서술 편의 라벨로만 유지**, 신규 모델·핵심 기여로 내세우지 않음(사용자 요청: 시계열 포함 사실을 드러내되 과대포장 회피). (2) **"self 직전 SLO 위반 여부" feature는 제외** — 위상 없이도 아는 자기상관 신호라 "이미 위반→계속 위반" 지름길로 위상 학습을 우회, LSTM 대비 우위 근거를 자해. feature 윈도우는 라벨창 [t,t+Δ]과 겹치지 않게 t 이전으로만(누수 방지).
 - **부수 이득**: GAT에 시계열 정보를 주면 GAT-vs-LSTM 비교의 변수가 위상 하나로 정제됨(단 LSTM이 보는 시퀀스를 초과하지 않게 통제). 스냅샷 전용 vs 시계열 보강 GAT를 ablation으로 → 실증 기여 추가.
-- **반영**: [docs/proposal.md](../docs/proposal.md) §2-A·§4-2·§4-3(ablation 6번)·우려 8.
+- **반영**: [docs/proposal.md](../docs/proposal.md) §2-A·§4-2·§4-3(ablation 6번)·우려 3.
 
 ### H6. 통합 검토 결론
 - 5건 모두 기존 확정 설계(F1/G1/G2/GT)와 **충돌 없음**. H2·H5는 오히려 핵심 차별점(D2·위상 우위) 강화, H3·H4는 비워둔 자리(신뢰도 검증·위상 변경 방어) 보완, H1만 프레임 충돌을 2계층으로 흡수.
@@ -460,4 +460,18 @@
   - **서술 상한**: "설계 과정에서 도출된 개념·조치·비교축을 도메인 온톨로지(OWL)로 정형화해 용어·정의 일관성을 관리하고 설계 공간을 명시적으로 표현했다. **온톨로지는 연구 기여가 아니라 설계 정합성 관리를 위한 보조 표현물이다.**" (마지막 문장으로 "왜 여기 있냐" 질문을 선제 차단 → rigor로 읽히게)
   - **금지 프레이밍**: "온톨로지 기반 방법론 제안" / "온톨로지를 통해 ~ 도출" 류.
   - **제출 전 필수 조건**: proposal이 갱신되면 온톨로지가 낡으므로, 부록에 넣기로 하면 **논문 제출 직전 본문↔온톨로지 정합성 점검**(`ontology-consistency-check`)을 돌려 맞춘다. 낡은 부록은 "본문과 다르다"는 감점 요인.
+  - **✅ 온톨로지 정합 완료 (2026-09-07)**: 아래 변경을 `ontology_temp/`(classes·properties·individuals·competency-questions·ontology.ttl)와 `devkit/ontology.yaml`에 일괄 반영했다. 수동 갱신분은 yaml에서 `manual: true`로 표시.
+    | 반영 항목 | 내용 |
+    |---|---|
+    | 조치 개명(E9) | `ReadRedirection` → `DegradedPathRedirection` (클래스·개체·CQ·yaml 전부) |
+    | LLM 노드(B7) | `NodeType`/`GeneralService`/`LLMInferenceNode`/`KVCache` 클래스, `hasNodeType` 속성 |
+    | 노드 피처(E8) | `SemanticSlot`(6종)·`NodeTypeEmbedding` 클래스, `mapsToSlot` 속성 |
+    | 적용 지점(E7·E9) | `ApplyPoint` 클래스, `appliesAt`·`nodeTypeScoped` 속성, 노드 타입별 분기 표 |
+    | LLM 조치 구현체 | `ModelDowngrade_i`/`TokenBudgetCut_i`/`InferenceCapacityUp_i` 개체 |
+    | 관련연구 3분할(D20) | `ComparisonTarget`/`UtilizedTechnique`/`AdjacentWork` 하위 클래스, `justifies`·`distinguishedFrom` 속성 |
+    | 신규 문헌 | `DeepScaler`(D16)·`FrugalGPT`·`RouteLLM`(D17)·`HW_Router`(D18)·`GraphRouter`(D19)·`ORACL`(D21)·`Graph_PHPA`(D22) |
+    | 실험(§4-6·A5) | `FailureScenario` S1~S3, `ExperimentValidityGate`, `Abl_NoConfidence`·`Abl_VanillaCoverage` |
+    | 벤치마크(B6) | 노드 수 13~14, Postgres/HikariCP 백엔드, Envoy `read_policy` Cluster 제약 |
+    | 심사 우려 | 번호 6~19 → **1~14** 재정렬, `Concern9`~`Concern14` 신설 |
+    | 정합성 규칙 | properties §C에 규칙 8~11 추가(조치 5종 유지 / 비용함수 품질 항 금지 / 3분할 격리 / LLM은 검증 대상) |
   - **기여로 승격하려면(별도 투자, 현 스코프 밖 — 권장 안 함)**: 여러 MSA 복원력 연구에 재사용 가능하도록 범용화 + reasoner로 추론 활성화(예: 저신뢰 노드의 조치 유보를 추론) + 외부 문헌/전문가 검증. 이는 시맨틱웹 계열 별도 short paper 소재이며 본 논문(7~10개월 겸업)의 핵심 기여(Policy Engine 실증) 시간을 잠식한다.

@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 1 | 신뢰도 축 유일성 — 검증 범위가 3편에 한정 | proposal §3·참고문헌 / challenges **D15** / README / overview | ✅ 완료 (원문 확인 포함) |
 | 2 | 요약 문서에 낡은 티어 서술 | proposal §2-B / README / overview | ✅ 완료 (3곳) |
-| 3 | 상태성 병목 — 단일 지점 + 스코프 불일치 | proposal §2-C·§4-1·§4-5·§5·우려6 / challenges **B6** / timeline | ✅ 완료 |
+| 3 | 상태성 병목 — 단일 지점 + 스코프 불일치 | proposal §2-C·§4-1·§4-5·§5·우려1 / challenges **B6** / timeline | ✅ 완료 |
 | 4 | 조치 적용 지점 — §2-C와 §2-E 불일치 | proposal §2-C·§2-E·§4-2 / challenges **E7** | ✅ 완료 |
 | 5 | 비용함수에 조치 실행 리드타임 항 없음 | proposal §2-B / challenges **G5** / timeline | ✅ 완료 (실험 단계 이월) |
 
@@ -63,7 +63,7 @@
 
 **갭 1 — Degraded-path Redirection의 구현 경로 미검증 ✅ [1순위 근거]**
 
-컷 우선순위상 최후까지 남기는 Actuator는 CB + Redirection을 포함한다(LLM 확장 반영 후 3종: Redirection·CB·Brownout). 그런데 Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 6 방어의 토대)과 정면 충돌한다.
+컷 우선순위상 최후까지 남기는 Actuator는 CB + Redirection을 포함한다(LLM 확장 반영 후 3종: Redirection·CB·Brownout). 그런데 Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 1 방어의 토대)과 정면 충돌한다.
 
 > 쟁점은 하드웨어 부담이 아니라 **벤치마크 충실도**다. 실험용 PC를 별도로 마련하더라도 이 논거는 그대로 성립한다.
 
@@ -83,11 +83,11 @@ Online Boutique 저장소 서비스 표로 확인(frontend·checkout·productcat
 | 방식 | 판정 |
 |---|---|
 | **(a) 신규 서비스 추가** | **채택.** Postgres primary/replica는 어차피 새로 붙이는 노드라 복제 구성이 원본 충실도를 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅이 표준이라 구현 부담도 낮다 |
-| (b) productcatalogservice 교체 | 미채택. fan-in 3의 이득보다 원본 변형 비용(우려 6 방어 약화, Go→JVM 지연 특성 변화)이 크다 |
+| (b) productcatalogservice 교체 | 미채택. fan-in 3의 이득보다 원본 변형 비용(우려 1 방어 약화, Go→JVM 지연 특성 변화)이 크다 |
 
 판단 기준은 "fan-in 크기"가 아니라 **"Degraded-path Redirection의 구현 경로를 원본 변형 없이 확보하는가"**다.
 
-**반영** ✅: proposal §2-C(Envoy 제약 + Postgres를 Redirection 1차 대상으로), §4-1(벤치마크 구성 + 근거 3순위), §4-5(두 번째 병목), §5(스코프 정합), 우려 6(원본 부분그래프 보존 단서). 경위는 challenges **B6**, 일정은 timeline(구현 항목 2~3주).
+**반영** ✅: proposal §2-C(Envoy 제약 + Postgres를 Redirection 1차 대상으로), §4-1(벤치마크 구성 + 근거 3순위), §4-5(두 번째 병목), §5(스코프 정합), 우려 1(원본 부분그래프 보존 단서). 경위는 challenges **B6**, 일정은 timeline(구현 항목 2~3주).
 
 **잔여(미결정)** ⚠️: 추가 서비스의 **배치(어느 서비스가 호출하는가)·명칭·API.** 배치가 fan-in과 전파 경로를 결정하므로 실험 환경 구축 착수 전 확정. 확정 후 노드 수 표기("13~14개", LLM 노드 포함)를 최종값으로 고정한다.
 

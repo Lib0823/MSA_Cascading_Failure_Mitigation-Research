@@ -365,7 +365,11 @@
 - **이슈**: G1의 비용식에서 `Dₐ`(disruption)·`Rₐ`(가역성)·`mₐ`(완화효과)는 모두 조치의 *결과*를 다루며, 조치가 실제로 완료되기까지 걸리는 **실행 리드타임**이 들어 있지 않다. §2-B 표의 "대상 전파속도" 열은 장애 쪽 속도이지 조치 쪽 속도가 아니다. 리드타임이 긴 조치(K8s Scale-up: 인스턴스 기동·워밍업)는 `θₐ`를 넘긴 시점에 발동해도 완료 시점에는 이미 늦을 수 있다.
 - **검토 방향**: 신뢰도 티어 표를 손으로 다시 긋는 방식은 채택하지 않는다(G1의 "구간을 손으로 긋지 않고 유도" 철학에 역행). 대신 조치별 리드타임 `ℓₐ`를 예측 지평 `Δ`와 비교하는 제약(`ℓₐ < Δ`)으로 넣는다 — §4-2가 이미 "Δ의 하한 = 폐루프 응답시간"이라 적고 있으므로, 이를 **조치별로 분해**하는 자연스러운 확장이 된다.
 - **결론**: `ℓₐ`는 조치별 실측 없이 확정할 수 없으므로 **실험 설계로 이관**(G3와 동일 논리 — 실측 없이 미리 확정하면 근거가 약한 값이 된다). 프로포절 심사 필수 항목은 아니다. [docs/proposal.md](../docs/proposal.md) §2-B에 미반영 항목으로 명시.
-- **확인 필요**: 관련 논거로 "GRAF가 인스턴스 생성 평균 5.5초 + 오토스케일러 결정 주기와 맞물린 cascading effect를 관측했다"는 수치가 거론되었으나 **원문 미확인**이다. 본문 인용 전 GRAF 원문(CoNEXT'21 / ToN'24) 확인 필요 — 확인 전에는 논거로 쓰지 않는다(D14의 원문 우선 원칙).
+- **✅ 원문 확인 완료 (2026-09-06)**: GRAF ToN'24 원문 §Ⅱ에서 직접 확인했다. 인용된 수치가 **정확하다.**
+  > *"**Cascading effect.** Figure 1 shows the time it takes to create instances. Across microservices, it takes **5.5 seconds on average to create a single instance**. Under circumstances where multiple instances are created at once, the creation time increases even more. Furthermore, in production settings, operators set an **interval (e.g., 15 seconds)** of how often the autoscaler makes scaling decisions to prevent the number of instances from being fluctuated. This instance creation time and control interval makes the autoscaler slow at perceiving changes in the microservices of an application."*
+  - **인용 시 함께 밝힐 측정 조건(각주 2)**: *"We create instances of microservices in [28] on a single worker node and ignore the network delay to download the container images."* — 단일 워커 노드, 이미지 다운로드 네트워크 지연 제외. 즉 **하한값**이며 실제 환경에서는 더 길다.
+  - GRAF는 이 절의 제목을 직접 **"Cascading effect"**로 달았다. 본 연구가 같은 용어로 문제를 지칭하는 것이 원문 용법과 일치한다.
+  - **사용 가능**: 본문 인용 가능하다. [docs/proposal.md](../docs/proposal.md) §1 다섯 번째 한계 2번에 반영.
 - **LLM 확장 반영(B7)**: `ℓₐ` 대상에 LLM 조치(추론 용량 파라미터 증대, 모델 로드)를 포함한다. 로컬 환경에서 실측 가능한 리드타임은 **모델 로드 시간**이며, 실증 방법 선택은 G7에서 다룬다.
 
 ### G6. [오픈] LLM 노드가 1개뿐인 구조적 한계

@@ -99,7 +99,7 @@
 - [해결] 추론 레이턴시 vs 즉각반응(G2) — 2계층 제어(로컬 반사 + GNN 선제) ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
 - [오픈] LLM 노드 1개의 타입 임베딩 학습 신호 부족(G6) — 학습 결과 확인 후 2개 확장 여부 판단
 - [오픈] 추론 자원 리드타임 실증 방법(G7) — S2 설계 전 결정
-- [이관] 조치 실행 리드타임 ℓₐ의 비용함수 반영(G5) — 조치별 실측 필요, 실험 단계 ([challenges.md](challenges.md) G5)
+- [이관] 조치 실행 리드타임 ℓₐ의 비용함수 반영(G5) — 조치별 실측 필요, 실험 단계. GRAF 인스턴스 생성 5.5초는 **원문 확인 완료**로 인용 가능 ([challenges.md](challenges.md) G5)
 - [해결] 신뢰도 축 유일성 — CP-Router(AAAI 2026)·Ramírez(COLM 2024) 원문 확인, 구분선 재정의 ([challenges.md](challenges.md) D15)
 - [미확정] 추가 서비스 배치·명칭·API ([challenges.md](challenges.md) B6)
 - [이관] 트래픽 프로파일 파라미터 + mₐ 측정(G3) — 실험 설계 [docs/proposal.md](../docs/proposal.md) §4-5로 이동(심사 필수 아님, 실측 기반 확정)

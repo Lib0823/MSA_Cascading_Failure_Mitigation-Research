@@ -13,7 +13,7 @@
 
 ## 문제 정의
 
-관련 선행연구(GRAF, FIRM, AGQ, GraphGRU)를 "예측 모델의 위상 인지 여부", "조치 공간의 이질성", "신뢰도 구간별 대응 여부"라는 세 축으로 분해해 재검토한 결과, 네 연구 모두 세 축 중 최소 하나 이상을 다루지 않고 있음을 확인했다. 특히 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조이며, **신뢰도 구간별 대응**은 문헌상 비어 있는 자리다.
+관련 선행연구(GRAF, FIRM, DeepScaler, AGQ, GraphGRU)를 "예측 모델의 위상 인지 여부", "조치 공간의 이질성", "신뢰도 구간별 대응 여부"라는 세 축으로 분해해 재검토한 결과, 다섯 연구 모두 세 축 중 최소 하나 이상을 다루지 않고 있음을 확인했다. 특히 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조이며, **신뢰도 구간별 대응**은 장애 예측·자원 관리 도메인에서 비어 있는 자리다.
 
 ## 연구 목적
 
@@ -22,9 +22,9 @@
 ## 연구 방법
 
 - **예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. 노드 feature에 시계열 통계량을 주입(TA-GAT)해 정적 그래프 위에서 시간성까지 학습.
-- **의사결정 계층**: 신뢰도 구간(고/중/저)에 따라 조치 강도를 달리하는 Policy Engine.
-- **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
-- **실험**: Online Boutique(11~12개 서비스) 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
+- **의사결정 계층**: 기대비용 최소화 비용함수로 조치를 선택하는 Policy Engine. 신뢰도 구간(고/중/저)은 손으로 긋는 것이 아니라 조치별 임계값 `θₐ`가 비용함수에서 유도되어 자동 생성된다.
+- **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Degraded-path Redirection, Brownout 5종 Actuator. 노드 타입(일반 서비스 / LLM 추론)에 따라 각 조치의 실행 방식과 적용 지점이 분기한다.
+- **실험**: Online Boutique(11~12개 서비스) + Spring/PostgreSQL 서비스 + LLM 추론 서비스 각 1개 추가(총 13~14개)한 **이기종 워크로드** 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
 
 자세한 아키텍처 설계와 근거는 [docs/proposal.md](../docs/proposal.md) §2, 비교 실험 설계는 §4를 참고.
 
@@ -32,7 +32,7 @@
 
 - 위상 정보를 반영한 예측이 시계열 전용 모델보다 연쇄 장애 대응에 효과적임을 실증.
 - 신뢰도 구간별 대응을 통해, 자원할당 중심 접근이 상태성 리소스 병목에서 일으키는 역효과(Thundering Herd)를 완화.
-- GRAF·FIRM·AGQ·GraphGRU 네 갈래로 나뉜 선행연구 사이의 공백(신뢰도 구간별 대응)을 채우는 학술적 기여.
+- GRAF·FIRM·DeepScaler·AGQ·GraphGRU로 나뉜 선행연구 사이의 공백(신뢰도 구간별 대응)을 채우는 학술적 기여.
 
 ## 현재 진행 상태
 

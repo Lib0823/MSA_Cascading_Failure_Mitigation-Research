@@ -4,6 +4,7 @@
 > 성격: LLM 노드 확장 검토 중 제기된 기존 설계 갭 중, 현재 문서와 대조해 **실재가 확인된 항목만** 남기고 반영한 결과.
 > **상태: 5개 항목 전부 반영 완료.** 잔여는 아래 "미결정 사항" 2건뿐이며, 둘 다 심사 필수가 아니다.
 > 링크는 줄번호 대신 **섹션 기호**로 건다(본문이 갱신되면 줄번호가 어긋나므로).
+> **후속 갱신(2026-09-06)**: 이후 LLM 노드 확장이 채택되어([`0906_llm_node_extension.md`](0906_llm_node_extension.md)) 조치 명칭·노드 수·컷 범위가 바뀌었다. 아래 서술은 그 결과를 반영한 것이다.
 
 ---
 
@@ -73,9 +74,9 @@
 
 > **주의**: 이 항목의 출발점이었던 *"Online Boutique에 상태성 병목을 실증할 대상이 없다"*는 주장은 **사실이 아니다.** proposal §4-5에 cartservice→Redis 경로가 주입 방법까지 명시되어 있었다. **Redis 경로는 폐기하지 않고 1차 병목으로 그대로 유지한다.** 아래가 실제 문제였다.
 
-**갭 1 — Read Redirection의 구현 경로 미검증 ✅ [1순위 근거]**
+**갭 1 — Degraded-path Redirection의 구현 경로 미검증 ✅ [1순위 근거]**
 
-컷 우선순위상 최후까지 남기는 Actuator 2종은 CB + Read Redirection이다. 그런데 Read Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 6 방어의 토대)과 정면 충돌한다.
+컷 우선순위상 최후까지 남기는 Actuator는 CB + Redirection을 포함한다(LLM 확장 반영 후 3종: Redirection·CB·Brownout). 그런데 Redirection의 유일한 실증 대상이 "Redis primary/replica + Envoy `read_policy`"였고, **Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시**되어 있다. Online Boutique의 `redis-cart`는 단일 인스턴스라, 이 경로를 쓰려면 `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다 — **즉 원본 서비스 변형이 필요하다.** 이는 (a) 방식이 지키려던 "원본 보존"(우려 6 방어의 토대)과 정면 충돌한다.
 
 > 쟁점은 하드웨어 부담이 아니라 **벤치마크 충실도**다. 실험용 PC를 별도로 마련하더라도 이 논거는 그대로 성립한다.
 
@@ -90,18 +91,18 @@
 
 Online Boutique 저장소 서비스 표로 확인(frontend·checkout·productcatalog·shipping = Go, recommendation·email = Python, currency·payment = Node.js, cart = **C#**, ad = **Java/gRPC**). 즉 현재 구성으로는 선언한 스코프와 지표를 실증할 노드가 없었다.
 
-**결정** 🟢 **(a) 신규 서비스 추가로 확정** — Spring + HikariCP + PostgreSQL 서비스 1개를 별도 노드로 붙인다(총 12~13개). 원본 서비스와 호출 관계는 보존.
+**결정** 🟢 **(a) 신규 서비스 추가로 확정** — Spring + HikariCP + PostgreSQL 서비스 1개를 별도 노드로 붙인다. 원본 서비스와 호출 관계는 보존. (LLM 확장 채택 후 LLM 노드까지 더해 **총 13~14개**.)
 
 | 방식 | 판정 |
 |---|---|
 | **(a) 신규 서비스 추가** | **채택.** Postgres primary/replica는 어차피 새로 붙이는 노드라 복제 구성이 원본 충실도를 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅이 표준이라 구현 부담도 낮다 |
 | (b) productcatalogservice 교체 | 미채택. fan-in 3의 이득보다 원본 변형 비용(우려 6 방어 약화, Go→JVM 지연 특성 변화)이 크다 |
 
-판단 기준은 "fan-in 크기"가 아니라 **"Read Redirection의 구현 경로를 원본 변형 없이 확보하는가"**다.
+판단 기준은 "fan-in 크기"가 아니라 **"Degraded-path Redirection의 구현 경로를 원본 변형 없이 확보하는가"**다.
 
 **반영** ✅: proposal §2-C(Envoy 제약 + Postgres를 Redirection 1차 대상으로), §4-1(벤치마크 구성 + 근거 3순위), §4-5(두 번째 병목), §5(스코프 정합), 우려 6(원본 부분그래프 보존 단서). 경위는 challenges **B6**, 일정은 timeline(구현 항목 2~3주).
 
-**잔여(미결정)** ⚠️: 추가 서비스의 **배치(어느 서비스가 호출하는가)·명칭·API.** 배치가 fan-in과 전파 경로를 결정하므로 실험 환경 구축 착수 전 확정. 확정 후 노드 수 표기("12~13개")를 최종값으로 고정한다.
+**잔여(미결정)** ⚠️: 추가 서비스의 **배치(어느 서비스가 호출하는가)·명칭·API.** 배치가 fan-in과 전파 경로를 결정하므로 실험 환경 구축 착수 전 확정. 확정 후 노드 수 표기("13~14개", LLM 노드 포함)를 최종값으로 고정한다.
 
 ---
 
@@ -112,10 +113,12 @@ Online Boutique 저장소 서비스 표로 확인(frontend·checkout·productcat
 | Actuator | 위험 노드 | 실제 적용 지점 |
 |---|---|---|
 | Brownout | adservice / recommendationservice | **frontend** (호출을 조건부 생략) |
-| Read Redirection | 상태성 백엔드 (Postgres primary, Redis primary) | **백엔드를 호출하는 서비스** |
+| Degraded-path Redirection | 상태성 백엔드 (Postgres primary, Redis primary) | **백엔드를 호출하는 서비스** |
 | Circuit Breaker | 피호출 노드 | **호출자** (Resilience4j는 호출 측) |
 | Traffic Shedding | 과부하 노드 | **v의 인그레스** |
-| K8s Scale-up | 자원 부족 노드 | **v 자신** (5종 중 유일) |
+| K8s Scale-up | 자원 부족 노드 | **v 자신** |
+
+> **후속(LLM 확장)**: LLM 노드에서는 Redirection·Brownout이 **서빙 노드 자신의 요청 파라미터**이므로 `apply_point = v`가 된다. 위 사상은 (조치 종류 × **노드 타입**)의 함수로 확장되었다(challenges **E9**).
 
 심사에서 §2-E 의사코드를 제시하면 *"Brownout은 adservice에 거는 겁니까?"*에 문서가 자기모순을 일으킨다.
 
@@ -124,6 +127,7 @@ Online Boutique 저장소 서비스 표로 확인(frontend·checkout·productcat
 1. proposal §2-E — `emit(대상=apply_point(a*, v), …)`로 수정 + `apply_point` 설명 추가
 2. proposal §2-C — **조치별 적용 지점 표** 신설 (위 표를 정식화)
 3. proposal §4-2 — "어느 서비스에 조치할지" → "어느 서비스가 **위험한지**" (예측 대상과 적용 지점의 분리)
+4. *(LLM 확장 후)* proposal §2-C 표에 **노드 타입별 분기** 추가 — challenges **E9**
 
 적용 지점은 탐색 대상이 아니라 조치 종류에 따라 **구조적으로 결정**되므로, 후보 집합 탐색(k-hop 상류 등)은 도입하지 않는다. 그런 안은 `argmin E[비용]` 구조와 달라 채택 시 `θₐ` 유도와 Safety Guard를 함께 버려야 한다(G1·G4 역행). **비용함수는 불변** — `p̄_v`·`u_v`·`p_eff`·`θₐ`·`mₐ` 모두 그대로. 경위는 challenges **E7**.
 

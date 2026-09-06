@@ -210,5 +210,5 @@ Actuator
 
 | 클래스 | ⊑ | 정의 | 근거 |
 |---|---|---|---|
-| `Concern` | DefenseConcept | 심사 예상 우려(1~14). 1~8은 기본 설계, 9~14는 LLM 노드 확장 관련. 개체는 individuals.md. | §6 |
+| `Concern` | DefenseConcept | 심사 예상 우려(1~15). 1~8은 기본 설계, 9~15는 LLM 노드 확장 관련. 개체는 individuals.md. | §6 |
 | `DesignDecision` | DefenseConcept | 우려를 방어하는 설계 결정. | challenges D~H |

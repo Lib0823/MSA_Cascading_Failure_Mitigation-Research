@@ -136,6 +136,8 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 **→ 조치마다 필요한 신뢰도 임계값 θₐ가 다르게 유도되어, "고신뢰도=적극적 조치 / 중간=저비용·가역적 / 저=보류"가 비용함수에서 자동으로 생성된다.**
 
+> **첨자 `a`의 범위**: `a`는 추상적인 조치가 아니라 **노드 타입별 구현체**를 가리킨다(§2-C). 노드 v에 대해서는 `type(v)`에 해당하는 구현체의 `Dₐ`·`Rₐ`·`mₐ`를 읽으므로, 같은 조치라도 노드 타입이 다르면 `θₐ`도 다르다. 조치 집합의 크기는 어느 노드에서든 5로 같고 위 식도 그대로 성립한다 — 달라지는 것은 대입하는 파라미터 값뿐이다.
+
 **Safety Guard(저신뢰 보류)**: 불확실성 `u_v`가 크면 `p_eff = max(0, p̄_v − κ√u_v)`가 줄어, p_eff가 모든 θₐ에 못 미치면 어떤 조치도 보류를 이기지 못해 자동으로 보류된다. 즉 "불확실성↑ → p_eff↓ → 극단 조치 유보"라는 Safety Guard가 외부 하드코딩 규칙이 아니라 비용함수에서 자연히 유도된다(저위험 노드가 보류되는 것과 같은 메커니즘). 이 보류의 타당성(저신뢰일 때 실제로 조치를 참는 게 이득인지)은 오탐/Drop Rate로 검증하고, 위험 확률 `p̄_v` 자체의 신뢰성은 보정(ECE)으로 별도 검증한다(§4-2·§4-4).
 
 | 조치 | Dₐ | Rₐ | mₐ | 대상 전파속도 | θₐ | 신뢰도 구간 |
@@ -177,7 +179,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 구현은 `Actuator` 인터페이스 → 조치별 추상 클래스 → 노드 타입별 구현체 주입(전략 패턴)으로 흡수한다. 예: `DegradedPathRedirection` → `ReadReplicaRedirect` / `ModelDowngradeRedirect`.
 
-**개명**: 종전 `Degraded-path Redirection`은 DB 읽기 한정으로 읽혀 모델 다운그레이드를 포괄하지 못하므로 **`Degraded-path Redirection`**으로 개명한다. 나머지 4종은 LLM 맥락에서도 명칭이 그대로 통하므로 유지한다.
+**개명**: 종전 명칭 `Read Redirection`은 DB 읽기 한정으로 읽혀 모델 다운그레이드를 포괄하지 못하므로 **`Degraded-path Redirection`**으로 개명했다. 나머지 4종은 LLM 맥락에서도 명칭이 그대로 통하므로 유지한다.
 
 **Redirection과 Brownout의 경계** (LLM 노드에서 둘 다 품질을 낮추므로 구분이 필요하다):
 
@@ -190,7 +192,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 > `max_tokens` 상한은 decode만 줄이고 prefill은 그대로인 반면 RAG top-k 축소는 prefill을 줄인다. 효과 발현 지점이 다르므로 분리 측정하고, 기본 구현은 예비 실험으로 결정한다.
 
 - Brownout은 요청의 비핵심(optional) 부분을 dimmer로 차단해 품질을 낮추는 방식으로 부하를 던다. Traffic Shedding(요청 통째 거부)·Degraded-path Redirection(경로 변경)과 질적으로 다른 레버로, 조치 공간의 이질성을 넓힌다. Online Boutique에서는 frontend가 `adservice`/`recommendationservice`(비핵심 기능) 호출을 조건부로 생략하는 형태로 구현 가능하다 — 벤치마크에 실제 optional 경로가 존재해 실증 가능성이 높다(FIRM은 브라운아웃을 쓰지 않으며, 이 채택은 FIRM 근거와 무관하다. [challenges.md](../research/challenges.md) D14).
-- Degraded-path Redirection은 과부하 상태의 읽기 트래픽을 **읽기 전용 복제본(read-replica)으로 우회**해 primary 병목을 던다. Online Boutique에서 read-replica가 성립하는 지점은 `cartservice`가 backing store로 쓰는 **Redis**이다(`productcatalogservice`는 DB 없이 로컬 JSON을 읽어 복제본 개념이 성립하지 않으며, 이 경우 단순 스케일아웃과 구분되지 않는다). Redis primary/replica를 두고 **Envoy Redis proxy의 `read_policy`를 Istio EnvoyFilter로 주입**해 읽기를 replica로 라우팅하면 앱 코드 수정 없이(비침습) 조치가 트리거된다. 이는 primary에 커넥션을 더 쌓지 않고 상태성 읽기 병목을 더는 **비프로비저닝 조치**라, Scale-up이 역효과를 내는 상태성 병목(D2, §4-5)에서 대조적으로 효과를 낸다. Brownout(기능 자체를 생략)·Traffic Shedding(요청 거부)과 달리 **기능은 유지하되 일관성을 일시적으로 약화(stale read 허용)**하는 질적으로 다른 레버다. **단, Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시되어 있다.** Online Boutique의 `redis-cart`는 단일 인스턴스이므로, 이 경로를 쓰려면 **원본 서비스를 변형해야 한다** — `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다. 이는 §4-1이 확장 방식으로 (a)를 택하며 지킨 "원본 서비스와 호출 관계 보존" 전제(우려 1 방어의 토대)를 스스로 무너뜨린다. 따라서 **Degraded-path Redirection의 1차 실증 대상은 §4-1에서 추가하는 Postgres primary/replica**로 둔다 — 어차피 새로 붙이는 노드라 복제 구성이 원본 충실도를 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅은 표준 구성이다. Redis 경로는 Cluster 전환을 감수할 경우의 보조 대상으로 남긴다([challenges.md](../research/challenges.md) B6).
+- Degraded-path Redirection은 과부하 경로의 트래픽을 **품질이 낮은 대체 경로로 우회**해 병목을 던다 — 일반 서비스에서는 읽기 트래픽을 읽기 전용 복제본(read-replica)으로, LLM 노드에서는 질의를 소형 폴백 모델로 보낸다(§2-C 표). 두 경우 모두 **요청은 온전히 처리되되 품질·일관성이 한 단계 낮은 경로를 탄다**는 점에서 같은 레버다. 이하는 일반 서비스 구현이다. Online Boutique에서 read-replica가 성립하는 지점은 `cartservice`가 backing store로 쓰는 **Redis**이다(`productcatalogservice`는 DB 없이 로컬 JSON을 읽어 복제본 개념이 성립하지 않으며, 이 경우 단순 스케일아웃과 구분되지 않는다). Redis primary/replica를 두고 **Envoy Redis proxy의 `read_policy`를 Istio EnvoyFilter로 주입**해 읽기를 replica로 라우팅하면 앱 코드 수정 없이(비침습) 조치가 트리거된다. 이는 primary에 커넥션을 더 쌓지 않고 상태성 읽기 병목을 더는 **비프로비저닝 조치**라, Scale-up이 역효과를 내는 상태성 병목(D2, §4-5)에서 대조적으로 효과를 낸다. Brownout(기능 자체를 생략)·Traffic Shedding(요청 거부)과 달리 **기능은 유지하되 일관성을 일시적으로 약화(stale read 허용)**하는 질적으로 다른 레버다. **단, Envoy 공식 문서 확인 결과 `read_policy`는 "currently supported for Redis Cluster"로 명시되어 있다.** Online Boutique의 `redis-cart`는 단일 인스턴스이므로, 이 경로를 쓰려면 **원본 서비스를 변형해야 한다** — `redis-cart`를 Cluster 모드로 전환하고 `cartservice`의 Redis 클라이언트도 cluster-aware로 바꿔야 한다. 이는 §4-1이 확장 방식으로 (a)를 택하며 지킨 "원본 서비스와 호출 관계 보존" 전제(우려 1 방어의 토대)를 스스로 무너뜨린다. 따라서 **Degraded-path Redirection의 1차 실증 대상은 §4-1에서 추가하는 Postgres primary/replica**로 둔다 — 어차피 새로 붙이는 노드라 복제 구성이 원본 충실도를 훼손하지 않고, 스트리밍 복제 + 읽기 라우팅은 표준 구성이다. Redis 경로는 Cluster 전환을 감수할 경우의 보조 대상으로 남긴다([challenges.md](../research/challenges.md) B6).
 - 시간이 부족할 경우 **Degraded-path Redirection + Circuit Breaker + Brownout 3종**만 실증하고 나머지(Scale-up/Shedding)는 "설계상 확장 가능"으로 남기는 옵션을 확보한다([timeline.md](../research/timeline.md) 컷 우선순위와 동일). 3종을 남기는 이유는 **서로 성격이 다르기 때문**이다 — 경로 변경 / 차단 / 품질 저하로 갈려야 축소 후에도 "이질적 조치 공간"의 최소 실증이 성립한다. Degraded-path Redirection은 Postgres read replica로 구현 경로를 확보했다(위 참조).
 
 **조치별 적용 지점(Application Point)**: 조치를 적용하는 노드는 위험이 예측된 노드와 항상 같지 않다. 유입 부하를 줄이는 조치는 병목 노드 자신이 아니라 **그 노드를 호출하는 쪽**에 걸어야 효과가 나기 때문이다. 적용 지점은 탐색 대상이 아니라 조치 종류에 따라 **구조적으로 결정**되므로, 후보 집합 탐색(k-hop 상류 등)을 도입하지 않고 아래 사상(mapping)으로 고정한다(§2-E의 `apply_point(a, v)`, 결정 근거는 [challenges.md](../research/challenges.md) E7).
@@ -545,7 +547,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 (주의: 본 연구 벤치마크는 고정 13~14노드 위상이라 위상 변경은 실험 과제가 아니라 프로덕션 확장 시 대응 논거다.)
 
-### 우려 9~14 — LLM 노드 확장에 관한 예상 질문
+### 우려 9~15 — LLM 노드 확장에 관한 예상 질문
 
 | # | 예상 질문 | 대응 |
 |---|---|---|
@@ -555,6 +557,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 | 12 | GraphRouter와 겹치지 않나 | §3-3(b). 그래프의 정의가 근본적으로 다르다(질의–모델 적합도 vs 서비스 호출 토폴로지) |
 | 13 | 소형 모델 실험이 일반화되나 | 검증 대상은 티어 간 상대적 격차이며, 절대 규모는 실험 환경 제약에 따른 선택이다(§5 한정) |
 | 14 | LLM 응답 품질을 어떻게 측정했나 | 측정하지 않았다. `D_downgrade`를 운영자 정책 파라미터로 두고 민감도 분석으로 `θₐ` 교차점을 제시한다(§2-B). 정성적 대조 사례는 부록 |
+| 15 | **LLM으로 오토스케일링을 결정하는 연구(ORACL, IEEE TSC 2026)가 이미 있는데 왜 GNN인가** | §3-3(c)의 5축 구분 — 의사결정 주체(LLM 추론 트레이스 vs 비용함수 `argmin`) / 조치 공간(자원 할당 단일 vs 질적 이질 5종) / 신뢰도 축(없음 vs `θₐ`+Safety Guard) / 재현성(LLM 출력 의존 vs 결정적) / **LLM의 위치(의사결정 도구 vs 검증 대상 노드)**. 덧붙여 ORACL조차 LLM에 결정을 온전히 맡기지 않고 행동 공간 가지치기와 정책 제약으로 감쌌으며, MicroRemed는 단독 LLM의 remediation 정확도가 최저 난이도에서도 50% 미만임을 보고한다(D21) |
 
 ---
 

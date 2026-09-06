@@ -49,9 +49,10 @@
 ├── research/
 │   ├── overview.md           # 연구 소개 요약
 │   ├── timeline.md           # 연구 진행 과정 · 일정 · 리스크 관리
+│   ├── environment.md        # 실험 환경 사양 · 제약 · 실험 프로토콜
 │   ├── challenges.md         # 의사결정 및 팩트체크 로그
 │   ├── outputs.md            # 산출물 현황
-│   └── study-notes/          # 연구를 위한 학습 커리큘럼 및 주제별 학습 노트
+│   └── study_notes/          # 연구를 위한 학습 커리큘럼 및 주제별 학습 노트
 │
 ├── code/                     # (착수 전, 폴더 구조만 준비)
 │   ├── backend/              # Policy Engine / API

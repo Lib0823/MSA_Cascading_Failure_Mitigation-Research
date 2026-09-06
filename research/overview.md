@@ -23,8 +23,8 @@
 
 - **예측 레이어**: 정적 GAT(Graph Attention Network) + Deep Ensemble(N=5)로 예측값과 신뢰도를 함께 산출. 노드 feature에 시계열 통계량을 주입(TA-GAT)해 정적 그래프 위에서 시간성까지 학습.
 - **의사결정 계층**: 기대비용 최소화 비용함수로 조치를 선택하는 Policy Engine. 신뢰도 구간(고/중/저)은 손으로 긋는 것이 아니라 조치별 임계값 `θₐ`가 비용함수에서 유도되어 자동 생성된다.
-- **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Read Redirection, Brownout 5종 Actuator.
-- **실험**: Online Boutique(11~12개 서비스) + Spring/PostgreSQL 서비스 1개 추가(총 12~13개) 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
+- **실행 계층**: Circuit Breaker, Traffic Shedding, K8s Scale-up, Degraded-path Redirection, Brownout 5종 Actuator. 노드 타입(일반 서비스 / LLM 추론)에 따라 각 조치의 실행 방식과 적용 지점이 분기한다.
+- **실험**: Online Boutique(11~12개 서비스) + Spring/PostgreSQL 서비스 + LLM 추론 서비스 각 1개 추가(총 13~14개)한 **이기종 워크로드** 벤치마크 위에서 Locust/k6 트래픽 생성 + Istio/Chaos Mesh 장애주입을 결합, 반응형 HPA·규칙기반 Policy·LSTM baseline·GRAF류 baseline과 비교.
 
 자세한 아키텍처 설계와 근거는 [docs/proposal.md](../docs/proposal.md) §2, 비교 실험 설계는 §4를 참고.
 

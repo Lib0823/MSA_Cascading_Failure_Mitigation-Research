@@ -15,10 +15,12 @@
 | LSTM baseline 학습 | +2~4주 | GNN과 병행 가능 |
 | Policy Engine 비용함수/의사결정 로직 구현 | 1~2개월 | - |
 | Spring/HikariCP/PostgreSQL 서비스 구현 + 벤치마크 통합 | 2~3주 | 가능 (주력 스택) |
+| assistantservice 구현 + vLLM 서빙 환경 | 3~4주 | 일부. Blackwell(sm_120) 환경 구축 1~2일 별도 ([environment.md](environment.md) E1) |
+| LLM 노드 메트릭 수집 파이프라인 | 2주 | GNN 파이프라인과 통합 |
 | Actuator 통합 (2~5종) | 1~1.5개월 | 부분 병행 가능 |
 | 실험 환경 구축 + 반복실험 + 임계치 튜닝 | 1~2개월 (보통 예상보다 오래 걸림) | - |
 | 논문 작성 | 1~1.5개월 | - |
-| **합계** | **약 7~10개월** | |
+| **합계** | **약 8~11.5개월** | LLM 확장(B7) 채택으로 약 1~1.5개월 추가 |
 
 ## 구현·실험 단계별 접근 (①→②→③)
 
@@ -26,8 +28,8 @@
 
 ### ① 모델 스모크 테스트 — 코드 실현 가능성
 - **목적**: 설계(노드 레벨 GAT + Deep Ensemble + 공유 per-node head, [docs/proposal.md](../docs/proposal.md) §2-A·§4-2)가 코드로 성립하는지 확인.
-- **방법**: 가짜 12~13노드 그래프 + 랜덤 feature로 forward pass. Online Boutique·K8s 불필요.
-- **확인 항목**: 텐서 shape 정합 / 노드별 위험도 + 신뢰도(앙상블 분산) 출력 / 13→20노드로 바꿔도 파라미터 불변(확장성 주장 검증, 우려 6·10).
+- **방법**: 가짜 13~14노드 그래프 + 랜덤 feature로 forward pass. 노드 타입 임베딩(일반/LLM) 포함. Online Boutique·K8s 불필요.
+- **확인 항목**: 텐서 shape 정합 / 노드별 위험도 + 신뢰도(앙상블 분산) 출력 / 14→20노드로 바꿔도 파라미터 불변(확장성 주장 검증, 우려 6·10).
 - **비용**: 몇 시간, 로컬 CPU. **성능·정확도는 검증 대상 아님**(랜덤 데이터).
 - **게이트**: 통과해야 ②의 GAT 입력 스펙(feature 차원·그래프 포맷)이 확정됨.
 
@@ -50,9 +52,11 @@
 
 1. Train Ticket 서브셋 보조 실험 (부하 스케일업 실험으로 대체 가능)
 2. FIRM류 baseline 추가 (GRAF류 baseline + LSTM baseline만으로도 최소 방어 가능)
-3. Actuator 5종 → 2종(Circuit Breaker + Read Redirection)으로 축소, 나머지(Scale-up/Shedding/Brownout)는 "확장 가능 설계"로만 서술. 특히 Brownout은 앱 계측(필수/선택 분리)이 필요해 컷 우선순위가 가장 높음.
-4. 부하 스케일업 실험(동시 사용자 수 변화 실험) — 그래도 시간이 없으면 생략 가능하나 §4-4 방어력이 약해짐에 유의
-5. 외부 피드백 반영으로 추가된 실증 항목([challenges.md](challenges.md) H) — 시계열 보강 GAT ablation(스냅샷 전용 대비), ECE/Drop Rate 측정, Read Redirection의 read replica 세팅(Postgres primary/replica — B6). 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택(이론적 필수는 아니나 실험 매트릭스를 키움).
+3. 부하 스케일업 실험(동시 사용자 수 변화 실험) — §4-4 방어력이 약해짐에 유의
+4. vanilla 커버리지 대조 ([challenges.md](challenges.md) C4)
+5. Actuator 5종 → 3종(Degraded-path Redirection + Circuit Breaker + Brownout)으로 축소, 나머지(Scale-up/Shedding)는 "확장 가능 설계"로만 서술. **남기는 조치는 서로 다른 성격**(경로 변경 / 차단 / 품질 저하)이어야 최소한의 이질성을 보인다.
+6. **장애 시나리오 S2(LLM 노드 포화)** — ⚠️ **여기까지 왔으면 컷이 아니라 LLM 확장 철회를 검토할 것.** S2는 LLM 확장의 유일한 고유 실증이며(S1·S3는 LLM 없이도 성립), 이것을 자르면 확장을 유지할 실익이 없다 ([docs/proposal.md](../docs/proposal.md) §4-6)
+5. 외부 피드백 반영으로 추가된 실증 항목([challenges.md](challenges.md) H) — 시계열 보강 GAT ablation(스냅샷 전용 대비), ECE/Drop Rate 측정, Degraded-path Redirection의 read replica 세팅(Postgres primary/replica — B6). 심사엔 설계로 제시하고 실증은 ②③ 단계 예산 보고 취사선택(이론적 필수는 아니나 실험 매트릭스를 키움).
 
 ## 마일스톤
 
@@ -65,6 +69,10 @@
 - [x] 문제 정의(§2-0) + Policy Engine 알고리즘(§2-E) 정형화, 비용함수 p 정의 정정 ([challenges.md](challenges.md) G4)
 - [x] **CP-Router·Ramírez 원문 확인 + 신뢰도 축 주장 수위 확정** ([challenges.md](challenges.md) D15) — 확인 결과 당초 구분 논리 1번이 사실과 반대여서 재정의함
 - [ ] 추가 서비스(Spring/Postgres) 배치·명칭·API 확정 ([challenges.md](challenges.md) B6) — 실험 환경 구축 착수 전
+- [x] **LLM 확장 채택 결정** — 채택 ([challenges.md](challenges.md) B7·C4)
+- [ ] G7(추론 자원 리드타임 실증 방법) 방향 결정 — S2 설계 전, (c) 모델 로드 시간 실측 우선 검토
+- [ ] assistantservice 부하 파라미터 확정(호출 비율·프롬프트 분포·`N`) — S2·S3 설계 시
+- [ ] 제목·초록에서 LLM의 위치 결정 — 초록에만 언급하는 안 권장
 
 **프로포절 심사** (약 3학기차)
 
@@ -89,6 +97,8 @@
 - [해결] 신뢰도 산출 방식 — Deep Ensemble(N=5) ([challenges.md](challenges.md) F1)
 - [해결] 비용함수 수식화(G1) — 기대비용 최소화형 ([challenges.md](challenges.md) G1, [docs/proposal.md](../docs/proposal.md) §2-B)
 - [해결] 추론 레이턴시 vs 즉각반응(G2) — 2계층 제어(로컬 반사 + GNN 선제) ([challenges.md](challenges.md) G2, [docs/proposal.md](../docs/proposal.md) §2-D)
+- [오픈] LLM 노드 1개의 타입 임베딩 학습 신호 부족(G6) — 학습 결과 확인 후 2개 확장 여부 판단
+- [오픈] 추론 자원 리드타임 실증 방법(G7) — S2 설계 전 결정
 - [이관] 조치 실행 리드타임 ℓₐ의 비용함수 반영(G5) — 조치별 실측 필요, 실험 단계 ([challenges.md](challenges.md) G5)
 - [해결] 신뢰도 축 유일성 — CP-Router(AAAI 2026)·Ramírez(COLM 2024) 원문 확인, 구분선 재정의 ([challenges.md](challenges.md) D15)
 - [미확정] 추가 서비스 배치·명칭·API ([challenges.md](challenges.md) B6)

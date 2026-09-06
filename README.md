@@ -12,17 +12,17 @@
 
 - 모놀리식 → K8s 분산 전환 시 연쇄 장애 위험 급증
 - 기존 K8s HPA의 4가지 한계: 사후반응성 / Thundering Herd 유발 가능성 / 위상 정보 부재 / 시계열 전용 모델의 전파경로 포착 실패
-- 선행연구(GRAF·FIRM·AGQ·GraphGRU)를 원문까지 재확인한 결과, 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조 — **신뢰도 구간별 대응**은 장애 예측·자원 관리 도메인에서 비어 있는 자리
+- 선행연구(GRAF·FIRM·DeepScaler·AGQ·GraphGRU)를 원문까지 재확인한 결과, 세 논문(GRAF·FIRM·AGQ) 모두 모델이 낸 예측을 확신 정도와 무관하게 그대로 실행하는 구조 — **신뢰도 구간별 대응**은 장애 예측·자원 관리 도메인에서 비어 있는 자리
 
 ## Research Goal
 
 위상 인지형 예측(GRAF류)과 학습 기반 조치 선택(FIRM류)의 교집합에, **신뢰도 구간별 대응**이라는 세 번째 축을 더한 Policy Engine을 설계하고 검증한다.
 
-| 축 | GRAF | FIRM | AGQ | GraphGRU | 본 연구 |
-|---|---|---|---|---|---|
-| 예측 모델 | GNN(MPNN, 위상 반영) | SVM(위상 미반영) | STGNN+Q-learning | GAT(DTW 동적 그래프) | GAT(정적, 실 호출관계 기반) |
-| 조치 공간 | 자원 할당 | 자원 재할당(다차원, 전부 프로비저닝) | 자원 할당 | 없음(예측만) | 질적 이질(CB/Shedding/Scale/Redirect/Brownout) |
-| 신뢰도 구간별 대응 | 없음 | 없음 | 없음 | 없음 | **있음 (신규 기여)** |
+| 축 | GRAF | FIRM | DeepScaler | AGQ | GraphGRU | 본 연구 |
+|---|---|---|---|---|---|---|
+| 예측 모델 | GNN(MPNN, 위상 반영) | SVM(위상 미반영) | STGNN(attention GCN + 그래프 학습) | STGNN+Q-learning | GAT(DTW 동적 그래프) | GAT(정적, 실 호출관계 기반) |
+| 조치 공간 | 자원 할당 | 자원 재할당(다차원, 전부 프로비저닝) | 자원 프로비저닝 | 자원 할당 | 없음(예측만) | 질적 이질(CB/Shedding/Scale/Redirect/Brownout) |
+| 신뢰도 구간별 대응 | 없음 | 없음 | 없음 | 없음 | 없음 | **있음 (신규 기여)** |
 
 ## Method
 

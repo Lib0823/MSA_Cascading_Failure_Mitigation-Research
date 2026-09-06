@@ -48,15 +48,16 @@ GNN은 사전학습된 범용 모델이 존재하지 않는 영역이다. 본 �
 
 ### B. 의사결정 계층 — Policy Engine (핵심 Contribution)
 
-본 연구의 위치: GRAF(위상 인지형 GNN 예측이지만 조치는 자원할당 하나로 한정)와 FIRM(조치를 학습 기반으로 적응적 선택하지만 조치 공간이 저수준 자원 재할당에 한정되고 그래프 구조 미반영)의 교집합에서, **신뢰도 구간별 대응(Confidence-tiered Response)**이라는 세 번째 축을 추가한 것이 본 연구의 정확한 학술적 위치다. AGQ(GNN+RL 결합이나 조치 공간은 자원할당 단일 축)와 GraphGRU(GAT 기반이나 예측에서 그침)도 세 축 중 어느 하나 이상을 비워두고 있어, 본 연구의 위치는 여전히 비어 있는 자리다.
+본 연구의 위치: GRAF(위상 인지형 GNN 예측이지만 조치는 자원할당 하나로 한정)와 FIRM(조치를 학습 기반으로 적응적 선택하지만 조치 공간이 저수준 자원 재할당에 한정되고 그래프 구조 미반영)의 교집합에서, **신뢰도 구간별 대응(Confidence-tiered Response)**이라는 세 번째 축을 추가한 것이 본 연구의 정확한 학술적 위치다. DeepScaler(attention GCN + 그래프 학습으로 축 ①은 가장 정교하나 조치는 자원 프로비저닝 단일), AGQ(GNN+RL 결합이나 조치 공간은 자원할당 단일 축), GraphGRU(GAT 기반이나 예측에서 그침)도 세 축 중 어느 하나 이상을 비워두고 있어, 본 연구의 위치는 여전히 비어 있는 자리다.
 
-**관련 연구 4자 비교표**
+**관련 연구 5자 비교표**
 
-| 축 | GRAF (CoNEXT'21/ToN'24) | FIRM (OSDI'20) | AGQ (FGCS'26) | GraphGRU (ICPADS'22) | 본 연구 |
-|---|---|---|---|---|---|
-| 예측 모델 | GNN(MPNN, 위상 반영) | SVM(위상 미반영) | STGNN(ChebConv, 시계열)+Q-learning | GAT(DTW 기반 동적 그래프) | GAT(정적, 실 서비스 호출관계 기반) |
-| 조치 공간 | 자원 할당(스칼라) | 자원 재할당 다차원(CPU/Mem/LLC/IO/Net + 수평 스케일, 전부 프로비저닝) | 자원 할당(스칼라) | 없음(예측만) | 질적 이질(CB/Shedding/Scale/Redirect/Brownout, 프로비저닝+비프로비저닝) |
-| 신뢰도 구간별 대응 | 없음 | 없음 | 없음 | 없음 | **있음 (신규 기여)** |
+| 축 | GRAF (CoNEXT'21/ToN'24) | FIRM (OSDI'20) | **DeepScaler (ASE'23)** | AGQ (FGCS'26) | GraphGRU (ICPADS'22) | 본 연구 |
+|---|---|---|---|---|---|---|
+| 예측 모델 | GNN(MPNN, 위상 반영) | SVM(위상 미반영) | **STGNN(attention GCN + adaptive graph learning, 의존 그래프를 EM으로 학습)** | STGNN(ChebConv, 시계열)+Q-learning | GAT(DTW 기반 동적 그래프) | GAT(정적, 실 서비스 호출관계 기반) |
+| 조치 공간 | 자원 할당(스칼라) | 자원 재할당 다차원(CPU/Mem/LLC/IO/Net + 수평 스케일, 전부 프로비저닝) | **자원 프로비저닝(상호작용 서비스 동시 재구성)** | 자원 할당(스칼라) | 없음(예측만) | 질적 이질(CB/Shedding/Scale/Redirect/Brownout, 프로비저닝+비프로비저닝) |
+| 신뢰도 구간별 대응 | 없음 | 없음 | **없음** | 없음 | 없음 | **있음 (신규 기여)** |
+| 예측 대상 | 자원 요구량(회귀) | 자원 압박 지표 | **CPU·메모리 사용률, 응답시간, 요청률(회귀)** | 자원 사용량(회귀) | 자원 사용량(회귀) | **SLO 위반 위험(노드별 이진 분류) + 불확실성** |
 
 - 신뢰도 구간별 대응 전략: 구간(고/중/저)을 **손으로 긋지 않는다.** 아래 비용함수에서 조치별 임계값 `θₐ`가 유도되어 구간이 자동 생성되며, "고신뢰도=적극적 조치 / 중간=저비용·가역적 / 저=보류"는 그 유도의 *결과*를 요약한 표현이지 정의가 아니다.
 - 런타임 독립성 주장 유지.
@@ -188,7 +189,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 ## 3. 학술적 가치 및 독창성
 
-**핵심 기여 재정의**: "GRAF류(위상 인지·예측)"와 "FIRM류(학습 기반 적응적 조치 선택)"의 교집합에 "신뢰도 구간별 대응"을 추가한 Policy Engine. 위 4자 비교표를 관련연구 섹션 서두에 배치해 차별점을 한눈에 제시한다. 다만 FIRM의 조치 공간은 원문 재확인 결과 저수준 자원 5종(CPU/Mem/LLC/IO/Net) 재할당 + 수평 스케일링으로 전부 자원 프로비저닝에 한정되므로([challenges.md](../research/challenges.md) D14), 본 연구의 비프로비저닝 조치(CB/Shedding/Redirection/Brownout)는 FIRM 대비로도 신규 기여다.
+**핵심 기여 재정의**: "GRAF류(위상 인지·예측)"와 "FIRM류(학습 기반 적응적 조치 선택)"의 교집합에 "신뢰도 구간별 대응"을 추가한 Policy Engine. 위 5자 비교표를 관련연구 섹션 서두에 배치해 차별점을 한눈에 제시한다. 다만 FIRM의 조치 공간은 원문 재확인 결과 저수준 자원 5종(CPU/Mem/LLC/IO/Net) 재할당 + 수평 스케일링으로 전부 자원 프로비저닝에 한정되므로([challenges.md](../research/challenges.md) D14), 본 연구의 비프로비저닝 조치(CB/Shedding/Redirection/Brownout)는 FIRM 대비로도 신규 기여다.
 
 **신뢰도 축의 공백 재확인**: GRAF·FIRM·AGQ 원문을 직접 확인한 결과, 세 논문 모두 명시적인 신뢰도/불확실성 산출을 하지 않는다.
 - GRAF는 GNN 예측값을 점 추정치(point estimate)로 그대로 자원 할당에 사용한다.
@@ -212,7 +213,9 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 - **AGQ**: Taiyuan University of Science and Technology, Future Generation Computer Systems (Elsevier, Q1), 2026.
 - **GraphGRU**: 중국과학원 선전첨단기술연구원(He, Su, Ye), IEEE ICPADS 2022(2023 게재) — 알리바바 실제 프로덕션 클러스터 데이터셋으로 검증, 기존 딥러닝 대비 최대 48.27% 정확도 개선.
 
-네 논문 모두 신빙성 있는 정식 동료심사 venue의 연구이며, GRAF·FIRM은 최상위권, AGQ·GraphGRU는 그보다 한 단계 아래이나 정식 색인 저널/학회다.
+- **DeepScaler**: 중산대(SYSU) Workflow Lab(Meng, Song, Tong, Pan, Yu), IEEE/ACM ASE 2023 — 소프트웨어공학 최상위 학회. 코드 공개(GitHub). Bookinfo·**Online Boutique**·Train-Ticket 3종 벤치마크에서 SLA 위반 평균 41% 감소 보고.
+
+다섯 논문 모두 신빙성 있는 정식 동료심사 venue의 연구이며, GRAF·FIRM·DeepScaler는 최상위권, AGQ·GraphGRU는 그보다 한 단계 아래이나 정식 색인 저널/학회다.
 
 **GRAF·FIRM·AGQ의 벤치마크 그래프 규모 재검증**: GRAF는 Online Boutique(11개 서비스) 중 실제 GNN 입력으로는 6개 노드 서브그래프만, Social Network(DeathStarBench)는 10개 노드 서브그래프만 사용(전체 벤치마크가 아닌 특정 요청 체인)한다. FIRM은 GNN이 아닌 SVM+RL 구조라 DeathStarBench·Train-Ticket 전체 그래프(15~41개)를 그대로 사용할 수 있었다. AGQ는 핵심 비교 실험(Table 3, 메인 베이스라인 대비)은 Sock Shop(~13개) 규모에서 수행했고, "수백 개 노드" 규모 실험은 비공개·비재현 시뮬레이션(LinkedIn 아키텍처 참고)으로 별도 진행된 보조 실험이다. 즉 GNN 기반 선행연구들의 실질적 검증 규모는 모두 본 연구의 11개 노드와 같은 자릿수이며, 본 연구가 유독 작은 것이 아니다.
 
@@ -302,7 +305,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 ### 우려 6 — "왜 이렇게 작은 MSA 벤치마크를 썼는가?"
 
 3단 논리:
-1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했다(본 연구는 원본 서비스와 호출 관계를 보존한 채 Spring/Postgres 노드 1개를 추가한 확장 구성이라, 원본 위상이 부분그래프로 그대로 남는다 — §4-1). GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
+1. **선행연구 전례**: 가장 직접적인 비교 대상인 GRAF(KAIST, CoNEXT/ToN)도 동일한 Online Boutique를 사용했고, **DeepScaler(ASE 2023)도 Online Boutique(10개 서비스)를 3종 벤치마크 중 하나로 사용**했다 — 최상위 venue 두 곳에서 같은 벤치마크가 채택된 전례다. (본 연구는 원본 서비스와 호출 관계를 보존한 채 Spring/Postgres 노드 1개를 추가한 확장 구성이라, 원본 위상이 부분그래프로 그대로 남는다 — §4-1.) GRAF·FIRM·AGQ의 실제 GNN 검증 규모를 재확인한 결과, 세 논문 모두 실질적으로는 본 연구와 같은 자릿수(6~15개 노드) 규모에서 핵심 결과를 냈다.
 2. **의도적 스코프 설정**: §5에 명시된 대로, 본 연구의 기여는 "위상 정보 반영의 효과 검증"이지 "초대규모 프로덕션 스케일링 검증"이 아니며, 후자는 후속 연구로 명시적으로 남긴다.
 3. **구조적 확장성**: GRAF는 readout에서 노드 임베딩을 flatten하는 방식이라 모델 파라미터가 노드 수에 선형 비례하고, 이를 스스로 확장성 한계로 인정한다(ToN 2024판 Discussion). 본 연구는 flatten이 아닌 공유 per-node head 기반 노드 레벨 예측을 채택해(§2-A 표) 그래프 크기가 달라져도 모델 구조·파라미터 수가 그대로 유지되도록 설계했다 — "검증은 작은 규모에서 했지만, 모델 구조 자체는 큰 규모에도 적용 가능하도록 설계했다"는 근거.
 
@@ -323,6 +326,10 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 1. **문제 정의가 다름**: AGQ·GraphGRU의 목표는 미래의 연속적 자원 사용량 수치를 정확히 예측하는 것(회귀)이고, 본 연구의 목표는 현재 상태의 위험 여부와 확신도를 즉각 판단하는 것(분류/신뢰도 추정)이다.
 2. **설계 트레이드오프**: 시계열 결합은 예측 정확도를 높이지만 버퍼링 시간과 시간축 attention 연산으로 추론 지연이 늘어난다. 본 연구는 신뢰도 구간별 즉각 대응이 핵심 기여이므로 정확도보다 낮은 추론 지연을 우선했다.
 3. **근거 기반 설계**: 이 트레이드오프는 §4-4에서 실측 검증 예정이며, GNN 추론 레이턴시와 즉각 반응 타이밍 간의 관계는 2계층 제어(§2-D)로 다루고 추론 주기 파라미터의 실측 튜닝은 실험 과제로 계획에 포함되어 있다.
+
+**DeepScaler(ASE 2023) 대응** — 같은 3단 논리가 그대로 적용되며, 추가로 두 가지를 답한다.
+1. **예측 대상이 다르다**: DeepScaler는 CPU·메모리 사용률·응답시간·요청률이라는 **연속 수치를 회귀**로 예측한다(AGQ·GraphGRU와 같은 계열). 본 연구는 SLO 위반 위험을 **노드별 이진 분류 + 불확실성**으로 산출한다(§2-0). 목적이 "얼마나 쓸 것인가"와 "위험한가·얼마나 확신하는가"로 갈린다.
+2. **왜 adaptive graph learning이 아니라 정적 그래프인가**: DeepScaler는 EM 기반으로 서비스 의존 그래프(affinity matrix)를 **학습**한다. 이는 호출 관계를 직접 관측할 수 없는 환경에서 유효한 접근이나, 본 연구는 Istio 사이드카가 실제 호출 관계를 직접 제공하는 환경을 전제하므로 그래프를 추정할 필요가 없다. 관측 가능한 구조를 굳이 추정하면 (a) 추정 오차가 예측 오차에 더해지고, (b) 학습된 인접행렬은 해석이 어려워 "왜 이 노드에 조치했는가"라는 설명 가능성(§2-A RL 미채택 근거와 같은 축)이 약해진다. 위상이 자주 바뀌는 환경에서의 그래프 갱신은 우려 13에서 별도로 다룬다.
 
 예상 후속 질문:
 - "정확도가 떨어지지 않나?" → 본 연구가 검증하려는 것은 "위상 정보가 있는 것이 없는 것(LSTM)보다 낫다"이지 "AGQ의 시계열 모델보다 정확하다"가 아니다.
@@ -417,6 +424,7 @@ GNN을 지도학습시키기 위해 각 학습 샘플(시점 t의 서비스 호�
 
 - **Gal & Ghahramani (2016)**, "Dropout as a Bayesian Approximation", ICML 2016. MC Dropout을 처음 제안한 논문. 신경망 추론 시 Dropout을 끄지 않고 유지한 채 여러 번 반복 추론함으로써 베이지안 근사 방식으로 모델의 불확실성을 추정하는 기법을 제안한다. 본 연구와의 관계: 신뢰도 산출 방식 후보 비교 시 MC Dropout 측 근거로 검토했으나, 추론 시 반복 순전파가 필요해 즉각 반응이 핵심인 본 연구에는 불리하다고 판단해 최종 미채택. [arXiv](https://arxiv.org/abs/1506.02142) · [PMLR](https://proceedings.mlr.press/v48/gal16.html)
 - **Lakshminarayanan, Pritzel & Blundell (2017)**, NeurIPS 2017. Deep Ensemble을 제안한 논문. 서로 다르게 초기화된 여러 신경망을 독립적으로 학습시킨 뒤 예측값들의 분산으로 불확실성을 추정하는 기법을 제시하며, MC Dropout과의 비교 실험을 통해 Deep Ensemble이 더 신뢰할 수 있는 불확실성 추정치를 제공함을 실증했다. 본 연구와의 관계: 신뢰도 산출 방식의 핵심 채택 근거 논문. [arXiv](https://arxiv.org/abs/1612.01474) · [NeurIPS](https://papers.nips.cc/paper/2017/hash/9ef2ed4b7fd2c810847ffa5fa85bce38-Abstract.html)
+- **Meng, C., Song, S., Tong, H., Pan, M. & Yu, Y. (2023)**, "DeepScaler: Holistic Autoscaling for Microservices Based on Spatiotemporal GNN with Adaptive Graph Learning", IEEE/ACM ASE 2023. EM 기반 adaptive graph learning으로 서비스 의존 그래프(affinity matrix)를 학습하고, attention 기반 GCN으로 시공간 특징을 추출해 상호작용 서비스의 자원을 동시에 재구성한다(의존관계로 인한 cascading effect 회피가 명시적 목표). Bookinfo·Online Boutique·Train-Ticket에서 SLA 위반 평균 41% 감소. 코드 공개. 본 연구와의 관계: **축 ①(위상 인지 예측)에서 가장 정교한 비교 대상**이며 벤치마크도 겹친다. 구분선은 (1) 예측 대상이 자원 수치 회귀 vs SLO 위반 위험 분류, (2) 조치 공간이 자원 프로비저닝 단일 vs 질적 이질 5종, (3) 신뢰도 축 부재다(우려 8, D16). [arXiv](https://arxiv.org/abs/2309.00859) · [ACM DL](https://dl.acm.org/doi/10.1109/ASE56229.2023.00038) · [코드](https://github.com/SYSU-Workflow-Lab/DeepScaler)
 - **Su, J. et al. (2026)**, "CP-Router: An Uncertainty-Aware Router Between LLM and LRM", AAAI 2026. Conformal Prediction으로 예측 불확실성을 추정하고, 예측 집합 크기가 작으면(불확실성 낮음) LLM, 크면 LRM으로 라우팅하는 학습 불필요 프레임워크. FBE(Full and Binary Entropy)로 CP 임계값을 적응적으로 선택한다. 본 연구와의 관계: **불확실성으로 조치를 가른다는 메커니즘이 표면적으로 겹치는 인접 연구.** 구분선은 (1) 임계값이 하나이며 근거가 통계적 커버리지 보장인 점, (2) 선택지가 이진 동질(LLM↔LRM)인 점, (3) 도메인이 MCQA·QA인 점이다(D15). [arXiv](https://arxiv.org/abs/2505.19970) · [AAAI](https://ojs.aaai.org/index.php/AAAI/article/view/40589)
 - **Ramírez, G., Birch, A. & Titov, I. (2024)**, "Optimising Calls to Large Language Models with Uncertainty-Based Two-Tier Selection", COLM 2024. 소형 LLM 생성의 불확실성(margin sampling)만으로 대형 LLM 호출 여부를 결정하며, 추가 신경망이 필요한 캐스케이드·라우팅 기법 대비 27개 설정 중 25개에서 우위. 임계값은 초기 질의로 잡은 뒤 비용식 `c = ĉ_s + p_c·ĉ_l`의 예산 목표에 맞춰 동적 보정한다. 본 연구와의 관계: 위와 같은 인접 연구이며 구분선도 동일하다(D15). **arXiv 프리프린트가 아니라 COLM 2024 정식 게재이므로 인용 시 venue를 정확히 적을 것.** [arXiv](https://arxiv.org/abs/2405.02134) · [OpenReview](https://openreview.net/forum?id=T9cOYH0wGF)
 

@@ -177,7 +177,7 @@ p > θₐ ,   θₐ =  Dₐ·Rₐ / ( mₐ·L − Dₐ·(1−Rₐ) )
 
 구현은 `Actuator` 인터페이스 → 조치별 추상 클래스 → 노드 타입별 구현체 주입(전략 패턴)으로 흡수한다. 예: `DegradedPathRedirection` → `ReadReplicaRedirect` / `ModelDowngradeRedirect`.
 
-**개명**: 종전 `Degraded-path Redirection`은 DB 읽기 한정으로 읽혀 모델 다운그레이드를 포괄하지 못하므로 **`Degraded-path Redirection`**으로 개명한다. 나머지 4종은 LLM 맥락에서도 명칭이 그대로 통하므로 유지한다.
+**개명**: 종전 명칭 `Read Redirection`은 DB 읽기 한정으로 읽혀 모델 다운그레이드를 포괄하지 못하므로 **`Degraded-path Redirection`**으로 개명했다. 나머지 4종은 LLM 맥락에서도 명칭이 그대로 통하므로 유지한다.
 
 **Redirection과 Brownout의 경계** (LLM 노드에서 둘 다 품질을 낮추므로 구분이 필요하다):
 

@@ -79,6 +79,7 @@
 **마지막 학기 시작 전**: 코어 구현(Policy Engine, 핵심 Actuator) + 메인 실험 완료
 
 **마지막 학기**: 논문 작성 + 본심사
+- [ ] **제출 직전 온톨로지 정합성 점검** — 본문↔`ontology_temp/` 불일치 해소 ([challenges.md](challenges.md) I1에 목록)
 
 ## 예산/인프라 계획
 

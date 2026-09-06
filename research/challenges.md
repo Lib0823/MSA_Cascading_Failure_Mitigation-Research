@@ -460,4 +460,14 @@
   - **서술 상한**: "설계 과정에서 도출된 개념·조치·비교축을 도메인 온톨로지(OWL)로 정형화해 용어·정의 일관성을 관리하고 설계 공간을 명시적으로 표현했다. **온톨로지는 연구 기여가 아니라 설계 정합성 관리를 위한 보조 표현물이다.**" (마지막 문장으로 "왜 여기 있냐" 질문을 선제 차단 → rigor로 읽히게)
   - **금지 프레이밍**: "온톨로지 기반 방법론 제안" / "온톨로지를 통해 ~ 도출" 류.
   - **제출 전 필수 조건**: proposal이 갱신되면 온톨로지가 낡으므로, 부록에 넣기로 하면 **논문 제출 직전 본문↔온톨로지 정합성 점검**(`ontology-consistency-check`)을 돌려 맞춘다. 낡은 부록은 "본문과 다르다"는 감점 요인.
+  - **⚠️ 현재 온톨로지가 낡아 있다 (2026-09-07 기준)**: 아래 변경이 `ontology_temp/`·`devkit/ontology.yaml`에 미반영이다. I1의 방침대로 **지금 고치지 않고 제출 직전 일괄 정합**하되, 누락 방지를 위해 목록을 남긴다.
+    | 변경 | 온톨로지 현재 상태 |
+    |---|---|
+    | `Read Redirection` → `Degraded-path Redirection` 개명(E9) | `ReadRedirection`으로 남아 있음 (classes·individuals·competency-questions) |
+    | LLM 추론 노드 추가(B7) — 노드 타입 개념, 타입 임베딩 | LLM 관련 개체·속성 **전무** |
+    | `apply_point(a, v)` 사상, 노드 타입별 분기(E7·E9) | 개념 **없음** |
+    | Spring/Postgres 노드 추가(B6) | `productcatalogservice hasBackingStore 로컬JSON`만 있고 Postgres 백엔드 없음 |
+    | 컷 우선순위 2종 → 3종 | individuals에 "CircuitBreaker+ReadRedirection 2종"으로 남아 있음 |
+    | 노드 수 11~12 → 13~14 | 미반영 |
+    | 비교표 4자 → 5자(DeepScaler, D16) | 미반영 |
   - **기여로 승격하려면(별도 투자, 현 스코프 밖 — 권장 안 함)**: 여러 MSA 복원력 연구에 재사용 가능하도록 범용화 + reasoner로 추론 활성화(예: 저신뢰 노드의 조치 유보를 추론) + 외부 문헌/전문가 검증. 이는 시맨틱웹 계열 별도 short paper 소재이며 본 논문(7~10개월 겸업)의 핵심 기여(Policy Engine 실증) 시간을 잠식한다.

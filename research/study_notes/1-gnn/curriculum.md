@@ -25,7 +25,7 @@
 ## STEP 4. RNN/LSTM (1주) — CNN보다 우선순위 높음
 
 - **[Must Have]** 같은 재생목록의 "2단계: 6장. 넷플릭스 주가 예측하기 (RNN으로 첫 시계열 학습)".
-- 목표: 시퀀스 처리, hidden state 개념 이해 → [docs/proposal.md](../../docs/proposal.md) §4-3의 LSTM baseline을 직접 구현할 수 있는 수준.
+- 목표: 시퀀스 처리, hidden state 개념 이해 → [docs/proposal.md](../../../docs/proposal.md) §4-3의 LSTM baseline을 직접 구현할 수 있는 수준.
 - 학습 노트: [3. RNN:LSTM.pdf](3.%20RNN%3ALSTM.pdf)
 
 > 참고: STEP 1~4는 모두 "텐초의 파이토치 딥러닝 특강" 한 재생목록에서 순서대로 이어지는 무료 공식 강의(1단계 → 2단계 순)이며, 골든래빗 출판사의 동명 도서와 짝을 이루는 검증된 자료.
@@ -56,7 +56,7 @@
 
 - Lecture 16: Deep Ensemble and Monte Carlo Dropout: https://www.youtube.com/watch?v=jYjLuFiTpck
 - MC Dropout과 Deep Ensemble 두 방법을 함께 비교하는 강의. 원 논문은 Gal & Ghahramani(2016) "Dropout as a Bayesian Approximation".
-- 목표: 이 STEP이 끝나면 MC Dropout / Deep Ensemble / Softmax entropy 중 신뢰도 산출 방식을 확정할 수 있어야 함(프로포절 심사 1순위 마일스톤). → [research/challenges.md](../challenges.md) F1에서 Deep Ensemble(N=5)로 확정됨.
+- 목표: 이 STEP이 끝나면 MC Dropout / Deep Ensemble / Softmax entropy 중 신뢰도 산출 방식을 확정할 수 있어야 함(프로포절 심사 1순위 마일스톤). → [research/challenges.md](../../challenges.md) F1에서 Deep Ensemble(N=5)로 확정됨.
 - 학습 노트: [7. 신뢰도(Confidence) 산출 방법론.pdf](7.%20신뢰도%28Confidence%29%20산출%20방법론.pdf)
 
 ## STEP 8-보강. Calibration 평가 방법론 (ECE, reliability diagram) — 가볍게, 2~3일

@@ -62,3 +62,13 @@ challenges D14·E5·E6·F1·G1·G2·G4·H1~H6.
 
 작업본(temp). 개념 누락·관계 정합성은 competency-questions.md의 질문으로 검증하며,
 연구 진행에 따라 갱신한다. **논문 제출 직전, 본문↔온톨로지 정합성 점검을 한 번 돌려 낡은 부분을 맞춘다(I1).**
+
+---
+
+## ⚠️ 드리프트 상태 (2026-09-24)
+
+**이 폴더의 내용은 현재 본문과 어긋나 있다.** 2026-09-24 범위 재설계([docs/feedback/0923_scope_redesign_proposal.md](../docs/feedback/0923_scope_redesign_proposal.md), [challenges.md](../research/challenges.md) §J)로 조치 종류·예측 모델·시나리오·인프라·벤치마크가 모두 바뀌었으나 온톨로지는 갱신하지 않았다.
+
+**지금 갱신하지 않는 이유**: 온톨로지는 연구 기여가 아니라 **설계 정합성 관리를 위한 보조 표현물**이며([challenges.md](../research/challenges.md) I1), 본문이 더 바뀔 수 있다. I1이 정한 프로토콜대로 **논문 제출 직전 일괄 재점검**한다.
+
+**갱신 필요 항목 목록은 [challenges.md](../research/challenges.md) I1**에 정리되어 있다. 그 전까지 이 폴더의 개체·관계를 본문 근거로 인용하지 말 것.

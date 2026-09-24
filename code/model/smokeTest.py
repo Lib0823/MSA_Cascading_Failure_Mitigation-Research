@@ -9,6 +9,9 @@
     C3  노드 수를 6→20으로 바꿔도 GAT 파라미터 수가 불변 (공유 per-node head)
     C4  ② 이웃 집계 feature + GBM 앙상블이 같은 규약으로 동작
     C5  p_eff = max(0, p̄ − κ√u) 가 κ에 대해 단조 감소 (Safety Guard 유도)
+    C6  역전파 gradient가 모든 파라미터 그룹에 도달
+    C7  상류 이웃으로만 결정되는 라벨을 학습 — 전파 간선 방향 검증
+    C8  앙상블 추론 지연의 자릿수 (Δ 하한의 입력)
 
 실행:
     python code/model/smokeTest.py
@@ -16,8 +19,8 @@
 
 from __future__ import annotations
 
-import math
 import sys
+import time
 
 import numpy as np
 import torch
@@ -439,6 +442,197 @@ def checkSafetyGuardMonotonicity() -> str:
     return "κ=0 → p̄ 환원, κ↑ → p_eff 단조 감소, 큰 κ에서 전원 보류(0)"
 
 
+# --- 학습 가능성 --------------------------------------------------------------
+
+
+def stackEpisodes(
+    featureList: list[np.ndarray], callEdges: np.ndarray, nodeTypes: np.ndarray
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """여러 에피소드를 서로 연결되지 않은 하나의 큰 그래프로 쌓는다.
+
+    같은 위상을 반복 관측한 스냅샷들을 한 번의 forward로 처리하기 위한 것이다.
+    에피소드마다 노드 인덱스를 오프셋해 간선이 에피소드를 넘지 않게 한다.
+    """
+    numNodes = nodeTypes.shape[0]
+    stackedFeatures = np.concatenate(featureList, axis=0)
+    stackedEdges = np.concatenate(
+        [callEdges + episode * numNodes for episode in range(len(featureList))], axis=1
+    )
+    stackedTypes = np.tile(nodeTypes, len(featureList))
+    return (
+        torch.from_numpy(stackedFeatures),
+        toPropagationEdges(stackedEdges),
+        torch.from_numpy(stackedTypes),
+    )
+
+
+def buildNeighborDrivenLabels(
+    numericFeatures: np.ndarray, firstUpstream: list[int | None]
+) -> np.ndarray:
+    """1-hop 상류 이웃의 f1(상태성 자원 포화율)만으로 결정되는 라벨을 만든다.
+
+    self feature 로는 풀 수 없게 만들어, 라벨을 맞히려면 전파 간선을 타고
+    이웃 정보가 실제로 도달해야만 하도록 한다. 전파 간선 방향이 뒤집혀 있으면
+    이 라벨은 학습되지 않는다. 상류가 없는 노드(말단 의존)는 정상으로 둔다.
+    """
+    labels = np.zeros(len(firstUpstream), dtype=np.int64)
+    for node, neighbor in enumerate(firstUpstream):
+        if neighbor is None:
+            continue
+        saturation = float(numericFeatures[neighbor, 0])
+        labels[node] = min(int(saturation * NUM_CLASSES), NUM_CLASSES - 1)
+    return labels
+
+
+def trainOnNeighborDrivenTask(
+    numNodes: int, numEpisodes: int, numEpochs: int
+) -> tuple[float, float, float, NodeRiskGat]:
+    """이웃 의존 라벨로 GAT를 학습하고 (초기 loss, 최종 loss, 검증 정확도, 모델)."""
+    torch.manual_seed(0)
+    callEdges, nodeTypes = buildFakeTopology(numNodes)
+    upstreamByHop = collectUpstreamByHop(callEdges, numNodes, hops=1)
+    firstUpstream: list[int | None] = [
+        neighbors[0] if neighbors else None for neighbors in upstreamByHop[0]
+    ]
+    hasUpstream = np.array([n is not None for n in firstUpstream])
+
+    featureList, labelList = [], []
+    for episode in range(numEpisodes):
+        features = buildFakeFeatures(numNodes, seed=5000 + episode)
+        featureList.append(features)
+        labelList.append(buildNeighborDrivenLabels(features, firstUpstream))
+
+    splitAt = int(numEpisodes * 0.8)
+    trainX, trainEdges, trainTypes = stackEpisodes(
+        featureList[:splitAt], callEdges, nodeTypes
+    )
+    validX, validEdges, validTypes = stackEpisodes(
+        featureList[splitAt:], callEdges, nodeTypes
+    )
+    trainY = torch.from_numpy(np.concatenate(labelList[:splitAt]))
+    validY = torch.from_numpy(np.concatenate(labelList[splitAt:]))
+
+    # 클래스 불균형 대응 — 빈도의 역수를 가중치로 (§4-2).
+    counts = np.bincount(trainY.numpy(), minlength=NUM_CLASSES).astype(np.float64)
+    classWeight = torch.from_numpy((counts.sum() / (counts + 1.0)).astype(np.float32))
+    criterion = nn.CrossEntropyLoss(weight=classWeight)
+
+    model = NodeRiskGat()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+
+    model.train()
+    initialLoss = 0.0
+    for epoch in range(numEpochs):
+        optimizer.zero_grad()
+        loss = criterion(model(trainX, trainTypes, trainEdges), trainY)
+        loss.backward()
+        optimizer.step()
+        if epoch == 0:
+            initialLoss = float(loss.detach())
+    finalLoss = float(loss.detach())
+
+    model.eval()
+    with torch.no_grad():
+        predicted = model(validX, validTypes, validEdges).argmax(dim=1).numpy()
+    validMask = np.tile(hasUpstream, numEpisodes - splitAt)
+    accuracy = float((predicted[validMask] == validY.numpy()[validMask]).mean())
+    return initialLoss, finalLoss, accuracy, model
+
+
+# --- 체크 (학습·지연) ----------------------------------------------------------
+
+
+def checkGradientFlow() -> str:
+    """C6 — 역전파가 모든 파라미터 그룹에 도달하는가 (타입 임베딩 포함)."""
+    numNodes = 7
+    callEdges, nodeTypesArray = buildFakeTopology(numNodes)
+    numericFeatures = torch.from_numpy(buildFakeFeatures(numNodes, seed=21))
+    nodeTypes = torch.from_numpy(nodeTypesArray)
+    propagationEdges = toPropagationEdges(callEdges)
+    labels = torch.from_numpy(
+        np.arange(numNodes, dtype=np.int64) % NUM_CLASSES
+    )
+
+    torch.manual_seed(0)
+    model = NodeRiskGat()
+    model.train()
+    loss = nn.CrossEntropyLoss()(
+        model(numericFeatures, nodeTypes, propagationEdges), labels
+    )
+    loss.backward()
+
+    missing = [
+        name
+        for name, parameter in model.named_parameters()
+        if parameter.grad is None or float(parameter.grad.abs().sum()) == 0.0
+    ]
+    assert not missing, f"gradient가 도달하지 않은 파라미터: {missing}"
+
+    # LLM 노드는 그래프에 1개뿐이다 — 해당 타입 임베딩 행에도 도달해야 한다.
+    llmRowGradient = float(model.typeEmbedding.weight.grad[1].abs().sum())
+    assert llmRowGradient > 0.0, "LLM 노드 타입 임베딩에 gradient가 도달하지 않았다"
+
+    trainable = sum(1 for _ in model.parameters())
+    return f"{trainable}개 파라미터 텐서 전부에 gradient 도달 (LLM 타입 임베딩 포함)"
+
+
+def checkTopologySignalLearning() -> str:
+    """C7 — 상류 이웃으로만 결정되는 라벨을 학습할 수 있는가.
+
+    통과하면 전파 간선 방향(의존 대상 → 호출자)이 실제로 연결돼 있고
+    message passing이 이웃 정보를 나른다는 뜻이다. 방향이 뒤집혀 있으면 실패한다.
+    """
+    initialLoss, finalLoss, accuracy, _ = trainOnNeighborDrivenTask(
+        numNodes=20, numEpisodes=200, numEpochs=150
+    )
+    randomBaseline = 1.0 / NUM_CLASSES
+
+    assert finalLoss < initialLoss * 0.8, (
+        f"loss가 유의미하게 줄지 않았다: {initialLoss:.3f} → {finalLoss:.3f}"
+    )
+    assert accuracy > randomBaseline + 0.15, (
+        f"이웃 의존 라벨을 학습하지 못했다 (정확도 {accuracy:.3f}, 랜덤 {randomBaseline:.2f}) "
+        "— 전파 간선 방향을 의심할 것"
+    )
+    return (
+        f"loss {initialLoss:.3f} → {finalLoss:.3f}, "
+        f"검증 정확도 {accuracy:.3f} (랜덤 {randomBaseline:.2f}) "
+        "— 전파 간선을 타고 이웃 정보가 도달함"
+    )
+
+
+def checkInferenceLatency() -> str:
+    """C8 — 앙상블 추론 지연의 자릿수 (Δ 하한의 입력, §2-D·§4-2).
+
+    본 실험 머신이 아니므로 절대값이 아니라 자릿수만 본다.
+    """
+    numNodes = 7
+    callEdges, nodeTypesArray = buildFakeTopology(numNodes)
+    numericFeatures = torch.from_numpy(buildFakeFeatures(numNodes, seed=13))
+    nodeTypes = torch.from_numpy(nodeTypesArray)
+    propagationEdges = toPropagationEdges(callEdges)
+    ensemble = GatEnsemble()
+
+    for _ in range(10):
+        ensemble.predictProba(numericFeatures, nodeTypes, propagationEdges)
+
+    samples = []
+    for _ in range(100):
+        started = time.perf_counter()
+        ensemble.predictProba(numericFeatures, nodeTypes, propagationEdges)
+        samples.append((time.perf_counter() - started) * 1000.0)
+    median = float(np.median(samples))
+    p95 = float(np.percentile(samples, 95))
+
+    assert median < 100.0, (
+        f"앙상블 추론이 {median:.1f}ms — Δ 하한을 압박한다. 2계층 제어 전제를 재검토할 것"
+    )
+    return (
+        f"N={ENSEMBLE_SIZE} 앙상블 추론 중앙값 {median:.2f}ms / p95 {p95:.2f}ms "
+        f"({numNodes}노드, 단일 스레드) — Δ 하한에서 무시 가능한 자릿수"
+    )
+
+
 # --- 실행 --------------------------------------------------------------------
 
 CHECKS = (
@@ -447,6 +641,9 @@ CHECKS = (
     ("C3  파라미터 수 불변 (6→20노드)", checkParameterInvariance),
     ("C4  ② 이웃 집계 + GBM 앙상블", checkTier2Pipeline),
     ("C5  p_eff 의 Safety Guard 성질", checkSafetyGuardMonotonicity),
+    ("C6  역전파 gradient 도달", checkGradientFlow),
+    ("C7  이웃 의존 라벨 학습 (간선 방향)", checkTopologySignalLearning),
+    ("C8  앙상블 추론 지연 자릿수", checkInferenceLatency),
 )
 
 

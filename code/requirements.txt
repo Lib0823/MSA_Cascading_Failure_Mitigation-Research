@@ -1,0 +1,14 @@
+# 게이트 ① 스모크 테스트 실행 환경 (CPU 전용, Python 3.12)
+#
+#   uv venv --python 3.12
+#   uv pip install --python .venv/bin/python torch --index-url https://download.pytorch.org/whl/cpu
+#   uv pip install --python .venv/bin/python -r code/requirements.txt
+#   .venv/bin/python code/model/smokeTest.py
+#
+# torch 는 CPU 휠 인덱스에서 따로 받는다(위 두 번째 줄). LightGBM 은 macOS arm64 의
+# libomp 의존을 피하려고 쓰지 않고, sklearn HistGradientBoostingClassifier 로 대신한다.
+
+torch==2.14.0
+torch-geometric==2.8.0.post1
+scikit-learn==1.9.1
+numpy==2.5.3

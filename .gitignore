@@ -8,3 +8,24 @@ devkit/ontology.html   # yaml에서 재생성 가능 (원하면 커밋 가능)
 
 # graphify 캐시가 프롬프트 캐시를 무효화하지 않도록
 graph.json
+
+# === Python ===
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# === 환경 변수 ===
+.env
+.env.local
+.env.*.local
+
+# === IDE ===
+.idea/
+*.iml
+
+# === 실험 산출물 ===
+*.log
+.cache/

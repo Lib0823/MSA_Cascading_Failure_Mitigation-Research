@@ -1,5 +1,8 @@
 # LLM 노드 확장 — 반영안 (LLM Node Extension)
 
+> ⚠️ **이 문서는 과거 기록이다 (2026-09-24 표시).** 2026-09-24 범위 재설계로 조치 종류·시나리오 정의·LLM 서빙 방식이 모두 바뀌었다. 특히 아래 표의 **S1 정의(`maximumPoolSize` 축소)는 폐기되었다** — 앱 측을 조이면 scale-out이 오히려 도움이 되어 의도한 기전이 재현되지 않기 때문이다([challenges.md](../../research/challenges.md) J15 결함 1). 현행 설계는 [proposal.md](../proposal.md)와 [0923_scope_redesign_proposal.md](0923_scope_redesign_proposal.md)를 보라.
+
+
 > 작성일: 2026-09-05 / 재작성: 2026-09-06 / **채택·반영 완료: 2026-09-06**
 > 성격: 연구 대상 시스템에 LLM 추론 서비스 1개를 포함시키는 확장.
 > **상태: 채택 확정. 아래 내용은 전부 본 문서에 반영 완료.** 반영처는 [proposal](../proposal.md) §1·§2-A·§2-B·§2-C·§3·§4-1·§4-3·§4-4·§4-6·§5·우려 9~14·참고문헌 / [challenges](../../research/challenges.md) B7·C4·D17~D20·E8·E9·E10·F4·G6·G7 / [timeline](../../research/timeline.md) / [README](../../README.md) / [overview](../../research/overview.md) / [environment](../../research/environment.md).

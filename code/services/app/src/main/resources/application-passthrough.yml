@@ -1,0 +1,12 @@
+# WORKLOAD=passthrough 노드. DB 를 쓰지 않으므로 DataSource 자동설정을 끈다.
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+app:
+  passthrough:
+    # S3(다운스트림 지연) 주입 손잡이. 게이트 ①.5 에서는 0 이다.
+    extraDelayMillis: ${PASSTHROUGH_DELAY_MILLIS:0}
+    timeoutMillis: ${PASSTHROUGH_TIMEOUT_MS:5000}

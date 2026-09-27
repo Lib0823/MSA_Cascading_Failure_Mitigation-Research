@@ -1,0 +1,12 @@
+# WORKLOAD=llm 노드. 게이트 ①.5 의 검증 대상이 아니다 (S2 자리표시).
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+app:
+  llm:
+    millisPerToken: ${LLM_MILLIS_PER_TOKEN:4}
+    # Brownout 조치가 낮추는 대상이 이 값이다.
+    maxTokens: ${LLM_MAX_TOKENS:64}

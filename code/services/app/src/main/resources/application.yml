@@ -1,0 +1,39 @@
+# 단일 이미지 + 프로파일 구성의 공통 설정.
+# 노드 간 차이는 전부 환경변수 3개로만 표현한다 (docs/proposal.md §4-1).
+#
+#   SERVICE_NAME  노드 이름 (지표 라벨)
+#   WORKLOAD      db | passthrough | llm  → 그대로 Spring 프로파일이 된다
+#   DOWNSTREAM    passthrough 노드가 호출할 상대 (예: http://app2:8080)
+
+spring:
+  application:
+    name: ${SERVICE_NAME:app}
+  profiles:
+    active: ${WORKLOAD:db}
+
+server:
+  port: 8080
+  tomcat:
+    # 스레드 수를 기본값(200)에 맡기면 조건 간 비교가 흔들린다. 명시 고정한다.
+    threads:
+      max: ${TOMCAT_MAX_THREADS:200}
+      min-spare: 20
+    accept-count: 200
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    tags:
+      serviceName: ${SERVICE_NAME:app}
+
+app:
+  serviceName: ${SERVICE_NAME:app}
+  downstream: ${DOWNSTREAM:}
+
+logging:
+  level:
+    root: WARN
+    com.research.cascade: INFO

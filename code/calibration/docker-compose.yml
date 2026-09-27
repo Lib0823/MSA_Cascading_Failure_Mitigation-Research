@@ -1,0 +1,113 @@
+# 게이트 ①.5 — S1 미니 캘리브레이션 하네스
+#
+# 확인하려는 것은 단 하나다: S1 조건에서 인스턴스를 2→4 로 늘렸을 때
+# 성능이 나빠지는가 (m_scale-out < 0 의 부호). 절대 수치는 목표가 아니다.
+#
+# ⚠️ 대조군 없이 이 수치만 보면 안 된다. 인스턴스를 늘리면 호스트 CPU 경합만으로도
+#    지연이 악화되어 H4 가 재현된 것처럼 보인다. 그래서 DB 를 조이지 않은 대조군에서
+#    2→4 가 개선되는지를 먼저 확인하고, 실험군에서만 악화될 때 효과를 DB 에 귀속시킨다.
+#    (research/timeline.md §①.5)
+#
+# 두 군은 max_connections 하나만 다르다. DB CPU 상한까지 군마다 다르게 주면
+# 조건별 호스트 CPU 총량이 달라져 대조군이 대조군 역할을 못 한다.
+#
+#   실행은 runCalibration.py 가 한다. 직접 띄울 때:
+#     DB_MAX_CONNECTIONS=25 docker compose --profile s4 up -d
+
+services:
+  db:
+    image: postgres:16
+    command:
+      - postgres
+      - -c
+      - max_connections=${DB_MAX_CONNECTIONS:-25}
+      - -c
+      - shared_buffers=128MB
+      - -c
+      # 관측용 psql 이 쓸 슬롯. 앱은 비-superuser 라 여기에 손대지 못한다.
+      - superuser_reserved_connections=3
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cascade}
+      POSTGRES_USER: ${DB_USER:-cascade}
+      # 비밀번호를 두지 않는다. 이 DB 는 호스트로 포트를 발행하지 않아 Compose 네트워크
+      # 밖에서 닿을 수 없고, 데이터는 tmpfs 라 컨테이너와 함께 사라진다. 자격증명이
+      # 하는 일이 없는데 리터럴만 남으면 비밀 스캐너에 계속 걸린다.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    cpus: ${DB_CPUS:-2.0}
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cascade} -d ${DB_NAME:-cascade}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - ./initDb.sql:/docker-entrypoint-initdb.d/initDb.sql:ro
+    tmpfs:
+      # 디스크 I/O 편차가 조건 간 비교에 섞이지 않게 데이터를 메모리에 둔다.
+      # 캘리브레이션은 내구성이 필요 없다.
+      - /var/lib/postgresql/data
+
+  app1:
+    profiles: ["s2", "s4"]
+    build: ../services/app
+    image: cascade-app:0.1.0
+    environment: &appEnvironment
+      SERVICE_NAME: app
+      WORKLOAD: db
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-cascade}
+      # superuser(POSTGRES_USER)가 아니라 initDb.sql 이 만든 비-superuser 롤로 붙는다.
+      # 이래야 커넥션이 고갈돼도 관측용 예약 슬롯이 남는다.
+      DB_USER: ${DB_APP_USER:-appuser}
+      HIKARI_MAX_POOL_SIZE: ${HIKARI_MAX_POOL_SIZE:-20}
+      HIKARI_MIN_IDLE: ${HIKARI_MIN_IDLE:-2}
+      HIKARI_CONNECTION_TIMEOUT_MS: ${HIKARI_CONNECTION_TIMEOUT_MS:-5000}
+      DB_SLEEP_MILLIS: ${DB_SLEEP_MILLIS:-200}
+      DB_BURN_ROWS: ${DB_BURN_ROWS:-1000}
+    # 앱당 CPU 를 고정 상한으로 준다. 이게 없으면 2→4 가 연산량 증가로 이어지지 않아
+    # 대조군에서도 개선이 나타나지 않고, 1 단계 부하 구간 탐색 자체가 실패한다.
+    cpus: ${APP_CPUS:-1.0}
+    mem_limit: 512m
+    ports: ["18081:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck: &appHealthcheck
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+
+  app2:
+    profiles: ["s2", "s4"]
+    build: ../services/app
+    image: cascade-app:0.1.0
+    environment: *appEnvironment
+    cpus: ${APP_CPUS:-1.0}
+    mem_limit: 512m
+    ports: ["18082:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck: *appHealthcheck
+
+  app3:
+    profiles: ["s4"]
+    build: ../services/app
+    image: cascade-app:0.1.0
+    environment: *appEnvironment
+    cpus: ${APP_CPUS:-1.0}
+    mem_limit: 512m
+    ports: ["18083:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck: *appHealthcheck
+
+  app4:
+    profiles: ["s4"]
+    build: ../services/app
+    image: cascade-app:0.1.0
+    environment: *appEnvironment
+    cpus: ${APP_CPUS:-1.0}
+    mem_limit: 512m
+    ports: ["18084:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck: *appHealthcheck

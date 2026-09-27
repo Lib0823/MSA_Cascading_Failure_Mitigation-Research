@@ -1,0 +1,32 @@
+# WORKLOAD=db 노드. S1 의 병목은 앱이 아니라 DB 쪽에 있어야 한다.
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    # trust 인증이라 비밀번호가 없다. 실 클러스터로 옮길 때 채운다.
+    password: ${DB_PASSWORD:}
+    hikari:
+      # 앱 풀은 넉넉하게 둔다. 여기를 조이면 인스턴스 2→4 에서 총 풀 용량이 함께 늘어
+      # 대기가 줄어들고 m_scale-out < 0 이 재현되지 않는다 (docs/proposal.md §4-5).
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20}
+      # minimumIdle 기본값은 maximumPoolSize 와 같아서, 그대로 두면 기동만으로
+      # 인스턴스당 20 커넥션을 연다. 그러면 max_connections 초과가 부하와 무관하게
+      # 일어나 "부하↑ → 점유↑ → 증설 → 커넥션 요구↑" 라는 검증 대상 기전이 사라진다.
+      # 낮게 고정해 커넥션이 수요를 따라 늘어나게 한다.
+      minimum-idle: ${HIKARI_MIN_IDLE:2}
+      # 기본 30s 는 측정 구간을 넘긴다. 획득 실패는 버그가 아니라 포화 신호이므로
+      # 짧게 잡아 에러율로 관측한다.
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:5000}
+      max-lifetime: 600000
+
+app:
+  db:
+    # 커넥션 점유시간 축 — 인스턴스당 동시 커넥션 요구를 끌어올린다.
+    # 이 값이 커야 한 인스턴스가 붙잡는 커넥션 수가 늘어 max_connections 에 닿는다.
+    sleepMillis: ${DB_SLEEP_MILLIS:200}
+    # DB CPU 소모 축 — 커넥션이 남아도 DB 가 포화하는 경로를 따로 만든다.
+    # ⚠️ 작게 유지한다. 이 값이 크면 DB CPU 가 먼저 천장이 되어 대조군에서도
+    #    2→4 증설이 아무 효과가 없고, 부호를 DB 커넥션에 귀속시킬 수 없다.
+    #    1000 행 ≈ 2~3 ms DB CPU (20000 행은 ≈ 50 ms 로 측정돼 천장을 50 rps 로 만들었다).
+    burnRows: ${DB_BURN_ROWS:1000}

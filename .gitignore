@@ -17,6 +17,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# === Java / Gradle ===
+.gradle/
+build/
+*.iml
+
 # === 환경 변수 ===
 .env
 .env.local

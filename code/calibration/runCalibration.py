@@ -39,6 +39,7 @@ import loadGen
 HERE = pathlib.Path(__file__).resolve().parent
 RESULTS_DIR = HERE / "results"
 COMPOSE_PROJECT = "gate15"
+RUN_STAMP = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # 군의 정의는 max_connections 하나뿐이다. DB CPU 상한까지 군마다 다르게 주면
 # 조건별 호스트 CPU 총량이 달라져 대조군이 대조군 역할을 하지 못한다.
@@ -171,6 +172,7 @@ def runCell(
     workerCount: int,
     durationSeconds: float,
     warmupSeconds: float,
+    resultName: str,
 ) -> dict:
     """한 칸(군 × 인스턴스 수)을 기동부터 정리까지 한 번 측정한다."""
     environment = buildEnvironment(group)
@@ -194,7 +196,9 @@ def runCell(
         "group": group,
         "scale": scale,
         "maxConnections": int(groupMaxConnections[group]),
+        "recordedAt": dt.datetime.now().isoformat(timespec="seconds"),
     })
+    appendMeasurement(resultName, summary)
     print(
         f"    goodput {summary['goodputRps']:.1f} rps"
         f" / p95 {summary['latencyP95Millis']:.0f} ms"
@@ -214,10 +218,22 @@ def relativeChange(valueAtTwo: float, valueAtFour: float) -> float:
 
 def writeResults(name: str, payload: dict) -> pathlib.Path:
     RESULTS_DIR.mkdir(exist_ok=True)
-    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    path = RESULTS_DIR / f"{name}-{stamp}.json"
+    path = RESULTS_DIR / f"{name}-{RUN_STAMP}.json"
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def appendMeasurement(name: str, summary: dict) -> None:
+    """칸 하나가 끝날 때마다 즉시 디스크에 남긴다.
+
+    전체 실행이 12~25 분이므로 리포트 단계에서 예외가 나면 그 시간이 통째로 날아간다.
+    실제로 첫 실행이 집계 중 KeyError 로 죽어 측정 8건을 잃었다. 원시 측정과 판정은
+    수명이 달라야 한다.
+    """
+    RESULTS_DIR.mkdir(exist_ok=True)
+    path = RESULTS_DIR / f"{name}-{RUN_STAMP}.jsonl"
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(summary, ensure_ascii=False) + "\n")
 
 
 def commandBand(arguments: argparse.Namespace) -> int:
@@ -229,8 +245,8 @@ def commandBand(arguments: argparse.Namespace) -> int:
     rows = []
     for workerCount in arguments.workers:
         print(f"[부하 {workerCount} VU]")
-        atTwo = runCell("control", 2, workerCount, arguments.duration, arguments.warmup)
-        atFour = runCell("control", 4, workerCount, arguments.duration, arguments.warmup)
+        atTwo = runCell("control", 2, workerCount, arguments.duration, arguments.warmup, "band")
+        atFour = runCell("control", 4, workerCount, arguments.duration, arguments.warmup, "band")
         goodputChange = relativeChange(atTwo["goodputRps"], atFour["goodputRps"])
         p95Change = relativeChange(atTwo["latencyP95Millis"], atFour["latencyP95Millis"])
         improved = goodputChange > IMPROVEMENT_THRESHOLD
@@ -289,12 +305,15 @@ def commandCompare(arguments: argparse.Namespace) -> int:
         print(f"[라운드 {roundIndex + 1}/{arguments.repeats}] 순서 {order}")
         for group, scale in order:
             measurements[(group, scale)].append(
-                runCell(group, scale, arguments.workers, arguments.duration, arguments.warmup)
+                runCell(group, scale, arguments.workers, arguments.duration,
+                        arguments.warmup, "compare")
             )
         print()
 
     def median(cell: tuple[str, int], key: str) -> float:
-        values = sorted(run[key] for run in measurements[cell])
+        # backendPeak 은 표집이 한 번도 성공하지 못하면 빠진다. 그 경우에도
+        # 본체인 goodput 판정은 계속돼야 하므로 nan 으로 흘려보낸다.
+        values = sorted(run.get(key, float("nan")) for run in measurements[cell])
         return values[len(values) // 2]
 
     report = {}
@@ -314,18 +333,38 @@ def commandCompare(arguments: argparse.Namespace) -> int:
             "backendPeakAtFour": median((group, 4), "backendPeak"),
         }
 
-    print("─── 2 단계 결과 (중앙값) ───")
-    print(f"{'군':<10}{'goodput 2→4':>14}{'p95 2→4':>12}{'err@2':>9}{'err@4':>9}{'backend 2→4':>16}")
+    # 반복 수가 적으므로 중앙값만 보이면 칸 사이 분산이 가려진다. 원시값을 함께 찍어
+    # 두 칸의 범위가 겹치는지를 눈으로 확인할 수 있게 한다.
+    print("─── 칸별 원시 측정 ───")
+    print(f"{'조건':<12}{'goodput (rps)':<28}{'p95 (ms)':<26}{'backend peak'}")
+    for group, scale in cells:
+        runs = measurements[(group, scale)]
+        goodputs = " ".join(f"{run['goodputRps']:.0f}" for run in runs)
+        p95s = " ".join(f"{run['latencyP95Millis']:.0f}" for run in runs)
+        backends = " ".join(str(run.get("backendPeak", "-")) for run in runs)
+        print(f"{group + '@' + str(scale) + 'x':<12}{goodputs:<28}{p95s:<26}{backends}")
+
+    print("\n─── 2→4 변화 (중앙값) ───")
+    print(f"{'군':<10}{'goodput':>12}{'p95':>10}{'err@2':>9}{'err@4':>9}{'backend 2→4':>16}")
     for group in ("control", "treat"):
         row = report[group]
         print(
-            f"{group:<10}{row['goodputChange']:>+13.1%}{row['p95Change']:>+11.1%}"
+            f"{group:<10}{row['goodputChange']:>+11.1%}{row['p95Change']:>+9.1%}"
             f"{row['errorRateAtTwo']:>9.1%}{row['errorRateAtFour']:>9.1%}"
             f"{row['backendPeakAtTwo']:>7.0f} → {row['backendPeakAtFour']:<6.0f}"
         )
 
     controlImproved = report["control"]["goodputChange"] > IMPROVEMENT_THRESHOLD
-    treatDegraded = report["treat"]["goodputChange"] < 0
+    # 악화 판정을 goodput 하나에 걸지 않는다. 폐루프 부하에서 실험군은 커넥션 상한에
+    # 묶여 처리량이 양쪽 다 바닥에 붙어 버릴 수 있고, 그때 증설의 해악은 처리량이 아니라
+    # 대기시간으로 나타난다. 실제로 첫 실행에서 goodput 은 -16% 로 분산에 묻혔지만
+    # p95 는 1.0s → 2.0s 로 두 라운드 모두 겹침 없이 갈렸다.
+    goodputDegraded = report["treat"]["goodputChange"] < -IMPROVEMENT_THRESHOLD
+    p95Degraded = report["treat"]["p95Change"] > 2 * IMPROVEMENT_THRESHOLD
+    treatDegraded = goodputDegraded or p95Degraded
+    degradationSignals = [
+        name for name, fired in (("goodput", goodputDegraded), ("p95", p95Degraded)) if fired
+    ]
 
     print("\n─── 판정 ───")
     if not controlImproved:
@@ -337,6 +376,10 @@ def commandCompare(arguments: argparse.Namespace) -> int:
         verdict = "h4-reproduced"
         print("✅ H4 전반부 재현 — m_scale-out < 0")
         print("   대조군은 2→4 에서 개선되는데 실험군만 악화됐다. 효과는 DB 제약에 귀속된다.")
+        print(f"   악화 신호: {', '.join(degradationSignals)}")
+        if "goodput" not in degradationSignals:
+            print("   ⚠️ 처리량은 갈리지 않고 대기시간만 갈렸다. 논문에 쓸 때 근거 지표를")
+            print("      p95 로 명시해야 하며, 처리량 기준으로 서술하면 재현되지 않는다.")
         print("   → K8s 구축(게이트 ②)으로 진행한다.")
     else:
         verdict = "h4-not-reproduced"
@@ -351,6 +394,7 @@ def commandCompare(arguments: argparse.Namespace) -> int:
         "workerCount": arguments.workers,
         "repeats": arguments.repeats,
         "report": report,
+        "degradationSignals": degradationSignals,
         "measurements": {f"{group}@{scale}": runs for (group, scale), runs in measurements.items()},
     }
     path = writeResults("compare", payload)

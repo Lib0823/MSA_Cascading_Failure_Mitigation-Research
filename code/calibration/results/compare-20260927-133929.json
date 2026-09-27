@@ -1,0 +1,384 @@
+{
+  "verdict": "h4-reproduced",
+  "workerCount": 64,
+  "repeats": 3,
+  "report": {
+    "control": {
+      "goodputChange": 0.5939030748408634,
+      "p95Change": -0.49797794529661504,
+      "errorRateAtTwo": 0.0,
+      "errorRateAtFour": 0.0,
+      "backendPeakAtTwo": 41,
+      "backendPeakAtFour": 81
+    },
+    "treat": {
+      "goodputChange": 0.0040224581185921955,
+      "p95Change": 0.35012354977844906,
+      "errorRateAtTwo": 0.0,
+      "errorRateAtFour": 0.0,
+      "backendPeakAtTwo": 23,
+      "backendPeakAtFour": 23
+    }
+  },
+  "degradationSignals": [
+    "p95"
+  ],
+  "measurements": {
+    "control@2": [
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 5840,
+        "successCount": 5840,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 194.65717226293222,
+        "goodputRps": 194.65717226293222,
+        "latencyMeanMillis": 328.4687360725924,
+        "latencyP50Millis": 391.9568338897079,
+        "latencyP95Millis": 419.9110839981586,
+        "latencyP99Millis": 599.1850830614567,
+        "statusCounts": {
+          "200": 5840
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 41,
+        "backendMean": 41.0,
+        "group": "control",
+        "scale": 2,
+        "maxConnections": 400,
+        "recordedAt": "2026-09-27T13:40:22"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 5863,
+        "successCount": 5863,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 195.408091220189,
+        "goodputRps": 195.408091220189,
+        "latencyMeanMillis": 327.7681023393553,
+        "latencyP50Millis": 321.88170799054205,
+        "latencyP95Millis": 415.0908750016242,
+        "latencyP99Millis": 537.5138339586556,
+        "statusCounts": {
+          "200": 5863
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 41,
+        "backendMean": 41.0,
+        "group": "control",
+        "scale": 2,
+        "maxConnections": 400,
+        "recordedAt": "2026-09-27T13:46:50"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 5845,
+        "successCount": 5845,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 194.8220452852935,
+        "goodputRps": 194.8220452852935,
+        "latencyMeanMillis": 327.9174631052006,
+        "latencyP50Millis": 234.3165830243379,
+        "latencyP95Millis": 536.9135839864612,
+        "latencyP99Millis": 608.0746669322252,
+        "statusCounts": {
+          "200": 5845
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 41,
+        "backendMean": 41.0,
+        "group": "control",
+        "scale": 2,
+        "maxConnections": 400,
+        "recordedAt": "2026-09-27T13:47:43"
+      }
+    ],
+    "control@4": [
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082",
+          "127.0.0.1:18083",
+          "127.0.0.1:18084"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.01,
+        "requestCount": 9360,
+        "successCount": 9360,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 311.94639331214313,
+        "goodputRps": 311.94639331214313,
+        "latencyMeanMillis": 205.16913338028527,
+        "latencyP50Millis": 204.46725003421307,
+        "latencyP95Millis": 209.3232918996364,
+        "latencyP99Millis": 216.83320892043412,
+        "statusCounts": {
+          "200": 9360
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 81,
+        "backendMean": 81.0,
+        "group": "control",
+        "scale": 4,
+        "maxConnections": 400,
+        "recordedAt": "2026-09-27T13:43:09"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082",
+          "127.0.0.1:18083",
+          "127.0.0.1:18084"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 9316,
+        "successCount": 9316,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 310.52745702701526,
+        "goodputRps": 310.52745702701526,
+        "latencyMeanMillis": 205.47479635375257,
+        "latencyP50Millis": 204.58612497895956,
+        "latencyP95Millis": 210.80462518148124,
+        "latencyP99Millis": 216.6203330270946,
+        "statusCounts": {
+          "200": 9316
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 81,
+        "backendMean": 81.0,
+        "group": "control",
+        "scale": 4,
+        "maxConnections": 400,
+        "recordedAt": "2026-09-27T13:44:02"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082",
+          "127.0.0.1:18083",
+          "127.0.0.1:18084"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 9265,
+        "successCount": 9265,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 308.7865388729884,
+        "goodputRps": 308.7865388729884,
+        "latencyMeanMillis": 206.80543472357115,
+        "latencyP50Millis": 205.34974988549948,
+        "latencyP95Millis": 214.41516582854092,
+        "latencyP99Millis": 227.96458308584988,
+        "statusCounts": {
+          "200": 9265
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 81,
+        "backendMean": 81.0,
+        "group": "control",
+        "scale": 4,
+        "maxConnections": 400,
+        "recordedAt": "2026-09-27T13:49:34"
+      }
+    ],
+    "treat@2": [
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 3209,
+        "successCount": 3209,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 106.9518541312947,
+        "goodputRps": 106.9518541312947,
+        "latencyMeanMillis": 597.3920280611692,
+        "latencyP50Millis": 612.2385000344366,
+        "latencyP95Millis": 986.595791997388,
+        "latencyP99Millis": 1032.3061670642346,
+        "statusCounts": {
+          "200": 3209
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 23,
+        "backendMean": 23.0,
+        "group": "treat",
+        "scale": 2,
+        "maxConnections": 25,
+        "recordedAt": "2026-09-27T13:41:18"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.01,
+        "requestCount": 2628,
+        "successCount": 2628,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 87.58501164941833,
+        "goodputRps": 87.58501164941833,
+        "latencyMeanMillis": 729.1066687755412,
+        "latencyP50Millis": 214.89441697485745,
+        "latencyP95Millis": 1330.9520839247853,
+        "latencyP99Millis": 2255.2481670863926,
+        "statusCounts": {
+          "200": 2628
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 23,
+        "backendMean": 23.0,
+        "group": "treat",
+        "scale": 2,
+        "maxConnections": 25,
+        "recordedAt": "2026-09-27T13:44:59"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.0,
+        "requestCount": 2908,
+        "successCount": 2908,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 96.92693063757578,
+        "goodputRps": 96.92693063757578,
+        "latencyMeanMillis": 658.7384506513043,
+        "latencyP50Millis": 226.39266680926085,
+        "latencyP95Millis": 1206.3804578501731,
+        "latencyP99Millis": 1853.3758751582354,
+        "statusCounts": {
+          "200": 2908
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 23,
+        "backendMean": 23.0,
+        "group": "treat",
+        "scale": 2,
+        "maxConnections": 25,
+        "recordedAt": "2026-09-27T13:48:39"
+      }
+    ],
+    "treat@4": [
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082",
+          "127.0.0.1:18083",
+          "127.0.0.1:18084"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.01,
+        "requestCount": 2920,
+        "successCount": 2920,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 97.31681515662912,
+        "goodputRps": 97.31681515662912,
+        "latencyMeanMillis": 656.5121917708694,
+        "latencyP50Millis": 621.2509998586029,
+        "latencyP95Millis": 1219.954292057082,
+        "latencyP99Millis": 1840.068040881306,
+        "statusCounts": {
+          "200": 2920
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 23,
+        "backendMean": 23.0,
+        "group": "treat",
+        "scale": 4,
+        "maxConnections": 25,
+        "recordedAt": "2026-09-27T13:42:14"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082",
+          "127.0.0.1:18083",
+          "127.0.0.1:18084"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.01,
+        "requestCount": 2937,
+        "successCount": 2937,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 97.88319875694704,
+        "goodputRps": 97.88319875694704,
+        "latencyMeanMillis": 655.718843982348,
+        "latencyP50Millis": 214.5684591960162,
+        "latencyP95Millis": 1628.7626661360264,
+        "latencyP99Millis": 1643.7343340367079,
+        "statusCounts": {
+          "200": 2937
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 23,
+        "backendMean": 23.0,
+        "group": "treat",
+        "scale": 4,
+        "maxConnections": 25,
+        "recordedAt": "2026-09-27T13:45:57"
+      },
+      {
+        "targets": [
+          "127.0.0.1:18081",
+          "127.0.0.1:18082",
+          "127.0.0.1:18083",
+          "127.0.0.1:18084"
+        ],
+        "workerCount": 64,
+        "durationSeconds": 30.01,
+        "requestCount": 2910,
+        "successCount": 2910,
+        "errorCount": 0,
+        "errorRate": 0.0,
+        "throughputRps": 96.9832619013212,
+        "goodputRps": 96.9832619013212,
+        "latencyMeanMillis": 657.977126504189,
+        "latencyP50Millis": 219.86379195004702,
+        "latencyP95Millis": 1633.8623750489205,
+        "latencyP99Millis": 1649.5567089878023,
+        "statusCounts": {
+          "200": 2910
+        },
+        "backendSampleCount": 13,
+        "backendPeak": 23,
+        "backendMean": 23.0,
+        "group": "treat",
+        "scale": 4,
+        "maxConnections": 25,
+        "recordedAt": "2026-09-27T13:50:31"
+      }
+    ]
+  }
+}

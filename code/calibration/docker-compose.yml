@@ -23,6 +23,9 @@ services:
       - max_connections=${DB_MAX_CONNECTIONS:-25}
       - -c
       - shared_buffers=128MB
+      - -c
+      # 관측용 psql 이 쓸 슬롯. 앱은 비-superuser 라 여기에 손대지 못한다.
+      - superuser_reserved_connections=3
     environment:
       POSTGRES_DB: ${DB_NAME:-cascade}
       POSTGRES_USER: ${DB_USER:-cascade}
@@ -34,6 +37,8 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+    volumes:
+      - ./initDb.sql:/docker-entrypoint-initdb.d/initDb.sql:ro
     tmpfs:
       # 디스크 I/O 편차가 조건 간 비교에 섞이지 않게 데이터를 메모리에 둔다.
       # 캘리브레이션은 내구성이 필요 없다.
@@ -47,8 +52,10 @@ services:
       SERVICE_NAME: app
       WORKLOAD: db
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-cascade}
-      DB_USER: ${DB_USER:-cascade}
-      DB_PASSWORD: ${DB_PASSWORD:-cascade}
+      # superuser(POSTGRES_USER)가 아니라 initDb.sql 이 만든 비-superuser 롤로 붙는다.
+      # 이래야 커넥션이 고갈돼도 관측용 예약 슬롯이 남는다.
+      DB_USER: ${DB_APP_USER:-appuser}
+      DB_PASSWORD: ${DB_APP_PASSWORD:-appuser}
       HIKARI_MAX_POOL_SIZE: ${HIKARI_MAX_POOL_SIZE:-20}
       HIKARI_MIN_IDLE: ${HIKARI_MIN_IDLE:-2}
       HIKARI_CONNECTION_TIMEOUT_MS: ${HIKARI_CONNECTION_TIMEOUT_MS:-5000}

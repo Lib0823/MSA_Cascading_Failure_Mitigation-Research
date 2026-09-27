@@ -8,4 +8,5 @@
 -- 부호만 보면 "느려졌다"까지밖에 말할 수 없고, 총 커넥션 수가 인스턴스 수를 따라
 -- 올랐는지를 봐야 기전을 주장할 수 있다. 그래서 관측 경로를 고갈로부터 보호한다.
 
-CREATE ROLE appuser LOGIN PASSWORD 'appuser' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+-- 비밀번호는 두지 않는다. DB 가 trust 인증이고 포트를 발행하지 않기 때문이다.
+CREATE ROLE appuser LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;

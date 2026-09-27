@@ -29,7 +29,10 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-cascade}
       POSTGRES_USER: ${DB_USER:-cascade}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-cascade}
+      # 비밀번호를 두지 않는다. 이 DB 는 호스트로 포트를 발행하지 않아 Compose 네트워크
+      # 밖에서 닿을 수 없고, 데이터는 tmpfs 라 컨테이너와 함께 사라진다. 자격증명이
+      # 하는 일이 없는데 리터럴만 남으면 비밀 스캐너에 계속 걸린다.
+      POSTGRES_HOST_AUTH_METHOD: trust
     cpus: ${DB_CPUS:-2.0}
     mem_limit: 1g
     healthcheck:
@@ -55,7 +58,6 @@ services:
       # superuser(POSTGRES_USER)가 아니라 initDb.sql 이 만든 비-superuser 롤로 붙는다.
       # 이래야 커넥션이 고갈돼도 관측용 예약 슬롯이 남는다.
       DB_USER: ${DB_APP_USER:-appuser}
-      DB_PASSWORD: ${DB_APP_PASSWORD:-appuser}
       HIKARI_MAX_POOL_SIZE: ${HIKARI_MAX_POOL_SIZE:-20}
       HIKARI_MIN_IDLE: ${HIKARI_MIN_IDLE:-2}
       HIKARI_CONNECTION_TIMEOUT_MS: ${HIKARI_CONNECTION_TIMEOUT_MS:-5000}

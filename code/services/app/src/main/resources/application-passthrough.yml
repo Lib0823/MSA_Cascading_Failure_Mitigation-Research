@@ -7,6 +7,5 @@ spring:
 
 app:
   passthrough:
-    # S3(다운스트림 지연) 주입 손잡이. 게이트 ①.5 에서는 0 이다.
-    extraDelayMillis: ${PASSTHROUGH_DELAY_MILLIS:0}
+    # 장애 주입은 FaultInjectionFilter 가 전 노드에 동일하게 적용한다 (FAULT_DELAY_MILLIS).
     timeoutMillis: ${PASSTHROUGH_TIMEOUT_MS:5000}

@@ -15,9 +15,9 @@ import org.springframework.stereotype.Component;
 /**
  * 하류를 호출하기만 하는 노드. 의존 사슬의 깊이를 만드는 것이 유일한 역할이다.
  *
- * <p>{@code app.passthrough.extraDelayMillis} 를 올리면 이 노드 자신이 느려지므로
- * S3(다운스트림 지연) 주입 지점이 된다. 게이트 ①.5 에서는 쓰지 않지만, S1 과 S3 가
- * 증상 동형이어야 한다는 요구(H5b) 때문에 같은 이미지 안에 있어야 한다.
+ * <p>S3(다운스트림 지연) 주입은 이 클래스가 아니라 {@link com.research.cascade.app.FaultInjectionFilter}
+ * 가 담당한다. 주입 손잡이를 워크로드마다 두면 노드 타입에 따라 주입 기전이 달라져,
+ * S1 과 S3 가 증상 동형이어야 한다는 요구(H5b)가 구현 차이로 깨질 수 있다.
  */
 @Component
 @Profile("passthrough")
@@ -25,15 +25,12 @@ public class PassthroughWorkload implements Workload {
 
     private final HttpClient httpClient;
     private final URI downstreamUri;
-    private final long extraDelayMillis;
     private final Duration requestTimeout;
 
     public PassthroughWorkload(
             @Value("${app.downstream}") String downstream,
-            @Value("${app.passthrough.extraDelayMillis}") long extraDelayMillis,
             @Value("${app.passthrough.timeoutMillis}") long timeoutMillis) {
         this.downstreamUri = URI.create(downstream + "/work");
-        this.extraDelayMillis = extraDelayMillis;
         this.requestTimeout = Duration.ofMillis(timeoutMillis);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
@@ -48,9 +45,6 @@ public class PassthroughWorkload implements Workload {
     @Override
     public Map<String, Object> execute() {
         try {
-            if (extraDelayMillis > 0) {
-                Thread.sleep(extraDelayMillis);
-            }
             HttpRequest request = HttpRequest.newBuilder(downstreamUri)
                     .timeout(requestTimeout)
                     .GET()
@@ -61,7 +55,6 @@ public class PassthroughWorkload implements Workload {
             Map<String, Object> detail = new LinkedHashMap<>();
             detail.put("downstream", downstreamUri.toString());
             detail.put("downstreamStatus", response.statusCode());
-            detail.put("extraDelayMillis", extraDelayMillis);
             if (response.statusCode() >= 500) {
                 throw new WorkloadException(
                         "downstream returned " + response.statusCode(), null);

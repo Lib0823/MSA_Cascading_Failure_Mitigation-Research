@@ -1,0 +1,6 @@
+{
+  "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+  "nodes": ["gateway", "orders", "payment"],
+  "callEdges": [["gateway", "orders"], ["orders", "payment"]],
+  "injectionPoint": "payment"
+}

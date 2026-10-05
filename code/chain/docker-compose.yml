@@ -1,0 +1,95 @@
+# S1↔S3 증상 동형성 실험 (H5b) + 전파성 판정 검증 (§4-2)
+#
+# 사슬:  부하 → gateway → orders → payment → postgres
+#        (passthrough)  (passthrough)  (db)
+#
+# 의존 깊이 4단. 연쇄의 본질은 노드 개수가 아니라 전파 경로이므로, 노드 수를 늘리는
+# 대신 깊이로 성립시킨다(docs/proposal.md §4-1).
+#
+# 전파 방향 규약: callEdges 는 호출자→피호출자로 저장하고, 전파는 그 반대로 흐른다.
+# 따라서 v 의 "상류"는 v 가 호출하는 쪽이다 — orders 의 상류는 payment 다.
+#
+#   주입 조건은 runChain.py 가 환경변수로 넣는다.
+#     정상  FAULT_DELAY_MILLIS=0,   DB_MAX_CONNECTIONS=400
+#     S1    FAULT_DELAY_MILLIS=0,   DB_MAX_CONNECTIONS=25    ← DB 쪽 제약
+#     S3    FAULT_DELAY_MILLIS=120, DB_MAX_CONNECTIONS=400   ← payment 자체가 느려짐
+
+x-appBase: &appBase
+  image: cascade-app:0.1.0
+  mem_limit: 512m
+  cpus: ${APP_CPUS:-1.0}
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+    interval: 2s
+    timeout: 3s
+    retries: 45
+
+services:
+  db:
+    image: postgres:16
+    command:
+      - postgres
+      - -c
+      - max_connections=${DB_MAX_CONNECTIONS:-400}
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - superuser_reserved_connections=3
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cascade}
+      POSTGRES_USER: ${DB_USER:-cascade}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    cpus: ${DB_CPUS:-2.0}
+    mem_limit: 1g
+    volumes:
+      - ../calibration/initDb.sql:/docker-entrypoint-initdb.d/initDb.sql:ro
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cascade} -d ${DB_NAME:-cascade}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # 사슬 끝. S1 의 주입 지점이자, S3 에서는 FAULT_DELAY_MILLIS 로 느려지는 노드다.
+  # 두 조건 모두 "payment 가 느려진다"는 같은 결과를 내는 것이 H5b 의 전제다.
+  payment:
+    <<: *appBase
+    environment:
+      SERVICE_NAME: payment
+      WORKLOAD: db
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-cascade}
+      DB_USER: ${DB_APP_USER:-appuser}
+      HIKARI_MAX_POOL_SIZE: ${HIKARI_MAX_POOL_SIZE:-20}
+      HIKARI_MIN_IDLE: ${HIKARI_MIN_IDLE:-2}
+      HIKARI_CONNECTION_TIMEOUT_MS: ${HIKARI_CONNECTION_TIMEOUT_MS:-5000}
+      DB_SLEEP_MILLIS: ${DB_SLEEP_MILLIS:-60}
+      DB_BURN_ROWS: ${DB_BURN_ROWS:-1000}
+      FAULT_DELAY_MILLIS: ${PAYMENT_FAULT_DELAY_MILLIS:-0}
+    ports: ["18093:8080"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  orders:
+    <<: *appBase
+    environment:
+      SERVICE_NAME: orders
+      WORKLOAD: passthrough
+      DOWNSTREAM: http://payment:8080
+      PASSTHROUGH_TIMEOUT_MS: ${PASSTHROUGH_TIMEOUT_MS:-10000}
+      FAULT_DELAY_MILLIS: 0
+    ports: ["18092:8080"]
+    depends_on:
+      payment: {condition: service_healthy}
+
+  gateway:
+    <<: *appBase
+    environment:
+      SERVICE_NAME: gateway
+      WORKLOAD: passthrough
+      DOWNSTREAM: http://orders:8080
+      PASSTHROUGH_TIMEOUT_MS: ${PASSTHROUGH_TIMEOUT_MS:-10000}
+      FAULT_DELAY_MILLIS: 0
+    ports: ["18091:8080"]
+    depends_on:
+      orders: {condition: service_healthy}

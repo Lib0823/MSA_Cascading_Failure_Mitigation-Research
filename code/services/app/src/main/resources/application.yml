@@ -4,6 +4,8 @@
 #   SERVICE_NAME  노드 이름 (지표 라벨)
 #   WORKLOAD      db | passthrough | llm  → 그대로 Spring 프로파일이 된다
 #   DOWNSTREAM    passthrough 노드가 호출할 상대 (예: http://app2:8080)
+#
+#   FAULT_DELAY_MILLIS  장애 주입 손잡이. 모든 노드에 동일하게 적용된다 (S3)
 
 spring:
   application:
@@ -28,10 +30,28 @@ management:
   metrics:
     tags:
       serviceName: ${SERVICE_NAME:app}
+    distribution:
+      # 역라벨링(§4-2)은 노드별 시계열을 요구한다. 부하기는 입구 노드만 보므로
+      # 사슬 중간 노드의 지연은 여기서 나와야 한다.
+      #
+      # ⚠️ Micrometer 의 `percentiles` 는 감쇠 윈도우 추정값이라 과거를 30초 가까이
+      # 끌고 온다. 전파성 판정의 허용 시간창 W 가 30초인데 지표 자체가 그만큼 번지면
+      # "상류가 **먼저** 열화했는가"라는 순서를 집을 수 없다. 그래서 분위수를 앱이
+      # 추정하게 두지 않고 **누적 히스토그램 버킷**을 내보내, 수집기가 구간 차분으로
+      # 참 분위수를 계산한다(metricScraper.py).
+      percentiles-histogram:
+        http.server.requests: true
+      minimum-expected-value:
+        http.server.requests: 5ms
+      maximum-expected-value:
+        http.server.requests: 10s
 
 app:
   serviceName: ${SERVICE_NAME:app}
   downstream: ${DOWNSTREAM:}
+  fault:
+    # S3(다운스트림 지연) 주입 지점. 워크로드보다 바깥이라 커넥션 풀을 건드리지 않는다.
+    delayMillis: ${FAULT_DELAY_MILLIS:0}
 
 logging:
   level:

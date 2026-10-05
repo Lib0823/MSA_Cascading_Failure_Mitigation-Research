@@ -21,3 +21,14 @@
 | 날짜 | 변경 내용 | 대상 | 사유 |
 |------|----------|------|------|
 | 2026-08-05 | 초기 구성 (research-writer/experiment-designer/ml-implementer 3-agent Expert Pool) | 전체 | `/devkit:setup-all` ontology+harness 최초 설치 |
+
+---
+
+## 커밋 규칙 (프로젝트 한정)
+
+**`Co-Authored-By: Claude ...` 트레일러를 붙이지 않는다.** 커밋 author 는 이미
+저장소 소유자(`Inbeom`)이며, 이 트레일러만이 GitHub 에서 Claude 를 공동 작성자로
+렌더링하게 만든다. 단독 저자 논문을 전제로 한 연구 저장소이므로 커밋 이력도
+단독으로 남긴다.
+
+🤖 generated-with 류의 푸터도 커밋 메시지에는 붙이지 않는다(PR 본문은 무관).

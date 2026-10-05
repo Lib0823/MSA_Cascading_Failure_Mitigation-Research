@@ -1,0 +1,85 @@
+{
+  "verdict": "h5b-and-h7-supported",
+  "observerNode": "orders",
+  "standard": {
+    "latencyP95": {
+      "separated": false,
+      "ratio": 1.3333333327124517
+    },
+    "errorRate": {
+      "separated": false,
+      "ratio": 1.0
+    },
+    "throughputRps": {
+      "separated": false,
+      "ratio": 1.4356306643350334
+    }
+  },
+  "additional": {
+    "poolAcquireMillis": {
+      "separated": true,
+      "ratio": 350.56638064849477
+    },
+    "poolUsageMillis": {
+      "separated": false,
+      "ratio": 1.003278188610149
+    },
+    "poolPending": {
+      "separated": true,
+      "ratio": Infinity
+    }
+  },
+  "neighborNode": "payment",
+  "medians": {
+    "normal": {
+      "latencyP95": 134.217727,
+      "errorRate": 0.0,
+      "throughputRps": 314.1432706594077,
+      "poolAcquireMillis": NaN,
+      "poolUsageMillis": NaN,
+      "poolPending": NaN
+    },
+    "s1": {
+      "latencyP95": 715.827881,
+      "errorRate": 0.0,
+      "throughputRps": 46.72702050263092,
+      "poolAcquireMillis": NaN,
+      "poolUsageMillis": NaN,
+      "poolPending": NaN
+    },
+    "s3": {
+      "latencyP95": 536.870911,
+      "errorRate": 0.0,
+      "throughputRps": 67.08274348658875,
+      "poolAcquireMillis": NaN,
+      "poolUsageMillis": NaN,
+      "poolPending": NaN
+    }
+  },
+  "neighborMedians": {
+    "normal": {
+      "latencyP95": 134.217727,
+      "errorRate": 0.0,
+      "throughputRps": 314.52837321275115,
+      "poolAcquireMillis": 33.4562098835074,
+      "poolUsageMillis": 61.948000074833686,
+      "poolPending": 12.0
+    },
+    "s1": {
+      "latencyP95": 715.827881,
+      "errorRate": 0.0,
+      "throughputRps": 46.741297063348725,
+      "poolAcquireMillis": 613.5057718749977,
+      "poolUsageMillis": 63.06250000000091,
+      "poolPending": 29.0
+    },
+    "s3": {
+      "latencyP95": 536.870911,
+      "errorRate": 0.0,
+      "throughputRps": 67.1527098561105,
+      "poolAcquireMillis": 1.7500416632653275,
+      "poolUsageMillis": 63.26923076922843,
+      "poolPending": 0.0
+    }
+  }
+}

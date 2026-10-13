@@ -1,0 +1,57 @@
+{
+  "report": {
+    "s1": {
+      "BULKHEAD": {
+        "goodputChange": -0.17245719375109947,
+        "p95Improvement": -0.4013827658107119,
+        "errorRateDelta": 0.0
+      },
+      "CIRCUIT_BREAKER": {
+        "goodputChange": -0.14688641461706695,
+        "p95Improvement": -0.031477218806426926,
+        "errorRateDelta": 0.0207200412813083
+      }
+    },
+    "s3": {
+      "BULKHEAD": {
+        "goodputChange": -0.09281001138971476,
+        "p95Improvement": -2.8719456373497736,
+        "errorRateDelta": 0.0
+      },
+      "CIRCUIT_BREAKER": {
+        "goodputChange": -0.1511833843419866,
+        "p95Improvement": 0.7318034910084723,
+        "errorRateDelta": 0.1822146962233169
+      }
+    }
+  },
+  "best": {
+    "s1": null,
+    "s3": null
+  },
+  "answersConflict": false,
+  "harmful": [
+    {
+      "scenario": "s1",
+      "remediation": "BULKHEAD",
+      "goodputChange": -0.17245719375109947,
+      "p95Improvement": -0.4013827658107119,
+      "errorRateDelta": 0.0
+    },
+    {
+      "scenario": "s1",
+      "remediation": "CIRCUIT_BREAKER",
+      "goodputChange": -0.14688641461706695,
+      "p95Improvement": -0.031477218806426926,
+      "errorRateDelta": 0.0207200412813083
+    },
+    {
+      "scenario": "s3",
+      "remediation": "CIRCUIT_BREAKER",
+      "goodputChange": -0.1511833843419866,
+      "p95Improvement": 0.7318034910084723,
+      "errorRateDelta": 0.1822146962233169
+    }
+  ],
+  "h5bSupported": true
+}

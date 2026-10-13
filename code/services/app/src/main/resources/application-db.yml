@@ -17,7 +17,14 @@ spring:
       minimum-idle: ${HIKARI_MIN_IDLE:2}
       # 기본 30s 는 측정 구간을 넘긴다. 획득 실패는 버그가 아니라 포화 신호이므로
       # 짧게 잡아 에러율로 관측한다.
-      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:5000}
+      #
+      # ⚠️ 이 값이 조치의 효과 유무를 결정한다 (2026-10-13 실측).
+      # S1 에서 Bulkhead 가 정답인 기전은 "대기 → 타임아웃 → 에러 → 재시도 →
+      # 부하 증가 → 더 긴 대기" 라는 악순환을 끊는 것이다. 타임아웃이 실제 대기보다
+      # 크면 에러가 나지 않아 악순환 자체가 돌지 않고, 그러면 Bulkhead 는 대기 위치만
+      # 풀에서 자기 큐로 옮길 뿐 아무 효과가 없다. 5000ms 에서 모든 조치의 mₐ 가
+      # 음수로 측정된 원인이 이것이다. 프로덕션에서도 수 초로 잡는 것이 통상이다.
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:1000}
       max-lifetime: 600000
 
 app:

@@ -52,6 +52,24 @@ app:
   fault:
     # S3(다운스트림 지연) 주입 지점. 워크로드보다 바깥이라 커넥션 풀을 건드리지 않는다.
     delayMillis: ${FAULT_DELAY_MILLIS:0}
+  remediation:
+    # 조치는 런타임에 건다(POST /remediation). 기동값은 무조치다.
+    initial: ${REMEDIATION:NONE}
+    bulkhead:
+      # 동시 진입 한도. 부하 수준보다 충분히 낮아야 제한이 의미를 갖는다.
+      maxConcurrentCalls: ${BULKHEAD_MAX_CONCURRENT:8}
+      # ⚠️ 0 으로 두면 즉시 거절(Shedding)이 되어 Bulkhead 가 아니게 된다.
+      maxWaitMillis: ${BULKHEAD_MAX_WAIT_MS:3000}
+    circuitBreaker:
+      # S1·S3 는 둘 다 "느려짐"이므로 느린 호출 비율이 주된 개방 조건이다.
+      # 정상 구간의 하류 호출이 약 100ms 이므로 그 4배로 잡는다. 800ms 로 두면
+      # S3(하류 지연 400ms → 호출 약 480ms)에서 CB 가 아예 열리지 않아
+      # "S3 의 정답은 CB" 를 검증할 수 없다 — 2026-10-13 실측.
+      slowCallMillis: ${CB_SLOW_CALL_MS:400}
+    retry:
+      # ⚠️ 실험 상수다. 조치가 아니라 모든 조건에서 동일하게 유지한다 (§2-C).
+      maxAttempts: ${RETRY_MAX_ATTEMPTS:3}
+      waitMillis: ${RETRY_WAIT_MS:50}
 
 logging:
   level:

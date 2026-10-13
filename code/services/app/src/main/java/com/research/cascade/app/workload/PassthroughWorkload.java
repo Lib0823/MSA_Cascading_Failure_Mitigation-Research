@@ -1,5 +1,6 @@
 package com.research.cascade.app.workload;
 
+import com.research.cascade.app.remediation.RemediationDecorator;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,11 +27,14 @@ public class PassthroughWorkload implements Workload {
     private final HttpClient httpClient;
     private final URI downstreamUri;
     private final Duration requestTimeout;
+    private final RemediationDecorator remediationDecorator;
 
     public PassthroughWorkload(
             @Value("${app.downstream}") String downstream,
-            @Value("${app.passthrough.timeoutMillis}") long timeoutMillis) {
+            @Value("${app.passthrough.timeoutMillis}") long timeoutMillis,
+            RemediationDecorator remediationDecorator) {
         this.downstreamUri = URI.create(downstream + "/work");
+        this.remediationDecorator = remediationDecorator;
         this.requestTimeout = Duration.ofMillis(timeoutMillis);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
@@ -44,6 +48,13 @@ public class PassthroughWorkload implements Workload {
 
     @Override
     public Map<String, Object> execute() {
+        // 조치는 **호출자 측**에 건다. 유입 부하를 줄이는 조치는 병목 노드 자신이
+        // 아니라 그 노드를 호출하는 쪽에 걸어야 효과가 난다(docs/proposal.md §2-C
+        // 적용 지점 표 — CB·Bulkhead 모두 `v 의 호출자`).
+        return remediationDecorator.execute(this::callDownstream);
+    }
+
+    private Map<String, Object> callDownstream() {
         try {
             HttpRequest request = HttpRequest.newBuilder(downstreamUri)
                     .timeout(requestTimeout)

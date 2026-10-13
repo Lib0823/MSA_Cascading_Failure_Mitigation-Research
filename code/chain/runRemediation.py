@@ -76,6 +76,7 @@ def readRemediationSnapshot() -> dict:
 
 def runCell(scenario: str, remediation: str, arguments: argparse.Namespace) -> dict:
     environment = runChain.buildEnvironment(scenario, arguments)
+    environment["BULKHEAD_MAX_CONCURRENT"] = str(arguments.bulkheadMaxConcurrent)
     tracePath = RESULTS_DIR / f"trace-{scenario}-{remediation.lower()}-{RUN_STAMP}.jsonl"
     RESULTS_DIR.mkdir(exist_ok=True)
 
@@ -145,6 +146,8 @@ def main() -> int:
     parser.add_argument("--maxConnections", type=int, default=30)
     parser.add_argument("--hogSessions", type=int, default=24)
     parser.add_argument("--faultDelayMillis", type=int, default=400)
+    parser.add_argument("--bulkheadMaxConcurrent", type=int, default=6,
+                        help="장애 중 가용 커넥션 수 이하여야 구제가 된다")
     arguments = parser.parse_args()
 
     scenarios = [s.strip() for s in arguments.scenarios.split(",") if s.strip()]

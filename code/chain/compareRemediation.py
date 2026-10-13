@@ -28,6 +28,7 @@ import argparse
 import json
 import math
 import pathlib
+import statistics
 
 # "의미 있는 차이"의 하한. 측정 잡음을 효과로 읽지 않기 위한 값이다.
 EFFECT_THRESHOLD = 0.10
@@ -46,6 +47,36 @@ def relativeChange(baseline: float, value: float) -> float:
     return (value - baseline) / baseline
 
 
+def nodeWindow(cell: dict, node: str) -> dict:
+    """한 노드의 **장애 구간** 지표 중앙값.
+
+    ⚠️ 입구 지표를 ``loadGen`` 집계값으로 쓰면 안 된다. 그것은 정상 구간과 장애
+    구간을 **합쳐서** 낸 값이라, 장애만 보는 하류 값과 섞으면 비교가 성립하지
+    않는다(재시도 낭비가 음수로 나왔던 원인). 모든 지표를 같은 창에서 뽑는다.
+
+    하류를 따로 보는 이유는 따로 있다.
+
+    무조치에서 payment 가 125.6 rps 를 처리하는데 입구는 109.3 rps 만 성공한 적이
+    있다. 차이는 재시도로 낭비된 용량이고, 재시도가 실패를 흡수하므로 **입구
+    에러율은 0% 로 보인다.** 조치의 효과를 입구에서만 재면 이 낭비가 통째로 가려진다.
+    """
+    here = pathlib.Path(__file__).resolve().parent
+    rows = [json.loads(line)
+            for line in (here / cell["tracePath"]).read_text(encoding="utf-8").splitlines()
+            if line.strip()]
+    injected = cell["injectedAt"]
+    selected = [r for r in rows if r["node"] == node and r["timestamp"] > injected + 15]
+
+    def median(key: str) -> float:
+        values = [r.get(key) for r in selected
+                  if isinstance(r.get(key), (int, float)) and not math.isnan(r.get(key))]
+        return statistics.median(values) if values else float("nan")
+
+    return {"throughputRps": median("throughputRps"), "errorRate": median("errorRate"),
+            "latencyP95Millis": median("latencyP95"),
+            "poolAcquireMillis": median("poolAcquireMillis"), "poolPending": median("poolPending")}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="H5b 조치 오선택 비용 판정")
     parser.add_argument("--cells", required=True, help="runRemediation.py 가 남긴 remediation-*.json")
@@ -58,16 +89,39 @@ def main() -> int:
     scenarios = sorted({c["scenario"] for c in cells})
 
     report: dict = {}
-    print("━━━ 장애 구간 원시 측정 (입구 기준) ━━━")
-    print(f"{'시나리오':<8}{'조치':<18}{'goodput':>10}{'p95':>9}{'에러율':>9}")
+    print("━━━ 장애 구간 원시 측정 (입구 노드) ━━━")
+    print(f"{'시나리오':<8}{'조치':<18}{'처리량':>10}{'p95':>9}{'에러율':>9}")
+    entry: dict = {}
     for scenario in scenarios:
         for remediation in ("NONE", "BULKHEAD", "CIRCUIT_BREAKER"):
             cell = byKey.get((scenario, remediation))
             if cell is None:
                 continue
-            load = cell["entryLoad"]
-            print(f"{scenario:<8}{remediation:<18}{load['goodputRps']:>10.1f}"
-                  f"{load['latencyP95Millis']:>9.0f}{load['errorRate']:>9.1%}")
+            window = nodeWindow(cell, "gateway")
+            entry[(scenario, remediation)] = window
+            print(f"{scenario:<8}{remediation:<18}{window['throughputRps']:>10.1f}"
+                  f"{window['latencyP95Millis']:>9.0f}{window['errorRate']:>9.1%}")
+        print()
+
+    print("━━━ 하류 부하 — 입구에서는 보이지 않는다 ━━━")
+    print(f"{'시나리오':<8}{'조치':<18}{'입구 goodput':>14}{'하류 처리량':>13}"
+          f"{'재시도 낭비':>13}{'하류 에러율':>13}")
+    for scenario in scenarios:
+        for remediation in ("NONE", "BULKHEAD", "CIRCUIT_BREAKER"):
+            cell = byKey.get((scenario, remediation))
+            if cell is None:
+                continue
+            downstream = nodeWindow(cell, cell["injectionNode"])
+            entryWindow = entry[(scenario, remediation)]
+            # 성공분만 센다. 실패한 요청은 입구가 얻은 것이 아니다.
+            entryGoodput = entryWindow["throughputRps"] * (1.0 - entryWindow["errorRate"])
+            downstreamRps = downstream["throughputRps"]
+            # 하류가 처리한 양에서 입구가 성공한 양을 뺀 것이 재시도로 버려진 용량이다.
+            waste = (downstreamRps - entryGoodput) / downstreamRps if downstreamRps else float("nan")
+            report.setdefault(scenario, {}).setdefault(remediation, {})["downstream"] = downstream
+            report[scenario][remediation]["retryWasteShare"] = waste
+            print(f"{scenario:<8}{remediation:<18}{entryGoodput:>14.1f}{downstreamRps:>13.1f}"
+                  f"{waste:>13.1%}{downstream['errorRate']:>13.1%}")
         print()
 
     print("━━━ mₐ — 무조치 대비 ━━━")
@@ -76,21 +130,22 @@ def main() -> int:
         baseline = byKey.get((scenario, "NONE"))
         if baseline is None:
             continue
-        baseLoad = baseline["entryLoad"]
-        report[scenario] = {}
+        baseLoad = entry[(scenario, "NONE")]
+        baseGoodput = baseLoad["throughputRps"] * (1.0 - baseLoad["errorRate"])
         for remediation in ("BULKHEAD", "CIRCUIT_BREAKER"):
             cell = byKey.get((scenario, remediation))
             if cell is None:
                 continue
-            load = cell["entryLoad"]
-            goodputChange = relativeChange(baseLoad["goodputRps"], load["goodputRps"])
+            load = entry[(scenario, remediation)]
+            goodput = load["throughputRps"] * (1.0 - load["errorRate"])
+            goodputChange = relativeChange(baseGoodput, goodput)
             # p95 는 낮을수록 좋으므로 부호를 뒤집어 "개선이면 양수"로 맞춘다.
             p95Change = -relativeChange(baseLoad["latencyP95Millis"], load["latencyP95Millis"])
             errorDelta = load["errorRate"] - baseLoad["errorRate"]
-            report[scenario][remediation] = {
+            report.setdefault(scenario, {}).setdefault(remediation, {}).update({
                 "goodputChange": goodputChange, "p95Improvement": p95Change,
                 "errorRateDelta": errorDelta,
-            }
+            })
             print(f"{scenario:<8}{remediation:<18}{goodputChange:>+10.1%}{p95Change:>+10.1%}"
                   f"{errorDelta:>+13.1%}  {EXPECTED.get((scenario, remediation), '')}")
     print()
@@ -107,8 +162,11 @@ def main() -> int:
         if not rows:
             return None
         # 에러율이 오른 조치는 후보에서 뺀다 — 빠른 실패로 얻은 지연 개선은 개선이 아니다.
+        # NONE 은 기준선이므로 후보가 아니다. 하류 부하 표가 report 에 NONE 항목도
+        # 넣으므로 mₐ 가 계산된 것만 고른다.
         viable = {name: row for name, row in rows.items()
-                  if row["errorRateDelta"] <= EFFECT_THRESHOLD
+                  if "errorRateDelta" in row
+                  and row["errorRateDelta"] <= EFFECT_THRESHOLD
                   and row["goodputChange"] > EFFECT_THRESHOLD}
         if not viable:
             return None
@@ -137,7 +195,7 @@ def main() -> int:
     harmful = []
     for (scenario, remediation), expectation in EXPECTED.items():
         row = report.get(scenario, {}).get(remediation)
-        if row is None:
+        if row is None or "goodputChange" not in row:
             continue
         worseThanNothing = (row["goodputChange"] < -EFFECT_THRESHOLD
                             or row["errorRateDelta"] > EFFECT_THRESHOLD)
@@ -151,6 +209,10 @@ def main() -> int:
             print(f"     {scenario} + {remediation}: goodput {row['goodputChange']:+.1%},"
                   f" 에러율 {row['errorRateDelta']:+.1%}")
         print("     → '틀린 조치는 안 하느니만 못하다'가 실측으로 성립한다.")
+        print()
+        print("  ⚠️ mₐ 를 입구 goodput 하나로 재면 조치의 성격을 놓친다.")
+        print("     Bulkhead 의 이득은 호출자 처리량이 아니라 **하류 부하 경감**으로")
+        print("     나타난다 — 위의 '하류 부하' 표를 함께 읽어야 한다.")
     else:
         print("  ❌ H5b 미지지 — 어떤 조치도 무조치보다 나쁘지 않다.")
         print("     '조치를 고르는 것'의 가치가 '아무거나 해도 손해는 없다'로 떨어진다.")

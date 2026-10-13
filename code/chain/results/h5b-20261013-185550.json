@@ -1,0 +1,79 @@
+{
+  "report": {
+    "s1": {
+      "NONE": {
+        "downstream": {
+          "throughputRps": 125.60187890211223,
+          "errorRate": 0.12686567164179105,
+          "latencyP95Millis": 1073.7418240000002,
+          "poolAcquireMillis": 948.7874046652653,
+          "poolPending": 121.0
+        },
+        "retryWasteShare": 0.1297966785904621
+      },
+      "BULKHEAD": {
+        "downstream": {
+          "throughputRps": 90.67949527121884,
+          "errorRate": 0.0,
+          "latencyP95Millis": 67.10886400000001,
+          "poolAcquireMillis": 0.001858315782125206,
+          "poolPending": 0.0
+        },
+        "retryWasteShare": -0.0037074041684205003,
+        "goodputChange": -0.16727932168735507,
+        "p95Improvement": 0.16666666658905646,
+        "errorRateDelta": 0.0
+      },
+      "CIRCUIT_BREAKER": {
+        "downstream": {
+          "throughputRps": 0.0,
+          "errorRate": 0.0,
+          "latencyP95Millis": 1073.7418240000002,
+          "poolAcquireMillis": 213.00102878571383,
+          "poolPending": 0.0
+        },
+        "retryWasteShare": NaN,
+        "goodputChange": -1.0,
+        "p95Improvement": 0.6250000007566996,
+        "errorRateDelta": 1.0
+      }
+    }
+  },
+  "best": {
+    "s1": null
+  },
+  "answersConflict": false,
+  "harmful": [
+    {
+      "scenario": "s1",
+      "remediation": "BULKHEAD",
+      "downstream": {
+        "throughputRps": 90.67949527121884,
+        "errorRate": 0.0,
+        "latencyP95Millis": 67.10886400000001,
+        "poolAcquireMillis": 0.001858315782125206,
+        "poolPending": 0.0
+      },
+      "retryWasteShare": -0.0037074041684205003,
+      "goodputChange": -0.16727932168735507,
+      "p95Improvement": 0.16666666658905646,
+      "errorRateDelta": 0.0
+    },
+    {
+      "scenario": "s1",
+      "remediation": "CIRCUIT_BREAKER",
+      "downstream": {
+        "throughputRps": 0.0,
+        "errorRate": 0.0,
+        "latencyP95Millis": 1073.7418240000002,
+        "poolAcquireMillis": 213.00102878571383,
+        "poolPending": 0.0
+      },
+      "retryWasteShare": NaN,
+      "goodputChange": -1.0,
+      "p95Improvement": 0.6250000007566996,
+      "errorRateDelta": 1.0
+    }
+  ],
+  "h5bSupported": true
+}

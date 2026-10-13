@@ -1,0 +1,165 @@
+[
+  {
+    "scenario": "s1",
+    "remediation": "NONE",
+    "injectedAt": 1791886034.957678,
+    "injectionNode": "payment",
+    "remediationNode": "orders",
+    "tracePath": "results/trace-s1-none-20261013-185550.jsonl",
+    "normalSeconds": 50.0,
+    "faultSeconds": 70.0,
+    "entryLoad": {
+      "targets": [
+        "127.0.0.1:18091"
+      ],
+      "workerCount": 128,
+      "durationSeconds": 120.0,
+      "requestCount": 22876,
+      "successCount": 22876,
+      "errorCount": 0,
+      "errorRate": 0.0,
+      "throughputRps": 190.63060433706727,
+      "goodputRps": 190.63060433706727,
+      "latencyMeanMillis": 668.8688265504433,
+      "latencyP50Millis": 436.24083301983774,
+      "latencyP95Millis": 1343.29329081811,
+      "latencyP99Millis": 2112.3912089969963,
+      "statusCounts": {
+        "200": 22876
+      }
+    },
+    "remediationSnapshot": {
+      "serviceName": "orders",
+      "remediation": "NONE"
+    },
+    "nodeSampleCount": 513,
+    "callGraph": {
+      "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+      "nodes": [
+        "gateway",
+        "orders",
+        "payment"
+      ],
+      "callEdges": [
+        [
+          "gateway",
+          "orders"
+        ],
+        [
+          "orders",
+          "payment"
+        ]
+      ],
+      "injectionPoint": "payment"
+    }
+  },
+  {
+    "scenario": "s1",
+    "remediation": "BULKHEAD",
+    "injectedAt": 1791886241.076494,
+    "injectionNode": "payment",
+    "remediationNode": "orders",
+    "tracePath": "results/trace-s1-bulkhead-20261013-185550.jsonl",
+    "normalSeconds": 50.0,
+    "faultSeconds": 70.0,
+    "entryLoad": {
+      "targets": [
+        "127.0.0.1:18091"
+      ],
+      "workerCount": 128,
+      "durationSeconds": 120.0,
+      "requestCount": 22176,
+      "successCount": 22176,
+      "errorCount": 0,
+      "errorRate": 0.0,
+      "throughputRps": 184.7994741547216,
+      "goodputRps": 184.7994741547216,
+      "latencyMeanMillis": 689.9847561838163,
+      "latencyP50Millis": 434.54433395527303,
+      "latencyP95Millis": 1450.8103339467198,
+      "latencyP99Millis": 1478.4507500007749,
+      "statusCounts": {
+        "200": 22176
+      }
+    },
+    "remediationSnapshot": {
+      "serviceName": "orders",
+      "remediation": "BULKHEAD"
+    },
+    "nodeSampleCount": 525,
+    "callGraph": {
+      "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+      "nodes": [
+        "gateway",
+        "orders",
+        "payment"
+      ],
+      "callEdges": [
+        [
+          "gateway",
+          "orders"
+        ],
+        [
+          "orders",
+          "payment"
+        ]
+      ],
+      "injectionPoint": "payment"
+    }
+  },
+  {
+    "scenario": "s1",
+    "remediation": "CIRCUIT_BREAKER",
+    "injectedAt": 1791886449.124036,
+    "injectionNode": "payment",
+    "remediationNode": "orders",
+    "tracePath": "results/trace-s1-circuit_breaker-20261013-185550.jsonl",
+    "normalSeconds": 50.0,
+    "faultSeconds": 70.0,
+    "entryLoad": {
+      "targets": [
+        "127.0.0.1:18091"
+      ],
+      "workerCount": 128,
+      "durationSeconds": 120.0,
+      "requestCount": 28204,
+      "successCount": 18011,
+      "errorCount": 10193,
+      "errorRate": 0.36140263792369876,
+      "throughputRps": 235.02453558159408,
+      "goodputRps": 150.08604844561378,
+      "latencyMeanMillis": 473.07856717993866,
+      "latencyP50Millis": 405.5707498919219,
+      "latencyP95Millis": 1051.8976661842316,
+      "latencyP99Millis": 1544.9730830732733,
+      "statusCounts": {
+        "200": 18011,
+        "503": 10193
+      }
+    },
+    "remediationSnapshot": {
+      "serviceName": "orders",
+      "remediation": "CIRCUIT_BREAKER"
+    },
+    "nodeSampleCount": 516,
+    "callGraph": {
+      "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+      "nodes": [
+        "gateway",
+        "orders",
+        "payment"
+      ],
+      "callEdges": [
+        [
+          "gateway",
+          "orders"
+        ],
+        [
+          "orders",
+          "payment"
+        ]
+      ],
+      "injectionPoint": "payment"
+    }
+  }
+]

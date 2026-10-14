@@ -1,0 +1,291 @@
+# 서비스 6종. **전부 같은 이미지**이며 환경변수 네 개로만 구분된다 (§4-1).
+#
+#   gateway → order → inventory → payment → [PostgreSQL]
+#                   ↘ notification
+#                   ↘ assistant   (선택 호출 — Brownout 이 생략하는 대상)
+#
+# 의존 깊이 4단(gateway→order→inventory→payment)이 "연쇄"를 성립시킨다.
+# 노드 개수가 아니라 전파 경로와 피드백 루프가 본질이다.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: cascade
+spec:
+  selector: {app: gateway}
+  ports: [{port: 8080, targetPort: 8080, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: cascade
+  labels: {app: gateway, tier: entry}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: gateway}}
+  template:
+    metadata:
+      labels: {app: gateway}
+      annotations:
+        # 주석 기반 디스커버리. Prometheus Operator 없이 동작한다.
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: cascade-app:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: SERVICE_NAME, value: gateway}
+            - {name: WORKLOAD, value: passthrough}
+            - {name: DOWNSTREAM, value: "http://order:8080"}
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "200m", memory: 384Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order
+  namespace: cascade
+spec:
+  selector: {app: order}
+  ports: [{port: 8080, targetPort: 8080, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order
+  namespace: cascade
+  labels: {app: order, tier: fanout}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: order}}
+  template:
+    metadata:
+      labels: {app: order}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: cascade-app:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: SERVICE_NAME, value: order}
+            - {name: WORKLOAD, value: passthrough}
+            # 필수 하류 둘. 실패가 전파된다.
+            - {name: DOWNSTREAM, value: "http://inventory:8080,http://notification:8080"}
+            # 선택 하류 — Brownout 이 이 호출을 생략한다 (§2-C). 실패해도 전파하지 않는다.
+            - {name: OPTIONAL_DOWNSTREAM, value: "http://assistant:8080"}
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "200m", memory: 384Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  namespace: cascade
+spec:
+  selector: {app: inventory}
+  ports: [{port: 8080, targetPort: 8080, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  namespace: cascade
+  labels: {app: inventory, tier: middle}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: inventory}}
+  template:
+    metadata:
+      labels: {app: inventory}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: cascade-app:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: SERVICE_NAME, value: inventory}
+            - {name: WORKLOAD, value: passthrough}
+            - {name: DOWNSTREAM, value: "http://payment:8080"}
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "200m", memory: 384Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+  namespace: cascade
+spec:
+  selector: {app: notification}
+  ports: [{port: 8080, targetPort: 8080, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: cascade
+  labels: {app: notification, tier: leaf}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: notification}}
+  template:
+    metadata:
+      labels: {app: notification}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: cascade-app:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: SERVICE_NAME, value: notification}
+            - {name: WORKLOAD, value: passthrough}
+            # 하류가 없는 잎 노드다. order 의 분기(fan-out)를 만들어 이웃 집계의
+            # 1-hop 이 둘 이상이 되게 하는 것이 역할이며, 장애가 전파되지 않는
+            # **대조 노드**로도 기능한다 — 여기가 positive 로 라벨링되면 규칙이 샜다는 뜻이다.
+            - {name: DOWNSTREAM, value: ""}
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "100m", memory: 320Mi}
+            limits: {cpu: "500m", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  namespace: cascade
+spec:
+  selector: {app: payment}
+  ports: [{port: 8080, targetPort: 8080, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: cascade
+  labels: {app: payment, tier: db}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: payment}}
+  template:
+    metadata:
+      labels: {app: payment}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: cascade-app:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: SERVICE_NAME, value: payment}
+            - {name: WORKLOAD, value: db}
+            - {name: DB_URL, value: "jdbc:postgresql://postgres:5432/cascade"}
+            - {name: DB_USER, value: appuser}
+            # ⚠️ 앱 풀은 넉넉해야 한다. 조이면 레플리카 2→4 에서 총 풀 용량이 함께
+            #    늘어 대기가 줄고 m_scale-out < 0 이 재현되지 않는다 (§4-5).
+            - {name: HIKARI_MAX_POOL_SIZE, value: "20"}
+            # 기본값(=maxPoolSize)으로 두면 기동만으로 풀 전체를 열어, 검증 대상인
+            # "부하→점유→증설→고갈" 기전이 사라진다.
+            - {name: HIKARI_MIN_IDLE, value: "2"}
+            # 획득 실패가 에러로 드러나야 재시도 증폭이 관측된다 (게이트 ①.5 실측).
+            - {name: HIKARI_CONNECTION_TIMEOUT_MS, value: "1000"}
+            - {name: DB_SLEEP_MILLIS, value: "60"}
+            # ⚠️ 올리지 않는다. 크면 DB CPU 가 먼저 천장이 되어 증설 효과가 사라진다.
+            - {name: DB_BURN_ROWS, value: "1000"}
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "200m", memory: 384Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assistant
+  namespace: cascade
+spec:
+  selector: {app: assistant}
+  ports: [{port: 8080, targetPort: 8080, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assistant
+  namespace: cascade
+  # ⚠️ 이 라벨이 설계 결정을 표현한다. 레플리카 1 고정이며 HPA 대상이 아니다.
+  #    제약이 아니라 **연구 설계의 일부**다 — "Scale-out 이 물리적으로 불가능한
+  #    노드"를 구현한 것이다 (§0, §4-6 S2). m_scale-out = 0 의 근거가 여기다.
+  labels: {app: assistant, tier: llm, scaling: fixed-replica}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: assistant}}
+  template:
+    metadata:
+      labels: {app: assistant}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: app
+          image: cascade-app:0.1.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: SERVICE_NAME, value: assistant}
+            - {name: WORKLOAD, value: llm}
+            # ⚠️ 현재 LlmWorkload 는 세마포어 자리표시다. vLLM 실 서빙으로 교체할 때
+            #    바뀌는 것은 이 컨테이너의 이미지와 환경변수뿐이며 위상은 불변이다.
+            - {name: LLM_MAX_TOKENS, value: "64"}
+            - {name: LLM_MILLIS_PER_TOKEN, value: "4"}
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "200m", memory: 384Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8080}
+            initialDelaySeconds: 10
+            periodSeconds: 3

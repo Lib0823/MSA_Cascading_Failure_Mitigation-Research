@@ -1,0 +1,22 @@
+# 게이트 ② 실험 환경 — K8s 매니페스트
+#
+# §4-1 의 토폴로지를 그대로 옮긴다.
+#
+#   gateway → order → inventory → payment → [PostgreSQL + HikariCP]
+#                   ↘ notification
+#                   ↘ assistant (vLLM, 레플리카 1 고정, HPA 제외)
+#
+# 전부 **같은 이미지**다. 노드 간 차이는 환경변수 네 개로만 표현한다 —
+# SERVICE_NAME / WORKLOAD / DOWNSTREAM / OPTIONAL_DOWNSTREAM.
+#
+# ⚠️ resources 와 HPA 임계는 **플레이스홀더**다. CPU 헤드룸을 실측해야 정해지며
+#    (게이트 ② 확인 항목), 그 전까지의 값은 구조를 표현하기 위한 것이지
+#    실험값이 아니다. 실측 후 kustomize overlay 로 덮는다.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cascade
+  labels:
+    # 실험 네임스페이스임을 명시한다. 정리할 때 이 라벨로 지운다.
+    experiment: msa-cascading-failure

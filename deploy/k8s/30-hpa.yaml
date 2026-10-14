@@ -1,0 +1,101 @@
+# HPA — 이 연구의 **baseline** 이다 (§4-3 A1). 컷 불가 항목이다.
+#
+# *"오토스케일링만으로는 안 된다"* 는 주장의 비교 대상이므로, 현장에서 쓰이는
+# 것과 같은 구성이어야 한다. kubeadm 표준 컨트롤 플레인을 택한 이유도 같다.
+#
+# ⚠️ **전제: metrics-server 가 설치돼 있어야 한다.** 없으면 HPA 가 `<unknown>`
+#    으로 멈춘다. kubeadm 에는 기본 포함되지 않는다 — 게이트 ② 의 알려진 작업이다.
+#
+# ⚠️ averageUtilization 값은 **플레이스홀더**다. CPU 헤드룸을 실측해야 정해지며
+#    (게이트 ② 확인 항목), 너무 낮으면 정상 부하에서도 스케일아웃되어 S1 의
+#    "부하↑ → HPA 발동 → 커넥션 요구↑" 기전이 통제를 벗어난다.
+#
+# ⚠️ **assistant 는 의도적으로 빠져 있다.** 레플리카 1 고정이며 HPA 대상이 아니다.
+#    이것이 S2 의 `m_scale-out = 0` 을 만드는 설계 결정이다 (§4-6).
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway
+  namespace: cascade
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: gateway}
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 60}}
+  behavior:
+    # 스케일다운을 느리게 둔다. 에피소드 중 레플리카가 출렁이면 `ℓₐ` 측정과
+    # 라벨 창이 함께 오염된다.
+    scaleDown: {stabilizationWindowSeconds: 300}
+    scaleUp: {stabilizationWindowSeconds: 0}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order
+  namespace: cascade
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: order}
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 60}}
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+    scaleUp: {stabilizationWindowSeconds: 0}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inventory
+  namespace: cascade
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: inventory}
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 60}}
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+    scaleUp: {stabilizationWindowSeconds: 0}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: notification
+  namespace: cascade
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: notification}
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 60}}
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+    scaleUp: {stabilizationWindowSeconds: 0}
+---
+# payment 의 HPA 가 S1 의 핵심이다. 부하가 오르면 HPA 가 레플리카를 늘리고,
+# 각 레플리카가 자기 풀을 열어 **총 커넥션 요구가 max_connections 를 넘는다.**
+# 이것이 `m_scale-out < 0` 의 직접 기전이다 (§4-5).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment
+  namespace: cascade
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: payment}
+  minReplicas: 1
+  # 상한 4 는 의도적이다. 풀 20 × 4 = 80 이 max_connections 50 을 넘어야
+  # 고갈이 일어난다. 2 × poolSize < max_connections < 4 × poolSize 규칙(게이트 ①.5).
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 60}}
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+    scaleUp: {stabilizationWindowSeconds: 0}

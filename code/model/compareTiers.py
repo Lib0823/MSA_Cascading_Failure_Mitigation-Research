@@ -38,9 +38,19 @@ feature 에 상류의 f4(지연)·f6(에러율)과 그 윈도우 통계가 들�
 여전히 예측해야** 하고, ②-self 가 상류 정보 없이 0.810 을 내는 것이 그 증거다.
 그러나 ②-self→② 차이를 **"위상 정보의 순수 기여"로 읽으면 과대평가**다.
 
-본 실험에서 이를 분리하려면 라벨 정의에 쓰이지 않는 축으로 비교해야 한다 —
-예컨대 상류 조건을 뺀 *"v 가 위반하는가"* 단독 라벨에 대해 같은 비교를 한 번 더
-돌리고, 두 결과의 차이를 보고하는 방법이 있다. 여기서는 그 한계를 기록만 한다.
+**순환 몫을 실제로 재 봤다** (``--selfOnlyLabel``). 라벨에서 상류 조건을 빼고
+*"v 가 위반하는가"* 단독으로 바꾼 뒤 같은 비교를 돌린다.
+
+=========================  ==============
+라벨                        위상 기여
+=========================  ==============
+§4-2 전파성 (상류 포함)      +0.071
+v 위반 단독 (상류 제거)      +0.063
+**순환 몫**                 **+0.008**
+=========================  ==============
+
+라벨이 상류를 전혀 참조하지 않아도 위상 정보가 +0.063 기여한다. **순환은
+전체 기여의 11% 에 불과하며 나머지는 진짜다.** 우려는 타당했으나 양적으로 작다.
 
 분할은 에피소드 단위다
 =======================
@@ -155,9 +165,15 @@ def main() -> int:
     parser.add_argument("--errorRateThreshold", type=float, default=0.05)
     parser.add_argument("--precursorMultiplier", type=float, default=1.5)
     parser.add_argument("--folds", type=int, default=4)
+    parser.add_argument("--selfOnlyLabel", action="store_true",
+                        help="라벨에서 상류 선행 열화 조건을 뺀다. 순환 몫을 분리하기 위한 대조")
     arguments = parser.parse_args()
 
     chainDir = pathlib.Path(arguments.chainDir).resolve()
+    if arguments.selfOnlyLabel:
+        # 상류 조건을 사실상 무력화한다 — 배수 0 이면 어떤 이웃이든 "열화"로 판정되어
+        # 라벨이 "v 가 위반하는가" 단독이 된다. 라벨 정의에서 위상을 빼는 것이 목적이다.
+        arguments.precursorMultiplier = 0.0
     episodes = loadAllEpisodes(chainDir, arguments)
     if not episodes:
         print("에피소드가 없다. code/chain 을 먼저 돌려야 한다.")
@@ -181,7 +197,8 @@ def main() -> int:
     print(f"self {selfMatrix.shape[1]}차원  ②(self+이웃) {combinedMatrix.shape[1]}차원")
     print("클래스 분포: " + ", ".join(
         f"{v} {c}({c / len(labelArray):.1%})" for v, c in zip(values, counts)))
-    print(f"분할: 에피소드 단위 GroupKFold(k={arguments.folds})\n")
+    print(f"분할: 에피소드 단위 GroupKFold(k={arguments.folds})")
+    print(f"라벨: {'v 위반 단독 (상류 조건 제거)' if arguments.selfOnlyLabel else '§4-2 전파성 (상류 조건 포함)'}\n")
 
     if len(values) < 2:
         print("라벨이 한 종류뿐이라 비교가 성립하지 않는다.")
@@ -252,8 +269,10 @@ def main() -> int:
         "classDistribution": {str(v): int(c) for v, c in zip(values, counts)},
         "macroF1": {name: scores[name] for name in tiers},
         "means": means, "modelGain": modelGain, "topologyGain": topologyGain,
+        "selfOnlyLabel": bool(arguments.selfOnlyLabel),
     }
-    outputPath = pathlib.Path(__file__).resolve().parent / "tierComparison.json"
+    suffix = "-selfOnlyLabel" if arguments.selfOnlyLabel else ""
+    outputPath = pathlib.Path(__file__).resolve().parent / f"tierComparison{suffix}.json"
     outputPath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"기록: {outputPath}")
     return 0

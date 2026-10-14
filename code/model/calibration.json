@@ -1,0 +1,51 @@
+{
+  "ensembleSize": 5,
+  "results": {
+    "raw": {
+      "middleShare": 0.04962406015037594,
+      "spreadAboveFloor": 0.06416040100250626,
+      "spreadMedian": 3.06435942486551e-08,
+      "zeroSpreadShare": 0.750375939849624,
+      "ece": 0.030237732146021743,
+      "macroF1": 0.8719071853123417
+    },
+    "rawFullData": {
+      "middleShare": 0.05664160401002506,
+      "spreadAboveFloor": 0.07218045112781955,
+      "spreadMedian": 2.5716260749386602e-08,
+      "zeroSpreadShare": 0.7604010025062656,
+      "ece": 0.02932844740891271,
+      "macroF1": 0.9416303780816948
+    },
+    "isotonic": {
+      "middleShare": 0.10726817042606517,
+      "spreadAboveFloor": 0.14235588972431076,
+      "spreadMedian": 0.0007808973159744722,
+      "zeroSpreadShare": 0.24611528822055137,
+      "ece": 0.018866300273521177,
+      "macroF1": 0.9318843256221835
+    },
+    "sigmoid": {
+      "middleShare": 0.11027568922305764,
+      "spreadAboveFloor": 0.1293233082706767,
+      "spreadMedian": 0.002404606645145593,
+      "zeroSpreadShare": 0.0,
+      "ece": 0.01842443812629514,
+      "macroF1": 0.9384779397819871
+    }
+  },
+  "verdicts": {
+    "isotonic": {
+      "중간 p̄ 증가": true,
+      "u 보존 (0.8배 이상)": true,
+      "ECE 감소": true,
+      "F1 유지 (0.02 이내)": true
+    },
+    "sigmoid": {
+      "중간 p̄ 증가": true,
+      "u 보존 (0.8배 이상)": true,
+      "ECE 감소": true,
+      "F1 유지 (0.02 이내)": true
+    }
+  }
+}

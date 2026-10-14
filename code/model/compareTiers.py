@@ -117,10 +117,15 @@ class RuleBasedPredictor:
         return np.where(risky, self.riskClass, "정상")
 
 
-def buildEnsemble(features: np.ndarray, labels: np.ndarray
+def buildEnsemble(features: np.ndarray, labels: np.ndarray, size: int | None = None
                   ) -> list[HistGradientBoostingClassifier]:
+    """부트스트랩 멤버 앙상블.
+
+    ``size`` 를 인자로 받는다. 모듈 상수를 몽키패치해 크기를 바꾸면 호출 순서에
+    따라 조용히 틀린 값이 쓰일 수 있다.
+    """
     models = []
-    for member in range(ENSEMBLE_SIZE):
+    for member in range(size if size is not None else ENSEMBLE_SIZE):
         model = HistGradientBoostingClassifier(
             max_iter=200, learning_rate=0.1, max_depth=6,
             random_state=RANDOM_SEED + member)
@@ -129,6 +134,30 @@ def buildEnsemble(features: np.ndarray, labels: np.ndarray
         model.fit(features[indexes], labels[indexes])
         models.append(model)
     return models
+
+
+def buildCalibratedEnsemble(fitFeatures: np.ndarray, fitLabels: np.ndarray,
+                            calibFeatures: np.ndarray, calibLabels: np.ndarray,
+                            size: int | None = None, method: str = "sigmoid") -> list:
+    """멤버별로 보정한 앙상블.
+
+    **평균이 아니라 멤버별로 보정한다.** `p_eff = max(0, p̄ − κ√u)` 는 `p̄` 와 `√u` 가
+    같은 공간에 있어야 성립하는데, 평균만 보정하면 `p̄` 는 보정 공간, `u` 는 원시
+    공간이 되어 뺄셈이 의미를 잃는다.
+
+    기본값이 ``sigmoid`` 인 이유는 isotonic 이 계단 함수라 보정 표본이 적을 때
+    서로 다른 원시값을 같은 값으로 뭉갤 수 있어서다. 실측에서는 둘 다 네 조건을
+    통과했으나 sigmoid 가 중간 구간을 더 넓혔다(calibrateEnsemble.py).
+    """
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.frozen import FrozenEstimator
+
+    calibrated = []
+    for model in buildEnsemble(fitFeatures, fitLabels, size=size):
+        calibrator = CalibratedClassifierCV(FrozenEstimator(model), method=method)
+        calibrator.fit(calibFeatures, calibLabels)
+        calibrated.append(calibrator)
+    return calibrated
 
 
 def predictEnsemble(models: list, features: np.ndarray) -> np.ndarray:

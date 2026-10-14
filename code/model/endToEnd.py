@@ -85,6 +85,11 @@ def main() -> int:
     parser.add_argument("--errorRateThreshold", type=float, default=0.05)
     parser.add_argument("--precursorMultiplier", type=float, default=1.5)
     parser.add_argument("--kappas", default="0,0.5,1,2,4")
+    parser.add_argument("--ensembleSize", type=int, default=5,
+                        help="N=3 은 불일치가 3/3 아니면 2/3 두 값뿐이라 해상도가 낮다")
+    parser.add_argument("--calibration", default="sigmoid",
+                        choices=["none", "sigmoid", "isotonic"],
+                        help="멤버별 보정. §2-A 가 설계에 넣어 둔 항목이다")
     arguments = parser.parse_args()
 
     chainDir = pathlib.Path(arguments.chainDir).resolve()
@@ -109,12 +114,28 @@ def main() -> int:
 
     splitter = GroupKFold(n_splits=4)
     trainIndex, testIndex = next(iter(splitter.split(combined, labelArray, groupArray)))
-    models = compareTiers.buildEnsemble(combined[trainIndex], labelArray[trainIndex])
+    if arguments.calibration == "none":
+        models = compareTiers.buildEnsemble(combined[trainIndex], labelArray[trainIndex],
+                                            size=arguments.ensembleSize)
+    else:
+        # 보정기는 base 가 보지 않은 표본으로 학습해야 한다. train 을 다시 쪼갠다.
+        inner = GroupKFold(n_splits=3)
+        fitLocal, calibLocal = next(iter(inner.split(
+            combined[trainIndex], labelArray[trainIndex], groupArray[trainIndex])))
+        fitIndex, calibIndex = trainIndex[fitLocal], trainIndex[calibLocal]
+        assert not (set(groupArray[fitIndex]) & set(groupArray[calibIndex])), "fit∩calib 누수"
+        assert not (set(groupArray[fitIndex]) & set(groupArray[testIndex])), "fit∩test 누수"
+        models = compareTiers.buildCalibratedEnsemble(
+            combined[fitIndex], labelArray[fitIndex],
+            combined[calibIndex], labelArray[calibIndex],
+            size=arguments.ensembleSize, method=arguments.calibration)
+    assert len(models) == arguments.ensembleSize
     meanRisk, uncertainty, bottleneck = summarizeEnsemble(models, combined[testIndex])
     trueLabels = labelArray[testIndex]
     testNodes = nodeArray[testIndex]
 
-    print(f"학습 {len(trainIndex)} / 평가 {len(testIndex)} 표본, 앙상블 N={len(models)}")
+    print(f"학습 {len(trainIndex)} / 평가 {len(testIndex)} 표본, 앙상블 N={len(models)}"
+          f", 보정 {arguments.calibration}")
     print(f"Δ = L_pred = {arguments.horizonSeconds}s\n")
 
     spread = np.sqrt(uncertainty)
@@ -247,7 +268,18 @@ def main() -> int:
         print(f"{label:<10}{total:>7}  "
               + "  ".join(f"{n} {c / total:.0%}" for n, c in counts.most_common(3)))
 
+    # 정상 라벨에 조치가 나간 비율 = H5a(장애 미발생 시 개입 비용)의 직접 재료다.
+    normalCounts = byLabel.get(NORMAL_LABEL, collections.Counter())
+    normalTotal = sum(normalCounts.values())
+    falsePositiveRate = (1.0 - normalCounts[HOLD] / normalTotal) if normalTotal else float("nan")
+    print(f"\n  정상 라벨에 조치가 나간 비율(오탐): {falsePositiveRate:.1%}"
+          f"  — H5a 의 직접 재료다")
+    print("  ⚠️ 캘리브레이션은 공짜가 아니다. 확률을 퍼뜨리면 정상 표본 일부가 θ 를 넘어")
+    print("     오탐이 는다. θ 가 0 에 가까운 현 가정에서 특히 그렇다 —")
+    print("     **캘리브레이션과 θ 보정(Dₐ·Rₐ 실측)은 함께 풀어야 하는 짝이다.**")
+
     payload = {"trainSamples": int(len(trainIndex)), "testSamples": int(len(testIndex)),
+               "falsePositiveRate": float(falsePositiveRate),
                "expectedCalibrationError": float(expectedError), "reliability": reliability,
                "zeroSpreadShare": zeroShare, "holdSwing": float(holdSwing),
                "middleConfidenceShare": middleShare,

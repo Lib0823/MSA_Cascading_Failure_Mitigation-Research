@@ -80,10 +80,9 @@ def main() -> int:
 
     rows = []
     for size in [int(s) for s in arguments.ensembleSizes.split(",")]:
-        originalSize = compareTiers.ENSEMBLE_SIZE
-        compareTiers.ENSEMBLE_SIZE = size
-        models = compareTiers.buildEnsemble(featureMatrix[trainIndex], labelArray[trainIndex])
-        compareTiers.ENSEMBLE_SIZE = originalSize
+        models = compareTiers.buildEnsemble(
+            featureMatrix[trainIndex], labelArray[trainIndex], size=size)
+        assert len(models) == size, f"앙상블 크기 불일치: {len(models)} != {size}"
 
         predicted, risk = memberOutputs(models, featureMatrix[testIndex])
         # 투표 일치 — 다수 득표 비율. 1.0 이면 전원 동일한 답.

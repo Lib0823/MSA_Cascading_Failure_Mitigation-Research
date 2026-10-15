@@ -34,3 +34,7 @@ build/
 # === 실험 산출물 ===
 *.log
 .cache/
+
+# === 폐루프 산출물 ===
+code/control/predictor.joblib    # 학습 산출물 (8MB, trainPredictor.py 로 재생성)
+code/control/decisions-*.jsonl   # 스모크 실행 기록

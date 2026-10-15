@@ -48,7 +48,10 @@ management:
 
 app:
   serviceName: ${SERVICE_NAME:app}
+  # 쉼표로 여럿을 줄 수 있다. §4-1 의 order 는 셋으로 분기한다.
   downstream: ${DOWNSTREAM:}
+  # 선택 호출 — Brownout 이 생략하는 대상이다 (§2-C "optional 호출 생략").
+  optionalDownstream: ${OPTIONAL_DOWNSTREAM:}
   fault:
     # S3(다운스트림 지연) 주입 지점. 워크로드보다 바깥이라 커넥션 풀을 건드리지 않는다.
     delayMillis: ${FAULT_DELAY_MILLIS:0}

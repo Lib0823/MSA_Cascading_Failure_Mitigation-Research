@@ -1,0 +1,52 @@
+[
+  {
+    "scenario": "normal",
+    "intensity": "none",
+    "episodesFile": "episodes-20261015-083514.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "100ms",
+    "episodesFile": "episodes-20261015-083841.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "200ms",
+    "episodesFile": "episodes-20261015-084207.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "300ms",
+    "episodesFile": "episodes-20261015-084533.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "500ms",
+    "episodesFile": "episodes-20261015-084858.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "800ms",
+    "episodesFile": "episodes-20261015-085224.json"
+  },
+  {
+    "scenario": "s1",
+    "intensity": "hog10",
+    "episodesFile": "episodes-20261015-085550.json"
+  },
+  {
+    "scenario": "s1",
+    "intensity": "hog14",
+    "episodesFile": "episodes-20261015-085915.json"
+  },
+  {
+    "scenario": "s1",
+    "intensity": "hog18",
+    "episodesFile": "episodes-20261015-091831.json"
+  },
+  {
+    "scenario": "s1",
+    "intensity": "hog22",
+    "episodesFile": "episodes-20261015-120322.json"
+  }
+]

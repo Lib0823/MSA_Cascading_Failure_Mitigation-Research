@@ -1,0 +1,131 @@
+# Prometheus — 노드별 지표 수집. §4-2 의 역라벨링 입력이다.
+#
+# Operator 없이 주석 기반 디스커버리를 쓴다. 의존을 하나라도 줄이는 쪽이
+# 재진입 비용 측면에서 낫고, 수집 대상이 6개뿐이라 Operator 가 과하다.
+#
+# ⚠️ **히스토그램 버킷을 긁어야 한다.** Micrometer 의 `percentiles` 는 감쇠 윈도우
+#    추정값이라 과거를 30초 가까이 끌고 온다. 전파성 판정의 허용 시간창 W 가
+#    30초인데 지표가 그만큼 번지면 onset 순서를 집을 수 없다 (사슬 실측).
+#    앱이 `percentiles-histogram` 을 내보내고 분위수는 수집 측에서 계산한다.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: cascade
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cascade-prometheus
+rules:
+  - apiGroups: [""]
+    resources: [nodes, nodes/metrics, services, endpoints, pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cascade-prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cascade-prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: cascade
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: cascade
+data:
+  prometheus.yml: |
+    global:
+      # 1Hz 수집. 전파성 판정이 "상류가 먼저 열화했는가"라는 순서 문제이므로
+      # 시점 해상도가 핵심이다. 리텐션은 짧게 둔다 — 에피소드마다 덤프한다.
+      scrape_interval: 1s
+      scrape_timeout: 900ms
+    scrape_configs:
+      - job_name: cascade-services
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces: {names: [cascade]}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+          # 노드 이름을 라벨로 남긴다. 역라벨링이 노드별 시계열을 요구한다.
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: replace
+            target_label: service
+          # 레플리카를 구분해야 HPA 로 늘어난 파드의 커넥션 요구를 따로 볼 수 있다.
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+      # 호스트 CPU 를 함께 기록한다. §4-1 의 측정 유효성 프로토콜 —
+      # 임계 초과 구간은 라벨링에서 제외해야 "전파에 기인한 위반"과 구분된다.
+      - job_name: kubelet-cadvisor
+        scheme: https
+        tls_config: {insecure_skip_verify: true}
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs: [{role: node}]
+        metrics_path: /metrics/cadvisor
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: cascade
+spec:
+  selector: {app: prometheus}
+  ports: [{port: 9090, targetPort: 9090, name: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: cascade
+  labels: {app: prometheus}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: prometheus}}
+  template:
+    metadata:
+      labels: {app: prometheus}
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.1.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            # 에피소드 단위로 덤프하므로 길게 둘 이유가 없다. 메모리를 아낀다.
+            - --storage.tsdb.retention.time=6h
+          ports: [{containerPort: 9090, name: http}]
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus}
+            - {name: data, mountPath: /prometheus}
+          resources:
+            # ⚠️ 수집기가 측정 대상과 CPU 를 다투면 안 된다. 상한을 낮게 묶고,
+            #    부족하면 코어를 늘린다 (§3-1 완화책).
+            requests: {cpu: "200m", memory: 512Mi}
+            limits: {cpu: "1", memory: 1Gi}
+      volumes:
+        - {name: config, configMap: {name: prometheus-config}}
+        - {name: data, emptyDir: {}}

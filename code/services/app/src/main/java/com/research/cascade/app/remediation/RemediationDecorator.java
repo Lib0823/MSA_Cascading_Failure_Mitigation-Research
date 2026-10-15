@@ -90,6 +90,9 @@ public class RemediationDecorator {
         if (active == Remediation.CIRCUIT_BREAKER) {
             decorated = CircuitBreaker.decorateSupplier(circuitBreaker, decorated);
         }
+        // BROWNOUT 은 여기서 감싸지 않는다. 호출을 막거나 제한하는 것이 아니라
+        // **워크로드 안에서 선택 호출을 생략**하는 조치이기 때문이다(§2-C).
+        // 따라서 Retry 만 걸린 상태로 내려간다.
         // Retry 는 조치가 아니라 실험 상수다. 항상 걸린다.
         decorated = Retry.decorateSupplier(retry, decorated);
 

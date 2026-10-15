@@ -46,6 +46,14 @@ DEFAULT_PRECURSOR_MULTIPLIER = 1.5       # 선행 열화: SLO 위반보다 느�
 
 NORMAL = "정상"
 
+# 시나리오 → 병목 유형 라벨. **대조군은 전파로 판정돼도 정상이다** — 주입된 장애가
+# 없으므로 ground truth 가 정상이고, 규칙의 오판은 isFalsePositive 로 따로 센다.
+#
+# ⚠️ 종전 구현은 `scenario.upper()` 를 썼는데, 대조군에서 전파가 집히면 라벨이
+#    "NORMAL"(영문)이 되어 **클래스가 하나 더 생겼다.** 대조군 오탐이 0 일 때는
+#    드러나지 않다가 강도를 다양화하자 학습이 깨졌다.
+BOTTLENECK_BY_SCENARIO = {"s1": "S1", "s2": "S2", "s3": "S3", "normal": NORMAL}
+
 
 @dataclass
 class NodeSeries:
@@ -166,7 +174,8 @@ def labelEpisode(episode: dict, tracePath: pathlib.Path, arguments: argparse.Nam
                 "node": name,
                 "timestamp": timestamp,
                 "secondsFromInjection": timestamp - injectedAt,
-                "label": (scenario.upper() if isPropagated else NORMAL),
+                "label": (BOTTLENECK_BY_SCENARIO.get(scenario, NORMAL)
+                          if isPropagated else NORMAL),
                 "isPropagated": isPropagated,
                 "isFalsePositive": isPropagated and scenario == "normal",
                 "violates": violates,

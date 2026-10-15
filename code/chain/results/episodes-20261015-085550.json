@@ -1,0 +1,51 @@
+[
+  {
+    "scenario": "s1",
+    "injectedAt": 1792022283.482342,
+    "injectionNode": "payment",
+    "tracePath": "results/trace-s1-20261015-085550.jsonl",
+    "normalSeconds": 50.0,
+    "faultSeconds": 70.0,
+    "entryLoad": {
+      "targets": [
+        "127.0.0.1:18091"
+      ],
+      "workerCount": 64,
+      "durationSeconds": 120.0,
+      "requestCount": 34194,
+      "successCount": 34194,
+      "errorCount": 0,
+      "errorRate": 0.0,
+      "throughputRps": 284.9487545361242,
+      "goodputRps": 284.9487545361242,
+      "latencyMeanMillis": 224.65142110958337,
+      "latencyP50Millis": 234.99154089950025,
+      "latencyP95Millis": 310.8655840624124,
+      "latencyP99Millis": 434.07237506471574,
+      "statusCounts": {
+        "200": 34194
+      }
+    },
+    "callGraph": {
+      "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+      "nodes": [
+        "gateway",
+        "orders",
+        "payment"
+      ],
+      "callEdges": [
+        [
+          "gateway",
+          "orders"
+        ],
+        [
+          "orders",
+          "payment"
+        ]
+      ],
+      "injectionPoint": "payment"
+    },
+    "intensityLabel": "hog10",
+    "intensityAxis": "s1"
+  }
+]

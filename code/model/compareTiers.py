@@ -152,6 +152,15 @@ def buildCalibratedEnsemble(fitFeatures: np.ndarray, fitLabels: np.ndarray,
     from sklearn.calibration import CalibratedClassifierCV
     from sklearn.frozen import FrozenEstimator
 
+    # 🔒 보정 표본에 클래스가 하나라도 빠지면 CalibratedClassifierCV 가 내부
+    # 교차검증에서 클래스 수 불일치로 깨진다. 에피소드 단위 분할이라 실제로
+    # 일어날 수 있으므로 미리 막는다.
+    missing = set(fitLabels) - set(calibLabels)
+    if missing:
+        raise ValueError(
+            f"보정 표본에 클래스가 빠졌다: {sorted(missing)}. "
+            "에피소드 분할이 한쪽으로 쏠렸으니 --folds 를 바꾸거나 에피소드를 늘려야 한다")
+
     calibrated = []
     for model in buildEnsemble(fitFeatures, fitLabels, size=size):
         calibrator = CalibratedClassifierCV(FrozenEstimator(model), method=method)

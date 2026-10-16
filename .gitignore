@@ -36,6 +36,10 @@ build/
 .cache/
 
 # === 폐루프 산출물 ===
-code/control/predictor.joblib    # 학습 산출물 (8MB, trainPredictor.py 로 재생성)
-code/control/decisions-*.jsonl   # 스모크 실행 기록
-code/experiment/results/       # 배치 산출물 (원장·트레이스·결정 기록)
+# ⚠️ gitignore 는 패턴 뒤 같은 줄의 주석을 지원하지 않는다. 주석은 윗줄에 둔다 —
+#    `path   # 설명` 으로 쓰면 패턴이 설명까지 포함해 아무것도 매칭하지 않는다.
+
+# 학습 산출물. 8MB 이며 trainPredictor.py 로 재생성된다
+code/control/predictor.joblib
+# 스모크 실행 기록
+code/control/decisions-*.jsonl

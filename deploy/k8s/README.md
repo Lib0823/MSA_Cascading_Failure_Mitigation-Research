@@ -95,6 +95,6 @@ docker run --rm -v "$(pwd):/work" -w /work ghcr.io/yannh/kubeconform:latest \
 
 - **클러스터에 실제로 적용해 본 적이 없다.** 스키마는 맞으나 동작은 미확인이다
 - **이미지 배포 경로 미정** — 단일 노드 로컬 빌드로 갈지 레지스트리를 세울지
-- **부하 생성기** — [code/chain/loadGen.py](../../code/chain/loadGen.py) 를 K8s 진입점
+- **부하 생성기** — [code/calibration/loadGen.py](../../code/calibration/loadGen.py) 를 K8s 진입점
   하나를 향하도록 바꾸면 된다. Compose 처럼 포트를 나열할 필요가 없다(Service 가 분배)
 - **`ℓₐ` 계측** — 파드 스케줄링·이미지 풀·JVM 기동. 클러스터가 있어야 잰다

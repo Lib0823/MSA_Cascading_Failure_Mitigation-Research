@@ -629,7 +629,9 @@ gateway → order → inventory → payment → [PostgreSQL + HikariCP]
 - **통제 변수 고정**: vLLM 은 Ollama 보다 손잡이가 많으므로(`gpu_memory_utilization`·`max_num_seqs`·`max_model_len`·스케줄러 정책) **값을 고정하고 근거를 명시**한다. 고정하지 않으면 S2 의 포화점이 조건마다 달라져 비교가 성립하지 않는다. 특히 `gpu_memory_utilization` 은 포화점을 정하는 값이므로 **인위적 제약이 아니라 선언된 실험 파라미터**로 기술한다.
 - ⚠️ **버전 고정**: vLLM 공식 prebuilt wheel 의 지원 목록에 sm_120 이 명시돼 있지 않고 SM120 관련 버전 회귀 보고가 있다. 동작하는 (vLLM · PyTorch/CUDA · attention backend · quantization backend) 조합을 찾는 즉시 고정하고 재현 절차에 기록한다([environment.md](../research/environment.md) §5 E1).
 - **호출 구현 — LLM 출력에 의존하지 않는다**: 카탈로그 조회를 function calling에 맡기지 않고 **결정적 파이프라인**으로 구현한다 — 질의 수신 → 사전 정의 규칙에 따라 조회 `N`회 → 결과를 컨텍스트로 LLM 요약 → 응답. 호출 횟수 `N`이 실험 파라미터로 통제되고, LLM 품질 변동이 부하 패턴에 영향을 주지 않는다. 한계 섹션에 *"실제 에이전트는 동적 툴콜을 수행하므로 본 구현은 증폭 현상을 통제된 형태로 재현한 것"* 임을 기재한다.
-- ⚠️ **미확정**: 서비스별 API·정상 상태 부하 파라미터·`N`의 정상값.
+- **API — 서비스별로 다르지 않다 (2026-10-17 해소)**: 단일 이미지 구성이므로 **모든 노드가 `GET /work` 하나**를 노출한다. *"서비스별 API"* 라는 항목 자체가 성립하지 않는다 — 노드 간 차이는 `WORKLOAD` 분기와 실제 의존 대상으로만 표현된다. 실험 제어용으로 `POST /fault`(장애 주입)와 `POST /remediation`(조치)이 추가로 열려 있으며, 둘은 지표 집계 대상이 아니다([code/services/app/](../code/services/app/)).
+- **`N`의 정상값 = 1 (2026-10-17 해소)**: `order → assistant` 를 **선택 호출 하나**로 구현했다(`OPTIONAL_DOWNSTREAM`). 그리고 그 호출이 §2-C 의 일반 서비스 Brownout 적용 지점이다 — *"optional 호출 생략"* 이 실제로 생략할 대상을 갖는다. `N` 을 늘리는 것은 후속 확장이며, 1 로도 증폭 경로와 Brownout 레버가 모두 성립한다.
+- ⏳ **미확정 — 정상 상태 부하 파라미터**: §4-5 대로 **실측 이월**이다. 클러스터 용량에 맞춰 캘리브레이션해야 하며, 미리 확정하면 근거가 약하다(동일 논리로 F2).
 
 **장애 주입 — 애플리케이션 레이어**
 

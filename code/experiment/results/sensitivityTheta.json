@@ -1,0 +1,135 @@
+{
+  "measuredDisruption": {
+    "A4": {
+      "throughput": 311.07542427920725,
+      "disruption": 0.0
+    },
+    "A6": {
+      "throughput": 92.51298875902788,
+      "disruption": 0.7026027080943804
+    },
+    "A5": {
+      "throughput": 92.25385834601701,
+      "disruption": 0.7034357228322411
+    }
+  },
+  "policy": "A5",
+  "normalRiskMedian": 0.21662581395002123,
+  "faultRiskMedian": 0.6114721870877076,
+  "rows": [
+    {
+      "reversibility": 0.02,
+      "threshold": 0.12716563341618525,
+      "normalActionShare": 0.5,
+      "faultActionShare": 0.6666666666666666
+    },
+    {
+      "reversibility": 0.04,
+      "threshold": 0.22563788257236844,
+      "normalActionShare": 0.5,
+      "faultActionShare": 0.6666666666666666
+    },
+    {
+      "reversibility": 0.06,
+      "threshold": 0.3041436583271737,
+      "normalActionShare": 0.5,
+      "faultActionShare": 0.6666666666666666
+    },
+    {
+      "reversibility": 0.08,
+      "threshold": 0.3681966521772316,
+      "normalActionShare": 0.3333333333333333,
+      "faultActionShare": 0.6060606060606061
+    },
+    {
+      "reversibility": 0.1,
+      "threshold": 0.4214515525459598,
+      "normalActionShare": 0.20833333333333334,
+      "faultActionShare": 0.6060606060606061
+    },
+    {
+      "reversibility": 0.12,
+      "threshold": 0.4664266185479893,
+      "normalActionShare": 0.125,
+      "faultActionShare": 0.6060606060606061
+    },
+    {
+      "reversibility": 0.14,
+      "threshold": 0.5049135360897459,
+      "normalActionShare": 0.08333333333333333,
+      "faultActionShare": 0.6060606060606061
+    },
+    {
+      "reversibility": 0.16,
+      "threshold": 0.5382218288450197,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.6060606060606061
+    },
+    {
+      "reversibility": 0.18,
+      "threshold": 0.5673308279764424,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.6060606060606061
+    },
+    {
+      "reversibility": 0.2,
+      "threshold": 0.592987572163256,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.5606060606060606
+    },
+    {
+      "reversibility": 0.22,
+      "threshold": 0.6157718254042797,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.5
+    },
+    {
+      "reversibility": 0.24,
+      "threshold": 0.6361404145948066,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.45454545454545453
+    },
+    {
+      "reversibility": 0.26,
+      "threshold": 0.6544581746005921,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.4393939393939394
+    },
+    {
+      "reversibility": 0.28,
+      "threshold": 0.671019994147538,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.4090909090909091
+    },
+    {
+      "reversibility": 0.3,
+      "threshold": 0.6860668117300807,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.3787878787878788
+    },
+    {
+      "reversibility": 0.4,
+      "threshold": 0.7444974242429107,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.3181818181818182
+    },
+    {
+      "reversibility": 0.5,
+      "threshold": 0.7845903977508341,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.30303030303030304
+    },
+    {
+      "reversibility": 0.7,
+      "threshold": 0.8360453084221168,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.21212121212121213
+    },
+    {
+      "reversibility": 0.9,
+      "threshold": 0.867657881847316,
+      "normalActionShare": 0.0,
+      "faultActionShare": 0.21212121212121213
+    }
+  ]
+}

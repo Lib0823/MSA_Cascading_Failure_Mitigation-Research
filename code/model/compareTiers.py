@@ -203,6 +203,10 @@ def main() -> int:
     parser.add_argument("--errorRateThreshold", type=float, default=0.05)
     parser.add_argument("--precursorMultiplier", type=float, default=1.5)
     parser.add_argument("--folds", type=int, default=4)
+    # ⚠️ 모듈 상수(3)를 쓰지 않고 명시한다. 2026-10-15 에 N=5 로 환원하기로 했는데
+    # 이 비교만 기본값에 남아 N=3 으로 돌고 있었다 — 보고한 위상 기여가 어느 N
+    # 기준인지 불명확해진다.
+    parser.add_argument("--ensembleSize", type=int, default=5)
     parser.add_argument("--selfOnlyLabel", action="store_true",
                         help="라벨에서 상류 선행 열화 조건을 뺀다. 순환 몫을 분리하기 위한 대조")
     arguments = parser.parse_args()
@@ -260,7 +264,8 @@ def main() -> int:
                 model = RuleBasedPredictor().fit(trainX, trainY)
                 predicted = model.predict(testX)
             else:
-                predicted = predictEnsemble(buildEnsemble(trainX, trainY), testX)
+                predicted = predictEnsemble(
+                    buildEnsemble(trainX, trainY, size=arguments.ensembleSize), testX)
             scores[name].append(f1_score(testY, predicted, average="macro", zero_division=0))
             lastPredictions[name] = (testY, predicted)
 

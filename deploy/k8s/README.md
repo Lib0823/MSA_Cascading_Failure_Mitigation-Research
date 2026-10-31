@@ -73,9 +73,39 @@ kubectl -n cascade rollout status statefulset/postgres
 kubectl apply -f 20-services.yaml
 kubectl -n cascade rollout status deployment/payment
 
-kubectl apply -f 30-hpa.yaml
 kubectl apply -f 40-prometheus.yaml
+
+# ⚠️ 30-hpa.yaml 은 **여기서 적용하지 않는다.** 정책별로 갈린다 — 아래 절 참조.
 ```
+
+## 🔴 HPA 는 A1 에만 켠다 — 셀마다 갈아야 한다
+
+§4-3 **A축 통제 원칙**이다. A1 과 A4 는 둘 다 제어 루프가 돌지 않으므로
+(`PASSIVE_POLICIES = {"A1", "A4"}`) **두 정책을 가르는 수단은 HPA 유무뿐**이다.
+HPA 를 전 정책에 켜 두면 **A1 과 A4 가 같은 실험이 되고**, A4 가 오탐 비용의
+기준선이므로 **H5a·H5b 측정이 함께 흔들린다.**
+
+```bash
+# ── A1 셀: HPA 켬 ─────────────────────────────────────────
+kubectl apply -f 30-hpa.yaml
+
+# ── A2~A6 셀: HPA 끔 + replicas 리셋 ──────────────────────
+kubectl -n cascade delete hpa --all --ignore-not-found
+
+# ⚠️ 삭제만으로는 부족하다. HPA 가 올려놓은 replicas 가 그대로 남는다.
+for d in gateway order inventory payment notification; do
+  kubectl -n cascade scale deployment "$d" --replicas=1
+done
+kubectl -n cascade rollout status deployment/payment
+```
+
+**리셋을 빠뜨리면 조용히 틀린다.** `runBatch.py` 가 셀 순서를 시드로
+무작위화하므로, 앞 셀의 잔여 레플리카가 뒤 셀에 섞여 들어가도 특정 정책에
+쏠리지 않는다 — 즉 **눈에 보이는 이상 없이 분산만 커진다.** 셀 시작 시
+`replicas == 1` 을 단정하고 아니면 셀을 실패로 남기는 편이 안전하다.
+
+> `assistant` 는 애초에 HPA 대상이 아니다(레플리카 1 고정, `scaling: fixed-replica`).
+> 위 리셋 루프에서도 제외한다 — §4-6 의 `m_scale-out = 0` 을 만드는 설계 결정이다.
 
 ## 검증
 

@@ -66,7 +66,7 @@ import sys
 
 import numpy as np
 from sklearn.metrics import f1_score
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import StratifiedGroupKFold
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
@@ -153,20 +153,36 @@ def verifyLayout(matrix: np.ndarray) -> None:
 
 def crossValidatedF1(matrix: np.ndarray, labels: np.ndarray, groups: np.ndarray,
                      folds: int, ensembleSize: int, average: str) -> tuple[float, float]:
-    """에피소드 단위 GroupKFold. 같은 에피소드가 학습과 평가에 동시에 들어가면
-    표본이 상관돼 있어 성능이 부풀려진다."""
-    splitter = GroupKFold(n_splits=min(folds, len(set(groups.tolist()))))
-    scores = []
+    """에피소드 단위 **StratifiedGroupKFold**.
+
+    에피소드를 쪼개지 않는 것(그룹)과 라벨 분포를 fold 간에 맞추는 것(층화)이
+    **둘 다** 필요하다.
+
+    ⚠️ 종전에 ``GroupKFold`` 를 썼고 **조용히 틀렸다.** 이 데이터는 에피소드
+    하나가 시나리오 하나라 라벨이 그룹에 완전히 쏠려 있고(S3 를 가진 에피소드가
+    34개 중 8개), ``GroupKFold`` 는 그룹 크기만 맞추고 라벨은 보지 않는다.
+    그 결과 **fold 0 의 평가 집합에 S3 가 0개**가 되어 그 fold 의 macro F1 이
+    S3 몫 0 을 그대로 먹었다 — 표준편차 ±0.204 의 정체가 그것이었다.
+
+    각 fold 의 평가 집합이 두 클래스를 갖는지 **확인하고 아니면 세지 않는다.**
+    세어 버리면 지표가 아니라 fold 운에 성능이 좌우된다.
+    """
+    usableGroups = len(set(groups.tolist()))
+    splitter = StratifiedGroupKFold(n_splits=min(folds, usableGroups),
+                                    shuffle=True, random_state=RANDOM_SEED)
+    scores, skipped = [], 0
     for trainIndex, testIndex in splitter.split(matrix, labels, groups):
-        trainY = labels[trainIndex]
-        if len(np.unique(trainY)) < 2:
+        trainY, testY = labels[trainIndex], labels[testIndex]
+        if len(np.unique(trainY)) < 2 or len(np.unique(testY)) < 2:
+            skipped += 1
             continue
         models = buildEnsemble(matrix[trainIndex], trainY, size=ensembleSize)
         predicted = predictEnsemble(models, matrix[testIndex])
-        scores.append(f1_score(labels[testIndex], predicted,
-                               average=average, zero_division=0))
+        scores.append(f1_score(testY, predicted, average=average, zero_division=0))
     if not scores:
         return float("nan"), float("nan")
+    if skipped:
+        print(f"    ⚠️ fold {skipped}개를 뺐다 — 한쪽에 클래스가 하나뿐이었다", flush=True)
     return float(np.mean(scores)), float(np.std(scores))
 
 
@@ -188,10 +204,27 @@ def sweepSubsets(matrix: np.ndarray, labels: np.ndarray, groups: np.ndarray,
 
 
 def report(results: list[dict], fullMean: float, retention: float, title: str) -> dict | None:
-    """크기순으로 가장 작은 '쓸 만한' 집합을 찾는다."""
-    threshold = fullMean * retention
+    """크기순으로 가장 작은 '쓸 만한' 집합을 찾는다.
+
+    ⚠️ **기준은 전체 집합이 아니라 최고 부분집합이다.** 종전에는 전체 집합의
+    95% 를 기준으로 삼았는데, 이 데이터에서는 **전체 집합이 과적합으로 열화**돼
+    있어(지표를 더 주면 F1 이 내려간다) 기준이 너무 낮았다. 그 결과 과제 2 에서
+    **크기 1까지 31개 전부 통과**해 "최소"가 무의미해졌다.
+    """
+    usable = [r for r in results if not np.isnan(r["mean"])]
+    if not usable:
+        print(f"\n━━━ {title} ━━━\n평가 가능한 부분집합이 없다")
+        return None
+    bestRow = max(usable, key=lambda r: r["mean"])
+    bestMean = bestRow["mean"]
+    threshold = bestMean * retention
     print(f"\n━━━ {title} ━━━")
-    print(f"전체 집합(f1·f2·f3·f4·f6) = {fullMean:.3f} / 보존 기준 {retention:.0%} → {threshold:.3f}\n")
+    print(f"전체 집합(f1·f2·f3·f4·f6) = {fullMean:.3f}")
+    print(f"최고 부분집합             = {bestMean:.3f}  ({'+'.join(bestRow['slots'])})")
+    if bestMean > fullMean + 0.005:
+        print(f"⚠️ **최고 부분집합이 전체 집합보다 {bestMean - fullMean:+.3f} 높다** — "
+              "지표를 더 주면 성능이 내려간다는 뜻이므로 과적합 신호다")
+    print(f"보존 기준 {retention:.0%} (최고 대비) → {threshold:.3f}\n")
 
     print(f"{'크기':<5}{'슬롯':<34}{'F1':>7}{'표준편차':>9}{'열':>5}")
     bySize: dict[int, list[dict]] = {}
@@ -204,17 +237,30 @@ def report(results: list[dict], fullMean: float, retention: float, title: str) -
         print(f"{size:<5}{slots:<34}{best['mean']:>7.3f}{best['std']:>9.3f}"
               f"{best['columns']:>5} {mark}  (크기 {size} 중 최고)")
 
-    passing = [r for r in results if not np.isnan(r["mean"]) and r["mean"] >= threshold]
+    passing = [r for r in usable if r["mean"] >= threshold]
     if not passing:
-        print(f"\n⚠️ 기준 {threshold:.3f} 를 넘는 부분집합이 없다. "
-              "전체 집합이 필요하다는 뜻이거나 기준이 과하다")
+        print(f"\n⚠️ 기준 {threshold:.3f} 를 넘는 부분집합이 없다 — 기준이 과하다")
         return None
     minimal = min(passing, key=lambda r: (r["size"], -r["mean"]))
     print(f"\n**최소 관측 집합 = {'+'.join(minimal['slots'])}** "
           f"({len(minimal['slots'])}종, F1 {minimal['mean']:.3f}, "
-          f"전체의 {minimal['mean'] / fullMean:.1%})")
+          f"최고 대비 {minimal['mean'] / bestMean:.1%} / 전체 대비 "
+          f"{minimal['mean'] / fullMean:.1%})")
     for slot in minimal["slots"]:
         print(f"    {slot}  {SLOT_LABELS[slot]}")
+
+    # 크기만으로 고르면 **불안정한 쪽을 고를 수 있다.** 기준선을 간신히 넘은 작은
+    # 집합과, 하나 더 써서 분산이 절반인 집합은 운영 권고로서 가치가 다르다.
+    steadier = [r for r in passing
+                if r["size"] > minimal["size"] and r["mean"] >= minimal["mean"]
+                and r["std"] <= minimal["std"] * 0.7]
+    if steadier:
+        better = min(steadier, key=lambda r: (r["size"], r["std"]))
+        print(f"\n⚠️ **크기 기준만 보면 위가 최소지만 분산이 크다.** "
+              f"{'+'.join(better['slots'])} 는 지표 {better['size'] - minimal['size']}종을 "
+              f"더 쓰는 대신 F1 {better['mean']:.3f}(+{better['mean'] - minimal['mean']:.3f})에 "
+              f"표준편차 {better['std']:.3f}(최소 집합 {minimal['std']:.3f}의 "
+              f"{better['std'] / minimal['std']:.0%})다 — **운영 권고로는 이쪽이다**")
     return minimal
 
 
@@ -326,6 +372,20 @@ def main() -> int:
     if len(binaryValues) < 2:
         print("⚠️ S1 과 S3 가 모두 있지 않아 이진 과제가 성립하지 않는다")
         return 0
+
+    # 표본 수가 아니라 **에피소드 수**가 교차검증의 실제 자유도다. 에피소드 하나가
+    # 시나리오 하나이므로 S3 에피소드가 적으면 fold 마다 같은 몇 개를 돌려쓴다.
+    episodesWith = {name: len({g for g, l in zip(binaryGroups, binaryLabels) if l == name})
+                    for name in binaryValues}
+    print("클래스별 에피소드 수: " + ", ".join(
+        f"{k} {v}개" for k, v in sorted(episodesWith.items())))
+    thin = min(episodesWith.values())
+    if thin < arguments.folds * 3:
+        print(f"🔴 **이진 과제의 결론은 확정으로 보지 않는다.** 가장 적은 클래스의 "
+              f"에피소드가 {thin}개뿐이라 fold({arguments.folds})당 "
+              f"{thin / arguments.folds:.1f}개로 쪼개진다 — 표준편차가 크게 나오고 "
+              f"부분집합 간 차이가 그 안에 묻힌다. **게이트 ② 에서 S3 에피소드를 "
+              f"더 모아야 한다**(목표 {arguments.folds * 3}개 이상)")
 
     binaryFull, binaryFullStd = crossValidatedF1(
         binaryMatrix[:, fullColumns], binaryLabels, binaryGroups,

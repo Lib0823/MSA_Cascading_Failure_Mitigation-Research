@@ -53,8 +53,13 @@ RESULTS_DIR = HERE / "results"
 RUN_STAMP = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 REMEDIATION_NODE = "orders"   # 적용 지점 — 위험 노드(payment)의 호출자 (§2-C)
-REMEDIATIONS = ("NONE", "BULKHEAD", "CIRCUIT_BREAKER")
+REMEDIATIONS = ("NONE", "BULKHEAD", "CIRCUIT_BREAKER", "BROWNOUT")
+# `normal` 은 **장애 없이 조치만** 거는 축이다 — 그것이 `Dₐ`(= H5a, 즉시 비용)의
+# 정의다(§4-5). runCell 은 scenario 가 s1·s3 가 아니면 주입을 건너뛰므로 자연히
+# "장애 없는데 개입" 이 된다. 아래 주석이 지적한 바로 그 상황을 **의도적으로**
+# 만드는 것이다.
 SCENARIOS = ("s1", "s3")
+KNOWN_SCENARIOS = ("normal", "s1", "s3")
 
 
 def setRemediation(action: str) -> None:
@@ -135,6 +140,35 @@ def runCell(scenario: str, remediation: str, arguments: argparse.Namespace) -> d
     return cell
 
 
+def cellKey(scenario: str, remediation: str) -> str:
+    return f"{scenario}|{remediation}"
+
+
+def readLedger(path: pathlib.Path) -> dict[str, dict]:
+    """완료 기록을 읽는다. 깨진 줄은 건너뛴다 — kill 당한 순간의 반쪽 줄일 수 있다."""
+    done: dict[str, dict] = {}
+    if not path.exists():
+        return done
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("cellKey"):
+            done[entry["cellKey"]] = entry
+    return done
+
+
+def appendLedger(path: pathlib.Path, entry: dict) -> None:
+    """완료 즉시 append + flush + fsync. 중간에 죽어도 끝낸 셀은 남는다."""
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="H5b 조치 오선택 비용 측정")
     parser.add_argument("--scenarios", default=",".join(SCENARIOS))
@@ -146,6 +180,8 @@ def main() -> int:
     parser.add_argument("--maxConnections", type=int, default=30)
     parser.add_argument("--hogSessions", type=int, default=24)
     parser.add_argument("--faultDelayMillis", type=int, default=400)
+    parser.add_argument("--resume", action="store_true",
+                        help="원장에 있는 셀은 건너뛴다 — 중단된 실행을 이어 받는다")
     parser.add_argument("--bulkheadMaxConcurrent", type=int, default=6,
                         help="장애 중 가용 커넥션 수 이하여야 구제가 된다")
     arguments = parser.parse_args()
@@ -153,15 +189,43 @@ def main() -> int:
     scenarios = [s.strip() for s in arguments.scenarios.split(",") if s.strip()]
     remediations = [r.strip().upper() for r in arguments.remediations.split(",") if r.strip()]
 
-    cells = []
-    for scenario in scenarios:
-        for remediation in remediations:
-            cells.append(runCell(scenario, remediation, arguments))
+    unknownScenario = [s for s in scenarios if s not in KNOWN_SCENARIOS]
+    unknownRemediation = [r for r in remediations if r not in REMEDIATIONS]
+    if unknownScenario or unknownRemediation:
+        print(f"❌ 모르는 이름 — 시나리오 {unknownScenario} / 조치 {unknownRemediation}")
+        print(f"   가능: 시나리오 {list(KNOWN_SCENARIOS)} / 조치 {list(REMEDIATIONS)}")
+        return 1
 
     RESULTS_DIR.mkdir(exist_ok=True)
+    ledgerPath = RESULTS_DIR / "remediation-ledger.jsonl"
+    done = readLedger(ledgerPath)
+    plan = [(s, r) for s in scenarios for r in remediations]
+    pending = [(s, r) for s, r in plan if cellKey(s, r) not in done]
+    if arguments.resume and len(pending) < len(plan):
+        print(f"원장에서 완료 {len(plan) - len(pending)} 건 확인 → 남은 {len(pending)} 셀")
+    elif not arguments.resume:
+        pending = plan
+    print(f"셀 {len(pending)}개 / 셀당 약 "
+          f"{(arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1:.1f}분"
+          f" → 예상 {len(pending) * ((arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1) / 60:.1f}시간\n")
+
+    cells = []
+    for scenario, remediation in pending:
+        try:
+            cell = runCell(scenario, remediation, arguments)
+        except Exception as error:   # 한 셀의 실패가 나머지를 죽이지 않게 한다
+            print(f"  ❌ {scenario}×{remediation} 실패: {error}", flush=True)
+            continue
+        cell["cellKey"] = cellKey(scenario, remediation)
+        cells.append(cell)
+        # **셀마다 기록한다.** 종전에는 전부 돌린 뒤 한 번에 썼으므로 중간에
+        # 멈추면 그때까지의 작업이 전부 사라졌다(노트북 sleep·kill·전원).
+        appendLedger(ledgerPath, cell)
+
     path = RESULTS_DIR / f"remediation-{RUN_STAMP}.json"
     path.write_text(json.dumps(cells, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n기록: {path}")
+    print(f"\n{len(cells)} 셀 완료. 기록: {path}")
+    print(f"원장(누적): {ledgerPath}")
     return 0
 
 

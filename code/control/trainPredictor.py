@@ -32,7 +32,7 @@ import sys
 
 import joblib
 import numpy as np
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import StratifiedGroupKFold
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "model"))
@@ -40,6 +40,7 @@ sys.path.insert(0, str(HERE.parent / "chain"))
 
 import buildDataset  # noqa: E402
 import compareTiers  # noqa: E402
+import episodeValidity  # noqa: E402
 
 DEFAULT_ARTIFACT = HERE / "predictor.joblib"
 
@@ -57,6 +58,10 @@ def main() -> int:
     parser.add_argument("--latencyMultiplier", type=float, default=2.0)
     parser.add_argument("--errorRateThreshold", type=float, default=0.05)
     parser.add_argument("--precursorMultiplier", type=float, default=1.5)
+    # 기준선이 참조로 부적격인 에피소드는 `f3`·`f4` 가 그 기준선으로 정규화되므로
+    # **feature 가 틀린다**([[research/challenges.md]] J17). 기본으로 뺀다.
+    parser.add_argument("--keepInvalid", action="store_true",
+                        help="유효성 판정에서 탈락한 에피소드도 학습에 넣는다(대조용)")
     arguments = parser.parse_args()
 
     chainDir = pathlib.Path(arguments.chainDir).resolve()
@@ -64,6 +69,20 @@ def main() -> int:
     if not episodes:
         print("에피소드가 없다. code/chain 을 먼저 돌려야 한다.")
         return 1
+
+    if arguments.keepInvalid:
+        print("⚠️ 유효성 탈락 에피소드를 포함해 학습한다(--keepInvalid) — 대조용")
+    else:
+        invalid = episodeValidity.invalidTracePaths(chainDir)
+        kept = [e for e in episodes if e["episodeKey"] not in invalid]
+        dropped = len(episodes) - len(kept)
+        episodes = kept
+        if dropped:
+            print(f"🔴 유효성 탈락 {dropped}개를 뺐다 — 장애가 느려지지 않아 기준선이 "
+                  f"참조로 부적격이다 (code/model/episodeValidity.py)")
+        if not episodes:
+            print("유효한 에피소드가 없다.")
+            return 1
 
     features, labels, groups = [], [], []
     for index, episode in enumerate(episodes):
@@ -85,8 +104,13 @@ def main() -> int:
         models = compareTiers.buildEnsemble(featureMatrix, labelArray,
                                             size=arguments.ensembleSize)
     else:
-        # 보정기는 base 가 보지 않은 표본으로 학습해야 한다. 에피소드 단위로 쪼갠다.
-        splitter = GroupKFold(n_splits=3)
+        # 보정기는 base 가 보지 않은 표본으로 학습해야 한다. 에피소드 단위로
+        # 쪼개되 **층화**한다 — 이 데이터는 에피소드 하나가 시나리오 하나라 라벨이
+        # 그룹에 쏠려 있어(S3 는 12개 에피소드에만 있다) 단순 GroupKFold 로는
+        # 보정 표본에 클래스가 빠질 수 있다. 아래 가드가 그때 ValueError 로
+        # 실패하므로 조용히 틀리지는 않으나, **학습이 아예 안 되는 것**도 곤란하다.
+        splitter = StratifiedGroupKFold(n_splits=3, shuffle=True,
+                                        random_state=compareTiers.RANDOM_SEED)
         fitLocal, calibLocal = next(iter(splitter.split(featureMatrix, labelArray, groupArray)))
         assert not (set(groupArray[fitLocal]) & set(groupArray[calibLocal])), "fit∩calib 누수"
         models = compareTiers.buildCalibratedEnsemble(

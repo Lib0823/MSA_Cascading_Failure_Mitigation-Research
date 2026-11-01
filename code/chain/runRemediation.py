@@ -140,6 +140,39 @@ def runCell(scenario: str, remediation: str, arguments: argparse.Namespace) -> d
     return cell
 
 
+def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float) -> bool:
+    """호스트가 조용해질 때까지 기다린다. §4-1 의 측정 유효성 프로토콜.
+
+    **이것이 J17 의 재발 방지다.** 정상 구간 기준선이 호스트 경쟁으로 밀려 올라가면
+    `f3`·`f4` 가 그 기준선으로 정규화되어 **feature 가 조용히 틀린다.** Spotlight
+    재인덱싱이나 다른 빌드가 도는 중에 재면 쓸 수 없는 데이터가 쌓인다.
+
+    `os.getloadavg()` 를 쓴다 — 의존성이 없고 macOS·Linux 모두에서 돈다.
+    """
+    coreCount = os.cpu_count() or 1
+    ceiling = coreCount * maxLoadRatio
+    deadline = time.time() + timeoutSeconds
+    while True:
+        load = os.getloadavg()[0]
+        if load <= ceiling:
+            print(f"✅ 호스트 부하 {load:.2f} / 상한 {ceiling:.2f}"
+                  f" ({coreCount}코어 × {maxLoadRatio}) — 측정 시작", flush=True)
+            return True
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            print(f"🔴 호스트 부하가 {timeoutSeconds:.0f}초 동안 내려오지 않았다 "
+                  f"(현재 {load:.2f} > 상한 {ceiling:.2f}).", flush=True)
+            print("   이 상태로 재면 정상 구간 기준선이 오염된다 "
+                  "(research/challenges.md J17).", flush=True)
+            print("   무엇이 쓰고 있는지 보라: ps -Ao %cpu,comm -r | head", flush=True)
+            print("   그래도 돌리려면 --maxLoadRatio 를 올리거나 --skipLoadCheck 를 쓴다.",
+                  flush=True)
+            return False
+        print(f"⏳ 호스트 부하 {load:.2f} > 상한 {ceiling:.2f} — 대기 "
+              f"(남은 {remaining:.0f}초)", flush=True)
+        time.sleep(10.0)
+
+
 def cellKey(scenario: str, remediation: str) -> str:
     return f"{scenario}|{remediation}"
 
@@ -180,6 +213,13 @@ def main() -> int:
     parser.add_argument("--maxConnections", type=int, default=30)
     parser.add_argument("--hogSessions", type=int, default=24)
     parser.add_argument("--faultDelayMillis", type=int, default=400)
+    # 호스트가 포화인 상태로 재면 기준선이 오염된다(J17). 기본으로 막는다.
+    parser.add_argument("--maxLoadRatio", type=float, default=0.5,
+                        help="허용 load average = 코어 수 × 이 값")
+    parser.add_argument("--loadWaitSeconds", type=float, default=300.0,
+                        help="부하가 내려오기를 기다리는 시간")
+    parser.add_argument("--skipLoadCheck", action="store_true",
+                        help="부하 점검을 건너뛴다 — 오염을 감수한다는 뜻이다")
     parser.add_argument("--resume", action="store_true",
                         help="원장에 있는 셀은 건너뛴다 — 중단된 실행을 이어 받는다")
     parser.add_argument("--bulkheadMaxConcurrent", type=int, default=6,
@@ -194,6 +234,11 @@ def main() -> int:
     if unknownScenario or unknownRemediation:
         print(f"❌ 모르는 이름 — 시나리오 {unknownScenario} / 조치 {unknownRemediation}")
         print(f"   가능: 시나리오 {list(KNOWN_SCENARIOS)} / 조치 {list(REMEDIATIONS)}")
+        return 1
+
+    if arguments.skipLoadCheck:
+        print("⚠️ 부하 점검을 건너뛴다(--skipLoadCheck) — 기준선 오염을 감수한다")
+    elif not waitForQuietHost(arguments.maxLoadRatio, arguments.loadWaitSeconds):
         return 1
 
     RESULTS_DIR.mkdir(exist_ok=True)

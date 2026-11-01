@@ -1,34 +1,81 @@
 {
-  "cells": 6,
+  "cells": 20,
   "settleSeconds": 10.0,
-  "hostSaturationMax": 0.0,
+  "hostSaturationMax": 0.315,
   "report": {
+    "A2": {
+      "normalDecisions": 120,
+      "normalActionShare": 0.0,
+      "faultDecisions": 165,
+      "faultActionShare": 0.6303030303030303,
+      "holdShareMedian": 0.6376811594202898,
+      "appliedTotal": 30,
+      "holdShareValues": [
+        0.6376811594202898,
+        0.6376811594202898,
+        0.6376811594202898,
+        0.6376811594202898,
+        0.6521739130434783
+      ],
+      "goodputMedian": 187.61756831062033,
+      "p95Median": 401.2712500007183,
+      "errorRateMedian": 0.0,
+      "goodputSpread": "187~188",
+      "p95Spread": "399~404"
+    },
     "A4": {
       "normalDecisions": 0,
       "normalActionShare": NaN,
       "faultDecisions": 0,
       "faultActionShare": NaN,
-      "goodputMedian": 206.9659224142699,
-      "p95Median": 483.7492913939059,
-      "errorRateMedian": 0.0
+      "holdShareMedian": null,
+      "appliedTotal": 0,
+      "holdShareValues": [],
+      "goodputMedian": 195.98343756218162,
+      "p95Median": 336.8455420022656,
+      "errorRateMedian": 0.0,
+      "goodputSpread": "196~199",
+      "p95Spread": "323~339"
     },
     "A5": {
-      "normalDecisions": 48,
-      "normalActionShare": 0.6666666666666666,
-      "faultDecisions": 66,
-      "faultActionShare": 0.8181818181818182,
-      "goodputMedian": 45.74043419047961,
-      "p95Median": 3318.5971250059083,
-      "errorRateMedian": 0.3969027159751549
+      "normalDecisions": 120,
+      "normalActionShare": 0.975,
+      "faultDecisions": 165,
+      "faultActionShare": 1.0,
+      "holdShareMedian": 0.0,
+      "appliedTotal": 57,
+      "holdShareValues": [
+        0.0,
+        0.0,
+        0.0,
+        0.028985507246376812,
+        0.043478260869565216
+      ],
+      "goodputMedian": 184.72633425315476,
+      "p95Median": 393.56074999886914,
+      "errorRateMedian": 0.031967248813205,
+      "goodputSpread": "175~188",
+      "p95Spread": "361~401"
     },
     "A6": {
-      "normalDecisions": 48,
-      "normalActionShare": 0.9583333333333334,
-      "faultDecisions": 63,
-      "faultActionShare": 0.9841269841269841,
-      "goodputMedian": 44.711464962778635,
-      "p95Median": 3350.4557500127703,
-      "errorRateMedian": 0.4541232415122459
+      "normalDecisions": 120,
+      "normalActionShare": 1.0,
+      "faultDecisions": 165,
+      "faultActionShare": 1.0,
+      "holdShareMedian": 0.0,
+      "appliedTotal": 31,
+      "holdShareValues": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "goodputMedian": 183.5650125336066,
+      "p95Median": 397.78887500142446,
+      "errorRateMedian": 0.029185867895545316,
+      "goodputSpread": "175~185",
+      "p95Spread": "383~400"
     }
   }
 }

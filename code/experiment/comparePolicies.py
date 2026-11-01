@@ -66,9 +66,17 @@ GATED = {"A5", "A6"}
 RULE_BASED = {"A2"}
 
 
-def cohortOf(cell: dict) -> tuple[str, object]:
-    """셀이 속한 비교 단위. 이것이 다르면 중앙값을 함께 내면 안 된다."""
-    return (cell.get("scenario"), (cell.get("entryLoad") or {}).get("workerCount"))
+def cohortOf(cell: dict) -> tuple:
+    """셀이 속한 비교 단위. 이것이 다르면 중앙값을 함께 내면 안 된다.
+
+    🔴 **엔진 파라미터 지문도 코호트다** (2026-11-02). `Dₐ` 를 배선하고 A5 를 다시
+    돌리면 `cellKey` 가 같아서 **원장만 보고는 배선 전 셀과 구분되지 않는다.**
+    지문이 없는 셀(배선 이전)은 `"배선전"` 으로 묶는다.
+    """
+    profiles = cell.get("actionProfiles") or {}
+    return (cell.get("scenario"),
+            (cell.get("entryLoad") or {}).get("workerCount"),
+            profiles.get("digest") or "배선전")
 
 
 def holdShareOf(cell: dict) -> float:
@@ -139,6 +147,8 @@ def main() -> int:
     parser.add_argument("--settleSeconds", type=float, default=10.0)
     parser.add_argument("--scenario", default=None, help="이 시나리오만 본다 (예: s1)")
     parser.add_argument("--workers", type=int, default=None, help="이 부하 수준만 본다")
+    parser.add_argument("--digest", default=None,
+                        help="이 엔진 파라미터 지문만 본다. '배선전' 은 지문 없는 셀")
     parser.add_argument("--pool", action="store_true",
                         help="🔴 코호트가 섞여도 강행한다. goodput 중앙값이 무의미해진다")
     arguments = parser.parse_args()
@@ -158,6 +168,8 @@ def main() -> int:
     if arguments.workers is not None:
         cells = [c for c in cells
                  if (c.get("entryLoad") or {}).get("workerCount") == arguments.workers]
+    if arguments.digest:
+        cells = [c for c in cells if cohortOf(c)[2] == arguments.digest]
     if not cells:
         print("그 조건에 맞는 셀이 없다.")
         return 1
@@ -165,15 +177,17 @@ def main() -> int:
     cohorts: dict[tuple, list[dict]] = collections.defaultdict(list)
     for cell in cells:
         cohorts[cohortOf(cell)].append(cell)
-    print(f"{'시나리오':<10}{'워커':>6}{'셀':>5}  정책")
-    for (scenario, workers), group in sorted(cohorts.items(), key=lambda kv: str(kv[0])):
+    print(f"{'시나리오':<10}{'워커':>6}{'엔진 지문':<14}{'셀':>5}  정책")
+    for (scenario, workers, digest), group in sorted(cohorts.items(), key=lambda kv: str(kv[0])):
         policies = ",".join(sorted({c["policy"] for c in group}))
-        print(f"{str(scenario):<10}{str(workers):>6}{len(group):>5}  {policies}")
+        print(f"{str(scenario):<10}{str(workers):>6}  {str(digest):<12}{len(group):>5}  {policies}")
     if len(cohorts) > 1 and not arguments.pool:
         print("\n🔴 **코호트가 둘 이상이다.** `goodput` 은 워커 수에 직접 종속되므로")
         print("   이들의 중앙값을 함께 내면 그 값은 아무것도 뜻하지 않는다.")
+        print("   **엔진 지문이 다른 것은 더 심각하다** — 같은 `cellKey` 인데 다른 `Dₐ`")
+        print("   로 만들어진 셀이므로 `θ` 가 다르다. 보류율을 함께 내면 안 된다.")
         print("   하나를 고르거나, 섞는 것을 감수한다고 명시하라 —")
-        print("     --scenario s1 --workers 32")
+        print("     --scenario s1 --workers 32 --digest <지문>")
         print("     --pool            (🔴 섞음을 감수한다)")
         return 1
     if len(cohorts) > 1:

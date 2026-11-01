@@ -177,7 +177,7 @@ def main() -> int:
     cohorts: dict[tuple, list[dict]] = collections.defaultdict(list)
     for cell in cells:
         cohorts[cohortOf(cell)].append(cell)
-    print(f"{'시나리오':<10}{'워커':>6}{'엔진 지문':<14}{'셀':>5}  정책")
+    print(f"{'시나리오':<10}{'워커':>6}  {'엔진 지문':<13}{'셀':>4}  정책")
     for (scenario, workers, digest), group in sorted(cohorts.items(), key=lambda kv: str(kv[0])):
         policies = ",".join(sorted({c["policy"] for c in group}))
         print(f"{str(scenario):<10}{str(workers):>6}  {str(digest):<12}{len(group):>5}  {policies}")

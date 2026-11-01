@@ -53,8 +53,13 @@ RESULTS_DIR = HERE / "results"
 RUN_STAMP = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 REMEDIATION_NODE = "orders"   # 적용 지점 — 위험 노드(payment)의 호출자 (§2-C)
-REMEDIATIONS = ("NONE", "BULKHEAD", "CIRCUIT_BREAKER")
+REMEDIATIONS = ("NONE", "BULKHEAD", "CIRCUIT_BREAKER", "BROWNOUT")
+# `normal` 은 **장애 없이 조치만** 거는 축이다 — 그것이 `Dₐ`(= H5a, 즉시 비용)의
+# 정의다(§4-5). runCell 은 scenario 가 s1·s3 가 아니면 주입을 건너뛰므로 자연히
+# "장애 없는데 개입" 이 된다. 아래 주석이 지적한 바로 그 상황을 **의도적으로**
+# 만드는 것이다.
 SCENARIOS = ("s1", "s3")
+KNOWN_SCENARIOS = ("normal", "s1", "s3")
 
 
 def setRemediation(action: str) -> None:
@@ -135,6 +140,68 @@ def runCell(scenario: str, remediation: str, arguments: argparse.Namespace) -> d
     return cell
 
 
+def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float) -> bool:
+    """호스트가 조용해질 때까지 기다린다. §4-1 의 측정 유효성 프로토콜.
+
+    **이것이 J17 의 재발 방지다.** 정상 구간 기준선이 호스트 경쟁으로 밀려 올라가면
+    `f3`·`f4` 가 그 기준선으로 정규화되어 **feature 가 조용히 틀린다.** Spotlight
+    재인덱싱이나 다른 빌드가 도는 중에 재면 쓸 수 없는 데이터가 쌓인다.
+
+    `os.getloadavg()` 를 쓴다 — 의존성이 없고 macOS·Linux 모두에서 돈다.
+    """
+    coreCount = os.cpu_count() or 1
+    ceiling = coreCount * maxLoadRatio
+    deadline = time.time() + timeoutSeconds
+    while True:
+        load = os.getloadavg()[0]
+        if load <= ceiling:
+            print(f"✅ 호스트 부하 {load:.2f} / 상한 {ceiling:.2f}"
+                  f" ({coreCount}코어 × {maxLoadRatio}) — 측정 시작", flush=True)
+            return True
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            print(f"🔴 호스트 부하가 {timeoutSeconds:.0f}초 동안 내려오지 않았다 "
+                  f"(현재 {load:.2f} > 상한 {ceiling:.2f}).", flush=True)
+            print("   이 상태로 재면 정상 구간 기준선이 오염된다 "
+                  "(research/challenges.md J17).", flush=True)
+            print("   무엇이 쓰고 있는지 보라: ps -Ao %cpu,comm -r | head", flush=True)
+            print("   그래도 돌리려면 --maxLoadRatio 를 올리거나 --skipLoadCheck 를 쓴다.",
+                  flush=True)
+            return False
+        print(f"⏳ 호스트 부하 {load:.2f} > 상한 {ceiling:.2f} — 대기 "
+              f"(남은 {remaining:.0f}초)", flush=True)
+        time.sleep(10.0)
+
+
+def cellKey(scenario: str, remediation: str) -> str:
+    return f"{scenario}|{remediation}"
+
+
+def readLedger(path: pathlib.Path) -> dict[str, dict]:
+    """완료 기록을 읽는다. 깨진 줄은 건너뛴다 — kill 당한 순간의 반쪽 줄일 수 있다."""
+    done: dict[str, dict] = {}
+    if not path.exists():
+        return done
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("cellKey"):
+            done[entry["cellKey"]] = entry
+    return done
+
+
+def appendLedger(path: pathlib.Path, entry: dict) -> None:
+    """완료 즉시 append + flush + fsync. 중간에 죽어도 끝낸 셀은 남는다."""
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="H5b 조치 오선택 비용 측정")
     parser.add_argument("--scenarios", default=",".join(SCENARIOS))
@@ -146,6 +213,15 @@ def main() -> int:
     parser.add_argument("--maxConnections", type=int, default=30)
     parser.add_argument("--hogSessions", type=int, default=24)
     parser.add_argument("--faultDelayMillis", type=int, default=400)
+    # 호스트가 포화인 상태로 재면 기준선이 오염된다(J17). 기본으로 막는다.
+    parser.add_argument("--maxLoadRatio", type=float, default=0.5,
+                        help="허용 load average = 코어 수 × 이 값")
+    parser.add_argument("--loadWaitSeconds", type=float, default=300.0,
+                        help="부하가 내려오기를 기다리는 시간")
+    parser.add_argument("--skipLoadCheck", action="store_true",
+                        help="부하 점검을 건너뛴다 — 오염을 감수한다는 뜻이다")
+    parser.add_argument("--resume", action="store_true",
+                        help="원장에 있는 셀은 건너뛴다 — 중단된 실행을 이어 받는다")
     parser.add_argument("--bulkheadMaxConcurrent", type=int, default=6,
                         help="장애 중 가용 커넥션 수 이하여야 구제가 된다")
     arguments = parser.parse_args()
@@ -153,15 +229,48 @@ def main() -> int:
     scenarios = [s.strip() for s in arguments.scenarios.split(",") if s.strip()]
     remediations = [r.strip().upper() for r in arguments.remediations.split(",") if r.strip()]
 
-    cells = []
-    for scenario in scenarios:
-        for remediation in remediations:
-            cells.append(runCell(scenario, remediation, arguments))
+    unknownScenario = [s for s in scenarios if s not in KNOWN_SCENARIOS]
+    unknownRemediation = [r for r in remediations if r not in REMEDIATIONS]
+    if unknownScenario or unknownRemediation:
+        print(f"❌ 모르는 이름 — 시나리오 {unknownScenario} / 조치 {unknownRemediation}")
+        print(f"   가능: 시나리오 {list(KNOWN_SCENARIOS)} / 조치 {list(REMEDIATIONS)}")
+        return 1
+
+    if arguments.skipLoadCheck:
+        print("⚠️ 부하 점검을 건너뛴다(--skipLoadCheck) — 기준선 오염을 감수한다")
+    elif not waitForQuietHost(arguments.maxLoadRatio, arguments.loadWaitSeconds):
+        return 1
 
     RESULTS_DIR.mkdir(exist_ok=True)
+    ledgerPath = RESULTS_DIR / "remediation-ledger.jsonl"
+    done = readLedger(ledgerPath)
+    plan = [(s, r) for s in scenarios for r in remediations]
+    pending = [(s, r) for s, r in plan if cellKey(s, r) not in done]
+    if arguments.resume and len(pending) < len(plan):
+        print(f"원장에서 완료 {len(plan) - len(pending)} 건 확인 → 남은 {len(pending)} 셀")
+    elif not arguments.resume:
+        pending = plan
+    print(f"셀 {len(pending)}개 / 셀당 약 "
+          f"{(arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1:.1f}분"
+          f" → 예상 {len(pending) * ((arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1) / 60:.1f}시간\n")
+
+    cells = []
+    for scenario, remediation in pending:
+        try:
+            cell = runCell(scenario, remediation, arguments)
+        except Exception as error:   # 한 셀의 실패가 나머지를 죽이지 않게 한다
+            print(f"  ❌ {scenario}×{remediation} 실패: {error}", flush=True)
+            continue
+        cell["cellKey"] = cellKey(scenario, remediation)
+        cells.append(cell)
+        # **셀마다 기록한다.** 종전에는 전부 돌린 뒤 한 번에 썼으므로 중간에
+        # 멈추면 그때까지의 작업이 전부 사라졌다(노트북 sleep·kill·전원).
+        appendLedger(ledgerPath, cell)
+
     path = RESULTS_DIR / f"remediation-{RUN_STAMP}.json"
     path.write_text(json.dumps(cells, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n기록: {path}")
+    print(f"\n{len(cells)} 셀 완료. 기록: {path}")
+    print(f"원장(누적): {ledgerPath}")
     return 0
 
 

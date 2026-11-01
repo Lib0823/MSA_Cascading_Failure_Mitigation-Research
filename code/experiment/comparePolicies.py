@@ -23,6 +23,26 @@ H5a 의 정의가 그렇다 (§0-1)
 
 따라서 **주입 이전 구간**의 조치 횟수가 직접 재료다. 장애 구간의 조치는
 오탐이 아니므로 섞으면 안 된다.
+
+🔴 코호트를 섞지 않는다 (2026-11-02)
+=====================================
+
+종전에는 원장의 모든 셀을 `policy` 로만 묶었다. **원장에 부하 수준이나 시나리오가
+다른 셀이 함께 있으면 조용히 틀린 숫자가 나온다.**
+
+실제로 2026-11-02 현재 원장에는 두 코호트가 있다.
+
+==========  =====  ======  ==================================
+시나리오     워커    반복    비고
+==========  =====  ======  ==================================
+s3          64     2      기준선 p95 357.9ms — J17 의 오염 수준
+s1          32     5      기준선 p95 134.2ms — 예측기 학습 분포
+==========  =====  ======  ==================================
+
+`goodput` 은 워커 수에 직접 종속되므로 **두 코호트의 중앙값을 함께 내면 그 값은
+아무것도 뜻하지 않는다.** 그래서 `(scenario, workerCount)` 가 둘 이상이면
+**기본적으로 거부한다.** 섞어 보려면 `--pool` 로 명시해야 한다
+([episodeValidity.py](../model/episodeValidity.py) 의 `--keepInvalid` 와 같은 규칙).
 """
 
 from __future__ import annotations
@@ -39,6 +59,34 @@ RESULTS_DIR = HERE / "results"
 
 HOLD = "보류"
 PASSIVE = {"A1", "A4"}
+# `p_eff` 를 쓰는 정책. 여기서 보류는 **게이팅이 참은 것**이다.
+GATED = {"A5", "A6"}
+# 규칙 기반. 보류는 **규칙이 발동하지 않은 것**이며 게이팅과 뜻이 다르다 —
+# 숨기면 정보를 잃고, 같은 열에 그냥 두면 다른 것을 같다고 읽게 된다. 표식을 붙인다.
+RULE_BASED = {"A2"}
+
+
+def cohortOf(cell: dict) -> tuple[str, object]:
+    """셀이 속한 비교 단위. 이것이 다르면 중앙값을 함께 내면 안 된다."""
+    return (cell.get("scenario"), (cell.get("entryLoad") or {}).get("workerCount"))
+
+
+def holdShareOf(cell: dict) -> float:
+    summary = cell.get("loopSummary") or {}
+    value = summary.get("holdShare")
+    return float(value) if isinstance(value, (int, float)) else float("nan")
+
+
+def appliedOf(cell: dict) -> int:
+    outcomes = ((cell.get("loopSummary") or {}).get("outcomeCounts") or {})
+    return int(outcomes.get("applied", 0))
+
+
+def spread(values: list[float]) -> str:
+    """반복이 여러 번이면 산포를 함께 본다 — 중앙값 하나는 결과가 아니다."""
+    if len(values) < 2:
+        return "단일"
+    return f"{min(values):.0f}~{max(values):.0f}"
 
 
 def loadLedger(path: pathlib.Path) -> list[dict]:
@@ -89,6 +137,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="A축 정책 비교 — 오탐 비용 중심")
     parser.add_argument("--ledger", default=str(RESULTS_DIR / "ledger.jsonl"))
     parser.add_argument("--settleSeconds", type=float, default=10.0)
+    parser.add_argument("--scenario", default=None, help="이 시나리오만 본다 (예: s1)")
+    parser.add_argument("--workers", type=int, default=None, help="이 부하 수준만 본다")
+    parser.add_argument("--pool", action="store_true",
+                        help="🔴 코호트가 섞여도 강행한다. goodput 중앙값이 무의미해진다")
     arguments = parser.parse_args()
 
     ledgerPath = pathlib.Path(arguments.ledger)
@@ -99,6 +151,34 @@ def main() -> int:
     if not cells:
         print("완료된 셀이 없다.")
         return 1
+
+    # 🔒 코호트 먼저. 섞인 중앙값은 조용히 틀린다.
+    if arguments.scenario:
+        cells = [c for c in cells if c.get("scenario") == arguments.scenario]
+    if arguments.workers is not None:
+        cells = [c for c in cells
+                 if (c.get("entryLoad") or {}).get("workerCount") == arguments.workers]
+    if not cells:
+        print("그 조건에 맞는 셀이 없다.")
+        return 1
+
+    cohorts: dict[tuple, list[dict]] = collections.defaultdict(list)
+    for cell in cells:
+        cohorts[cohortOf(cell)].append(cell)
+    print(f"{'시나리오':<10}{'워커':>6}{'셀':>5}  정책")
+    for (scenario, workers), group in sorted(cohorts.items(), key=lambda kv: str(kv[0])):
+        policies = ",".join(sorted({c["policy"] for c in group}))
+        print(f"{str(scenario):<10}{str(workers):>6}{len(group):>5}  {policies}")
+    if len(cohorts) > 1 and not arguments.pool:
+        print("\n🔴 **코호트가 둘 이상이다.** `goodput` 은 워커 수에 직접 종속되므로")
+        print("   이들의 중앙값을 함께 내면 그 값은 아무것도 뜻하지 않는다.")
+        print("   하나를 고르거나, 섞는 것을 감수한다고 명시하라 —")
+        print("     --scenario s1 --workers 32")
+        print("     --pool            (🔴 섞음을 감수한다)")
+        return 1
+    if len(cohorts) > 1:
+        print("\n⚠️ `--pool` — 코호트를 섞었다. goodput·p95 의 중앙값은 **읽지 않는다.**")
+    print()
 
     byPolicy: dict[str, list[dict]] = collections.defaultdict(list)
     for cell in cells:
@@ -121,7 +201,8 @@ def main() -> int:
     print()
 
     print("━━━ 🔴 오탐 비용 (H5a) — 정상 구간에 개입했는가 ━━━")
-    print(f"{'정책':<6}{'셀':>4}{'정상 결정':>10}{'조치 비율':>11}{'장애 결정':>10}{'조치 비율':>11}")
+    print(f"{'정책':<6}{'셀':>4}{'정상 결정':>10}{'조치 비율':>11}{'장애 결정':>10}"
+          f"{'조치 비율':>11}{'보류중앙':>9}{'적용':>7}  보류 분포(반복별)")
     report: dict[str, dict] = {}
     for policy in sorted(byPolicy):
         normalAll, faultAll = [], []
@@ -131,14 +212,30 @@ def main() -> int:
             faultAll.extend(fault)
         normalShare = actionShare(normalAll)
         faultShare = actionShare(faultAll)
+        holds = [h for h in (holdShareOf(c) for c in byPolicy[policy]) if h == h]
+        holdMedian = statistics.median(holds) if holds else float("nan")
+        appliedTotal = sum(appliedOf(c) for c in byPolicy[policy])
         report[policy] = {"normalDecisions": len(normalAll), "normalActionShare": normalShare,
-                          "faultDecisions": len(faultAll), "faultActionShare": faultShare}
+                          "faultDecisions": len(faultAll), "faultActionShare": faultShare,
+                          "holdShareMedian": None if holdMedian != holdMedian else holdMedian,
+                          "appliedTotal": appliedTotal}
         marker = "  (수동)" if policy in PASSIVE else ""
+        # 보류율은 `p_eff` 를 쓰는 정책에서만 뜻을 갖는다. 나머지는 가리지 않고 비운다.
+        if holdMedian != holdMedian or policy in PASSIVE:
+            holdCell = f"{'—':>9}"
+        else:
+            suffix = "†" if policy in RULE_BASED else " "
+            holdCell = f"{holdMedian:>8.1%}{suffix}"
+        # 🔴 반복이 여러 번이면 보류율도 산포를 봐야 한다. 5회 중 2회만 참았는데
+        #    중앙값이 0 이면 "한 번도 참지 않았다" 로 읽힌다 — 실제와 다르다.
+        holdSpread = ("[" + " ".join(f"{h:.0%}" for h in sorted(holds)) + "]") if holds else ""
+        report[policy]["holdShareValues"] = sorted(holds)
         print(f"{policy:<6}{len(byPolicy[policy]):>4}{len(normalAll):>10}"
-              f"{normalShare:>11.1%}{len(faultAll):>10}{faultShare:>11.1%}{marker}")
+              f"{normalShare:>11.1%}{len(faultAll):>10}{faultShare:>11.1%}"
+              f"{holdCell}{appliedTotal:>7}  {holdSpread}{marker}")
 
     print("\n━━━ 성능 (장애 구간 포함, 입구 기준) ━━━")
-    print(f"{'정책':<6}{'goodput':>10}{'p95':>9}{'에러율':>9}")
+    print(f"{'정책':<6}{'goodput':>10}{'(범위)':>12}{'p95':>9}{'(범위)':>12}{'에러율':>9}")
     for policy in sorted(byPolicy):
         goodputs = [c["entryLoad"]["goodputRps"] for c in byPolicy[policy]
                     if c["entryLoad"].get("goodputRps") is not None]
@@ -151,8 +248,11 @@ def main() -> int:
         report[policy].update({"goodputMedian": statistics.median(goodputs),
                                "p95Median": statistics.median(p95s),
                                "errorRateMedian": statistics.median(errors)})
-        print(f"{policy:<6}{statistics.median(goodputs):>10.1f}"
-              f"{statistics.median(p95s):>9.0f}{statistics.median(errors):>9.1%}")
+        report[policy]["goodputSpread"] = spread(goodputs)
+        report[policy]["p95Spread"] = spread(p95s)
+        print(f"{policy:<6}{statistics.median(goodputs):>10.1f}{spread(goodputs):>12}"
+              f"{statistics.median(p95s):>9.0f}{spread(p95s):>12}"
+              f"{statistics.median(errors):>9.1%}")
 
     print("\n━━━ 판정 ━━━")
     a5 = report.get("A5", {})
@@ -167,7 +267,25 @@ def main() -> int:
         print("  정상 구간 결정이 없다. 워밍업이 정상 구간을 다 먹었는지 확인한다.")
         return 0
 
+    a5Hold = a5.get("holdShareMedian")
+    a6Hold = a6.get("holdShareMedian")
     print(f"  정상 구간 조치 비율 — A5 {a5Normal:.1%} vs A6 {a6Normal:.1%}")
+    if a5Hold is not None and a6Hold is not None:
+        print(f"  보류율           — A5 {a5Hold:.1%} vs A6 {a6Hold:.1%}  "
+              f"(차이 {a5Hold - a6Hold:+.1%})")
+        a5Values = a5.get("holdShareValues") or []
+        a6Values = a6.get("holdShareValues") or []
+        a5Held = sum(1 for v in a5Values if v > 0)
+        a6Held = sum(1 for v in a6Values if v > 0)
+        print(f"  참은 반복 수       — A5 {a5Held}/{len(a5Values)} vs A6 {a6Held}/{len(a6Values)}")
+        if a5Held == 0 and a6Held == 0:
+            print("  🔴 **어느 반복에서도 보류가 없다.** 게이팅이 아무것도 하지 않았다 —")
+            print("     H5a 를 보류로 논증할 수 없다.")
+        elif a5Held > a6Held and a5Hold == 0.0:
+            print(f"  ⚠️ **방향은 맞으나 재현되지 않는다.** A5 는 {a5Held}/{len(a5Values)} 회만")
+            print("     참았고 중앙값은 0 이다. **중앙값만 보면 \"참지 않았다\" 로 읽힌다.**")
+            print("     효과의 부호는 예측과 같으나 크기가 반복 간 산포 안이다 —")
+            print("     **이 부하 수준에서는 게이팅이 실증되지 않았다.**")
     if a6Normal > a5Normal + 0.05:
         print("  ✅ **A5 가 A6 보다 덜 헛발질한다.** 불확실성을 할인해 참은 결과이며,")
         print("     H5a(장애 미발생 시 개입 비용)에서 A5 가 우월하다는 직접 증거다.")

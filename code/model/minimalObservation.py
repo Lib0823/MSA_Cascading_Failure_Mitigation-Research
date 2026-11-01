@@ -70,6 +70,8 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import episodeValidity  # noqa: E402
+
 from compareTiers import (  # noqa: E402
     RANDOM_SEED, buildEnsemble, loadAllEpisodes, predictEnsemble,
 )
@@ -316,6 +318,10 @@ def main() -> int:
     # 모두 0.888 로 같았으므로 **순위를 가리는 데에는 N=1 로 충분하다.**
     parser.add_argument("--sweepEnsembleSize", type=int, default=1,
                         help="전수 탐색에 쓰는 앙상블 크기")
+    # 기준선이 참조로 부적격인 에피소드는 `f3`·`f4` 가 그 기준선으로 정규화되므로
+    # **feature 가 틀린다**. 기본으로 뺀다 — 넣는 쪽이 알려진 오류다.
+    parser.add_argument("--keepInvalid", action="store_true",
+                        help="유효성 판정에서 탈락한 에피소드도 포함한다(대조용)")
     parser.add_argument("--retention", type=float, default=0.95,
                         help="전체 집합 성능의 몇 %% 를 지키면 '쓸 만하다' 고 볼 것인가")
     arguments = parser.parse_args()
@@ -325,6 +331,22 @@ def main() -> int:
     if not episodes:
         print("에피소드가 없다. code/chain 을 먼저 돌려야 한다.")
         return 1
+
+    invalid = episodeValidity.invalidTracePaths(chainDir)
+    if arguments.keepInvalid:
+        if invalid:
+            print(f"⚠️ **유효성 탈락 {len(invalid)}개를 포함해 돈다(--keepInvalid).** "
+                  "기준선이 참조로 부적격이므로 `f3`·`f4` 가 틀린다 — 대조용으로만 쓴다")
+    else:
+        kept = [e for e in episodes if e["episodeKey"] not in invalid]
+        dropped = len(episodes) - len(kept)
+        episodes = kept
+        if dropped:
+            print(f"🔴 유효성 탈락 {dropped}개를 뺐다 — 장애가 느려지지 않아 기준선이 "
+                  f"참조로 부적격이다 (code/model/episodeValidity.py)")
+        if not episodes:
+            print("유효한 에피소드가 없다.")
+            return 1
 
     selfFeatures, neighbourFeatures, labels, groups = [], [], [], []
     for index, episode in enumerate(episodes):

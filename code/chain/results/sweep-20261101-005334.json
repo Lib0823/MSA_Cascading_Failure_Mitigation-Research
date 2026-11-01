@@ -1,0 +1,22 @@
+[
+  {
+    "scenario": "s3",
+    "intensity": "150ms",
+    "episodesFile": "episodes-20261101-005334.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "200ms",
+    "episodesFile": "episodes-20261101-005654.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "250ms",
+    "episodesFile": "episodes-20261101-010013.json"
+  },
+  {
+    "scenario": "s3",
+    "intensity": "300ms",
+    "episodesFile": "episodes-20261101-010332.json"
+  }
+]

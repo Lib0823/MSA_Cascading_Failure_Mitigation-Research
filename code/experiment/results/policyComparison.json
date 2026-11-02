@@ -17,6 +17,7 @@
         0.043478260869565216,
         0.057971014492753624
       ],
+      "falsePositiveCost": 0.00019833333333333335,
       "counterfactualMeanHold": 0.014492753623188406,
       "counterfactualEffectiveHold": 0.043478260869565216,
       "gatingShare": 0.028985507246376812,
@@ -47,6 +48,7 @@
         0.08695652173913043,
         0.10144927536231885
       ],
+      "falsePositiveCost": 0.00019333333333333336,
       "counterfactualMeanHold": 0.057971014492753624,
       "counterfactualEffectiveHold": 0.057971014492753624,
       "gatingShare": 0.0,

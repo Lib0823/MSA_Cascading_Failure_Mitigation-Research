@@ -53,6 +53,7 @@ import json
 import math
 import pathlib
 import statistics
+import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 RESULTS_DIR = HERE / "results"
@@ -209,6 +210,35 @@ def observedThresholds(cells: list[dict]) -> dict[str, float]:
     return found
 
 
+def actionCosts() -> dict[str, float]:
+    """조치별 **오탐 비용** `Dₐ·Rₐ` — 장애가 없는데 걸었을 때 남는 손실.
+
+    🔴 **왜 횟수가 아니라 비용인가** (2026-11-02, [[research/challenges.md]] J26)
+
+    *"오탐 개입 횟수"* 는 모든 개입을 같은 비용으로 취급한다. **비용함수는 그렇지
+    않다고 말한다.** 실측에서 정상 구간 개입 119건이 전부 Circuit Breaker 였고
+    `Dₐ·Rₐ = 0.002 × 0.1 = 0.0002` 다 — 합쳐도 0.024, 결정당 0.00008 이다.
+    **횟수로는 99.2% 지만 비용으로는 사실상 0 이다.**
+
+    그래서 두 열을 **함께** 낸다. 횟수만 보면 과대평가하고, 비용만 보면 *"얼마나
+    자주 개입하는가"* 라는 운영 관심사를 놓친다.
+    """
+    sys.path.insert(0, str(HERE.parent / "model"))
+    import policyEngine   # noqa: PLC0415
+
+    return {p.name: p.disruption * p.reversibility
+            for p in policyEngine.defaultProfiles() if p.nodeType == "service"}
+
+
+def falsePositiveCost(decisions: list[dict], costs: dict[str, float]) -> float:
+    """정상 구간 결정들의 **개입 비용 합을 결정 수로 나눈 값**."""
+    if not decisions:
+        return float("nan")
+    total = sum(costs.get(d.get("action"), 0.0) for d in decisions
+                if d.get("action") != HOLD)
+    return total / len(decisions)
+
+
 def actionShare(decisions: list[dict]) -> float:
     """조치가 나간 비율. 보류는 조치가 아니다."""
     if not decisions:
@@ -319,8 +349,9 @@ def main() -> int:
     print()
 
     print("━━━ 🔴 오탐 비용 (H5a) — 정상 구간에 개입했는가 ━━━")
-    print(f"{'정책':<6}{'셀':>4}{'정상 결정':>10}{'조치 비율':>11}{'장애 결정':>10}"
-          f"{'조치 비율':>11}{'보류중앙':>9}{'적용':>7}  보류 분포(반복별)")
+    costs = actionCosts()
+    print(f"{'정책':<6}{'셀':>4}{'정상 결정':>10}{'조치 비율':>11}{'오탐 비용':>11}"
+          f"{'장애 결정':>10}{'조치 비율':>11}{'보류중앙':>9}{'적용':>7}  보류 분포")
     report: dict[str, dict] = {}
     for policy in sorted(byPolicy):
         normalAll, faultAll = [], []
@@ -348,8 +379,12 @@ def main() -> int:
         #    중앙값이 0 이면 "한 번도 참지 않았다" 로 읽힌다 — 실제와 다르다.
         holdSpread = ("[" + " ".join(f"{h:.0%}" for h in sorted(holds)) + "]") if holds else ""
         report[policy]["holdShareValues"] = sorted(holds)
+        normalCost = falsePositiveCost(normalAll, costs)
+        report[policy]["falsePositiveCost"] = (None if normalCost != normalCost
+                                               else normalCost)
+        costCell = f"{'—':>11}" if normalCost != normalCost else f"{normalCost:>11.5f}"
         print(f"{policy:<6}{len(byPolicy[policy]):>4}{len(normalAll):>10}"
-              f"{normalShare:>11.1%}{len(faultAll):>10}{faultShare:>11.1%}"
+              f"{normalShare:>11.1%}{costCell}{len(faultAll):>10}{faultShare:>11.1%}"
               f"{holdCell}{appliedTotal:>7}  {holdSpread}{marker}")
 
     # ━━━ H5a 의 올바른 측정 — 같은 실행 안의 반사실 ━━━
@@ -389,6 +424,10 @@ def main() -> int:
         print("     폐루프에서 위험도 분포가 내생적이므로 두 실행은 다른 분포를 만난다.")
         print("     반사실은 같은 결정 레코드에 `p̄`·`p_eff` 를 각각 대입하므로")
         print("     입력·θ·병목 판정이 동일하고 **차이가 κ 뿐이다**.")
+
+    print("  ⚠️ **`오탐 비용` 은 `Dₐ·Rₐ` 의 결정당 평균이다** — 횟수와 함께 읽는다.")
+    print(f"     조치별 Dₐ·Rₐ: " + " / ".join(f"{a} {c:.5f}" for a, c in sorted(costs.items())))
+    print("     횟수로는 커 보여도 공짜인 조치면 비용은 0 에 가깝다 (J26).")
 
     print("\n━━━ 성능 (장애 구간 포함, 입구 기준) ━━━")
     print(f"{'정책':<6}{'goodput':>10}{'(범위)':>12}{'p95':>9}{'(범위)':>12}{'에러율':>9}")

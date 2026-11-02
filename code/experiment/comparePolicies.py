@@ -23,6 +23,26 @@ H5a 의 정의가 그렇다 (§0-1)
 
 따라서 **주입 이전 구간**의 조치 횟수가 직접 재료다. 장애 구간의 조치는
 오탐이 아니므로 섞으면 안 된다.
+
+🔴 코호트를 섞지 않는다 (2026-11-02)
+=====================================
+
+종전에는 원장의 모든 셀을 `policy` 로만 묶었다. **원장에 부하 수준이나 시나리오가
+다른 셀이 함께 있으면 조용히 틀린 숫자가 나온다.**
+
+실제로 2026-11-02 현재 원장에는 두 코호트가 있다.
+
+==========  =====  ======  ==================================
+시나리오     워커    반복    비고
+==========  =====  ======  ==================================
+s3          64     2      기준선 p95 357.9ms — J17 의 오염 수준
+s1          32     5      기준선 p95 134.2ms — 예측기 학습 분포
+==========  =====  ======  ==================================
+
+`goodput` 은 워커 수에 직접 종속되므로 **두 코호트의 중앙값을 함께 내면 그 값은
+아무것도 뜻하지 않는다.** 그래서 `(scenario, workerCount)` 가 둘 이상이면
+**기본적으로 거부한다.** 섞어 보려면 `--pool` 로 명시해야 한다
+([episodeValidity.py](../model/episodeValidity.py) 의 `--keepInvalid` 와 같은 규칙).
 """
 
 from __future__ import annotations
@@ -33,12 +53,49 @@ import json
 import math
 import pathlib
 import statistics
+import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 RESULTS_DIR = HERE / "results"
 
 HOLD = "보류"
 PASSIVE = {"A1", "A4"}
+# `p_eff` 를 쓰는 정책. 여기서 보류는 **게이팅이 참은 것**이다.
+GATED = {"A5", "A6"}
+# 규칙 기반. 보류는 **규칙이 발동하지 않은 것**이며 게이팅과 뜻이 다르다 —
+# 숨기면 정보를 잃고, 같은 열에 그냥 두면 다른 것을 같다고 읽게 된다. 표식을 붙인다.
+RULE_BASED = {"A2"}
+
+
+def cohortOf(cell: dict) -> tuple:
+    """셀이 속한 비교 단위. 이것이 다르면 중앙값을 함께 내면 안 된다.
+
+    🔴 **엔진 파라미터 지문도 코호트다** (2026-11-02). `Dₐ` 를 배선하고 A5 를 다시
+    돌리면 `cellKey` 가 같아서 **원장만 보고는 배선 전 셀과 구분되지 않는다.**
+    지문이 없는 셀(배선 이전)은 `"배선전"` 으로 묶는다.
+    """
+    profiles = cell.get("actionProfiles") or {}
+    return (cell.get("scenario"),
+            (cell.get("entryLoad") or {}).get("workerCount"),
+            profiles.get("digest") or "배선전")
+
+
+def holdShareOf(cell: dict) -> float:
+    summary = cell.get("loopSummary") or {}
+    value = summary.get("holdShare")
+    return float(value) if isinstance(value, (int, float)) else float("nan")
+
+
+def appliedOf(cell: dict) -> int:
+    outcomes = ((cell.get("loopSummary") or {}).get("outcomeCounts") or {})
+    return int(outcomes.get("applied", 0))
+
+
+def spread(values: list[float]) -> str:
+    """반복이 여러 번이면 산포를 함께 본다 — 중앙값 하나는 결과가 아니다."""
+    if len(values) < 2:
+        return "단일"
+    return f"{min(values):.0f}~{max(values):.0f}"
 
 
 def loadLedger(path: pathlib.Path) -> list[dict]:
@@ -77,6 +134,147 @@ def splitDecisions(cell: dict, settleSeconds: float) -> tuple[list[dict], list[d
     return normal, fault
 
 
+def allDecisions(cell: dict) -> list[dict]:
+    """셀의 결정 전체. 구간을 나누지 않는다."""
+    if not cell.get("decisionPath"):
+        return []
+    path = HERE / cell["decisionPath"]
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()]
+
+
+def gateableBottlenecks(cells: list[dict], thresholds: dict[str, float]) -> dict[str, bool]:
+    """병목별로 **게이팅의 대상인가** — `θ` 가 클램프 폭에 닿는가.
+
+    🔴 **왜 모집단을 가려야 하는가** (2026-11-02, [[research/challenges.md]] J27)
+
+    게이트가 결정을 바꾸는 조건은 `θ <= p̄ < θ + κ√u` 다. `θ` 가 클램프 폭
+    `κ√u` 보다 **훨씬 작으면** `p_eff` 가 이미 `θ` 를 넘어 있어 창이 닫힌다 —
+    그 조치는 **상시 투입**이고 *"언제 걸까"* 라는 질문이 성립하지 않는다.
+
+    실측에서 `θ_CB = 0.00025` 이고 클램프 `p50 = 0.0139` 였다. `θ` 가 클램프의
+    **1/56** 이므로 CB 결정은 게이팅 대상이 아니다. 그런데 그 결정이 345건 중
+    235건이었다 — **분모에 넣으면 게이팅 성능이 2/3 만큼 희석된다.**
+
+    `오탐 개입 99.2%` 도 같은 이유로 오해를 부른다. 그 개입은 전부 `Dₐ·Rₐ = 0.0002`
+    인 CB 장전이고, 비용함수는 **그것을 상시 투입하라고 말하고 있다.**
+
+    기준: `θ > κ·median(√u)`. 넘지 못하면 상시 투입으로 본다.
+    """
+    clamps: dict[str, list[float]] = collections.defaultdict(list)
+    for cell in cells:
+        for entry in allDecisions(cell):
+            bottleneck = entry.get("bottleneck")
+            if bottleneck is None:
+                continue
+            clamps[bottleneck].append(entry["meanRisk"] - entry["effectiveRisk"])
+    verdict = {}
+    for bottleneck, threshold in thresholds.items():
+        samples = [c for c in clamps.get(bottleneck, []) if c > 0]
+        scale = statistics.median(samples) if samples else 0.0
+        verdict[bottleneck] = threshold > scale
+    return verdict
+
+
+def counterfactualHold(cell: dict, thresholds: dict[str, float],
+                       only: set[str] | None = None) -> dict | None:
+    """🔴 **같은 실행 안에서** `p̄` 로 판정했다면 몇 건을 보류했을까.
+
+    왜 이것이 H5a 의 올바른 측정인가 (2026-11-02)
+    ============================================
+
+    A6(κ=0) 을 **별도 실행**으로 두고 A5 와 비교하면 `κ` 의 효과가 분리되지 않는다.
+    폐루프에서 **위험도 분포가 내생적**이기 때문이다 — 정책이 다른 조치를 걸면
+    시스템 상태가 달라지고, 그러면 다음 틱의 위험도가 달라진다. 두 실행은 애초에
+    **다른 분포를 만난다.**
+
+    2026-11-02 실측이 그것을 드러냈다. S1 판정 결정에서 `p̄` 가 θ 를 미달한 비율이
+
+        A5 의 실행:  3.6%
+        A6 의 실행: 17.0%     ← 4.7 배
+
+    였다. 이 상태에서 보류율을 맞대면 `κ` 가 아니라 **분포 차이를 재게 된다.**
+    실제로 A6 이 **더 많이** 참았다(5.8% vs 4.3%) — `p_eff ≤ p̄` 이므로 같은 입력
+    에서는 **일어날 수 없는 방향**이다.
+
+    반사실은 **같은 결정 레코드**에 `p̄` 와 `p_eff` 를 각각 대입한다. 입력·θ·병목
+    판정이 모두 동일하므로 **차이는 `κ` 뿐이다.**
+
+    ⚠️ **한계**: 궤적을 고정하므로 *"덜 개입했을 때 시스템이 어떻게 됐을지"* 는
+    답하지 않는다. H5a 가 묻는 것은 **오탐 개입 횟수**이므로 그 양에는 맞는다.
+    """
+    decisions = allDecisions(cell)
+    if only is not None:
+        decisions = [d for d in decisions if d.get("bottleneck") in only]
+    if not decisions:
+        return None
+    withMean = withEffective = 0
+    for entry in decisions:
+        threshold = thresholds.get(entry.get("bottleneck"))
+        if threshold is None:
+            continue
+        if entry["meanRisk"] < threshold:
+            withMean += 1
+        if entry["effectiveRisk"] < threshold:
+            withEffective += 1
+    total = len(decisions)
+    return {"decisions": total, "meanHold": withMean / total,
+            "effectiveHold": withEffective / total,
+            "loggedHold": sum(1 for d in decisions if d.get("action") == HOLD) / total}
+
+
+def observedThresholds(cells: list[dict]) -> dict[str, float]:
+    """결정 로그에서 병목별 θ 를 **관측해서** 가져온다.
+
+    손으로 적어 넣지 않는다 — 엔진 파라미터가 바뀌면 그 숫자가 조용히 낡는다.
+    보류 레코드의 θ 는 `inf` 이므로 조치가 선택된 레코드만 본다.
+    """
+    found: dict[str, float] = {}
+    for cell in cells:
+        # 🔴 `GATED` 만 본다. A2 의 `threshold` 는 `p̄ > 0.5` 규칙의 상수이지
+        #    비용함수가 유도한 `θ` 가 아니다 — 섞으면 반사실이 엉뚱한 임계를 쓴다.
+        if cell.get("policy") not in GATED:
+            continue
+        for entry in allDecisions(cell):
+            bottleneck, threshold = entry.get("bottleneck"), entry.get("threshold")
+            if entry.get("action") == HOLD or bottleneck is None:
+                continue
+            if isinstance(threshold, (int, float)) and math.isfinite(threshold):
+                found.setdefault(bottleneck, threshold)
+    return found
+
+
+def actionCosts() -> dict[str, float]:
+    """조치별 **오탐 비용** `Dₐ·Rₐ` — 장애가 없는데 걸었을 때 남는 손실.
+
+    🔴 **왜 횟수가 아니라 비용인가** (2026-11-02, [[research/challenges.md]] J26)
+
+    *"오탐 개입 횟수"* 는 모든 개입을 같은 비용으로 취급한다. **비용함수는 그렇지
+    않다고 말한다.** 실측에서 정상 구간 개입 119건이 전부 Circuit Breaker 였고
+    `Dₐ·Rₐ = 0.002 × 0.1 = 0.0002` 다 — 합쳐도 0.024, 결정당 0.00008 이다.
+    **횟수로는 99.2% 지만 비용으로는 사실상 0 이다.**
+
+    그래서 두 열을 **함께** 낸다. 횟수만 보면 과대평가하고, 비용만 보면 *"얼마나
+    자주 개입하는가"* 라는 운영 관심사를 놓친다.
+    """
+    sys.path.insert(0, str(HERE.parent / "model"))
+    import policyEngine   # noqa: PLC0415
+
+    return {p.name: p.disruption * p.reversibility
+            for p in policyEngine.defaultProfiles() if p.nodeType == "service"}
+
+
+def falsePositiveCost(decisions: list[dict], costs: dict[str, float]) -> float:
+    """정상 구간 결정들의 **개입 비용 합을 결정 수로 나눈 값**."""
+    if not decisions:
+        return float("nan")
+    total = sum(costs.get(d.get("action"), 0.0) for d in decisions
+                if d.get("action") != HOLD)
+    return total / len(decisions)
+
+
 def actionShare(decisions: list[dict]) -> float:
     """조치가 나간 비율. 보류는 조치가 아니다."""
     if not decisions:
@@ -89,6 +287,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="A축 정책 비교 — 오탐 비용 중심")
     parser.add_argument("--ledger", default=str(RESULTS_DIR / "ledger.jsonl"))
     parser.add_argument("--settleSeconds", type=float, default=10.0)
+    parser.add_argument("--scenario", default=None, help="이 시나리오만 본다 (예: s1)")
+    parser.add_argument("--workers", type=int, default=None, help="이 부하 수준만 본다")
+    parser.add_argument("--digest", default=None,
+                        help="이 엔진 파라미터 지문만 본다. '배선전' 은 지문 없는 셀")
+    parser.add_argument("--pool", action="store_true",
+                        help="🔴 코호트가 섞여도 강행한다. goodput 중앙값이 무의미해진다")
     arguments = parser.parse_args()
 
     ledgerPath = pathlib.Path(arguments.ledger)
@@ -99,6 +303,66 @@ def main() -> int:
     if not cells:
         print("완료된 셀이 없다.")
         return 1
+
+    # 🔒 코호트 먼저. 섞인 중앙값은 조용히 틀린다.
+    if arguments.scenario:
+        cells = [c for c in cells if c.get("scenario") == arguments.scenario]
+    if arguments.workers is not None:
+        cells = [c for c in cells
+                 if (c.get("entryLoad") or {}).get("workerCount") == arguments.workers]
+    if arguments.digest:
+        cells = [c for c in cells if cohortOf(c)[2] == arguments.digest]
+    if not cells:
+        print("그 조건에 맞는 셀이 없다.")
+        return 1
+
+    cohorts: dict[tuple, list[dict]] = collections.defaultdict(list)
+    for cell in cells:
+        cohorts[cohortOf(cell)].append(cell)
+    print(f"{'시나리오':<10}{'워커':>6}  {'엔진 지문':<13}{'셀':>4}  정책")
+    for (scenario, workers, digest), group in sorted(cohorts.items(), key=lambda kv: str(kv[0])):
+        policies = ",".join(sorted({c["policy"] for c in group}))
+        print(f"{str(scenario):<10}{str(workers):>6}  {str(digest):<12}{len(group):>5}  {policies}")
+    if len(cohorts) > 1 and not arguments.pool:
+        print("\n🔴 **코호트가 둘 이상이다.** `goodput` 은 워커 수에 직접 종속되므로")
+        print("   이들의 중앙값을 함께 내면 그 값은 아무것도 뜻하지 않는다.")
+        print("   **엔진 지문이 다른 것은 더 심각하다** — 같은 `cellKey` 인데 다른 `Dₐ`")
+        print("   로 만들어진 셀이므로 `θ` 가 다르다. 보류율을 함께 내면 안 된다.")
+        print("   하나를 고르거나, 섞는 것을 감수한다고 명시하라 —")
+        print("     --scenario s1 --workers 32 --digest <지문>")
+        print("     --pool            (🔴 섞음을 감수한다)")
+        return 1
+    if len(cohorts) > 1:
+        print("\n⚠️ `--pool` — 코호트를 섞었다. goodput·p95 의 중앙값은 **읽지 않는다.**")
+    print()
+
+    # 🔒 결정 로그가 덮어써졌는가 (2026-11-02).
+    #    `Dₐ` 를 배선하고 다시 돌리면 종전 파일명 규칙이 **같은 경로에 썼다.**
+    #    파일을 실제로 소유한 것은 **마지막에 기록된 셀**이고, 그보다 앞선 셀의
+    #    로그는 사라졌다. 그 셀에서는 **결정 파일 기반 지표를 내지 않는다** —
+    #    `goodput`·`holdShare`·`적용` 은 원장에 들어 있어 영향받지 않으므로 셀
+    #    자체는 버리지 않는다.
+    latestOwner: dict[str, str] = {}
+    for entry in loadLedger(ledgerPath):
+        path, stamp = entry.get("decisionPath"), entry.get("recordedAt") or ""
+        if path and stamp >= latestOwner.get(path, ""):
+            latestOwner[path] = stamp
+    overwritten = [c for c in cells
+                   if c.get("decisionPath")
+                   and (c.get("recordedAt") or "") != latestOwner.get(c["decisionPath"])]
+    if overwritten:
+        print(f"🔴 **결정 로그가 덮어써진 셀 {len(overwritten)} 건** — 나중에 돌린 셀이")
+        print("   같은 경로에 썼다. 그 파일의 내용은 이 셀의 것이 아니다.")
+        print("   **결정 파일 기반 지표(정상/장애 결정·조치 비율·반사실)를 내지 않는다.**")
+        print("   원장에서 오는 goodput·보류율·적용 은 영향받지 않는다.")
+        for cell in sorted(overwritten, key=lambda c: c["cellKey"])[:6]:
+            print(f"     {cell['cellKey']}  {cell['decisionPath']}")
+        if len(overwritten) > 6:
+            print(f"     … 외 {len(overwritten) - 6} 건")
+        print("   → 배선 전 로그는 git 이력에 있다 (commit c425b87).")
+        print("   → 이후 실행은 파일명에 지문이 들어가 충돌하지 않는다.\n")
+        for cell in overwritten:
+            cell["decisionPath"] = None   # splitDecisions·allDecisions 가 빈 값을 낸다
 
     byPolicy: dict[str, list[dict]] = collections.defaultdict(list)
     for cell in cells:
@@ -121,7 +385,9 @@ def main() -> int:
     print()
 
     print("━━━ 🔴 오탐 비용 (H5a) — 정상 구간에 개입했는가 ━━━")
-    print(f"{'정책':<6}{'셀':>4}{'정상 결정':>10}{'조치 비율':>11}{'장애 결정':>10}{'조치 비율':>11}")
+    costs = actionCosts()
+    print(f"{'정책':<6}{'셀':>4}{'정상 결정':>10}{'조치 비율':>11}{'오탐 비용':>11}"
+          f"{'장애 결정':>10}{'조치 비율':>11}{'보류중앙':>9}{'적용':>7}  보류 분포")
     report: dict[str, dict] = {}
     for policy in sorted(byPolicy):
         normalAll, faultAll = [], []
@@ -131,14 +397,112 @@ def main() -> int:
             faultAll.extend(fault)
         normalShare = actionShare(normalAll)
         faultShare = actionShare(faultAll)
+        holds = [h for h in (holdShareOf(c) for c in byPolicy[policy]) if h == h]
+        holdMedian = statistics.median(holds) if holds else float("nan")
+        appliedTotal = sum(appliedOf(c) for c in byPolicy[policy])
         report[policy] = {"normalDecisions": len(normalAll), "normalActionShare": normalShare,
-                          "faultDecisions": len(faultAll), "faultActionShare": faultShare}
+                          "faultDecisions": len(faultAll), "faultActionShare": faultShare,
+                          "holdShareMedian": None if holdMedian != holdMedian else holdMedian,
+                          "appliedTotal": appliedTotal}
         marker = "  (수동)" if policy in PASSIVE else ""
+        # 보류율은 `p_eff` 를 쓰는 정책에서만 뜻을 갖는다. 나머지는 가리지 않고 비운다.
+        if holdMedian != holdMedian or policy in PASSIVE:
+            holdCell = f"{'—':>9}"
+        else:
+            suffix = "†" if policy in RULE_BASED else " "
+            holdCell = f"{holdMedian:>8.1%}{suffix}"
+        # 🔴 반복이 여러 번이면 보류율도 산포를 봐야 한다. 5회 중 2회만 참았는데
+        #    중앙값이 0 이면 "한 번도 참지 않았다" 로 읽힌다 — 실제와 다르다.
+        holdSpread = ("[" + " ".join(f"{h:.0%}" for h in sorted(holds)) + "]") if holds else ""
+        report[policy]["holdShareValues"] = sorted(holds)
+        normalCost = falsePositiveCost(normalAll, costs)
+        report[policy]["falsePositiveCost"] = (None if normalCost != normalCost
+                                               else normalCost)
+        costCell = f"{'—':>11}" if normalCost != normalCost else f"{normalCost:>11.5f}"
         print(f"{policy:<6}{len(byPolicy[policy]):>4}{len(normalAll):>10}"
-              f"{normalShare:>11.1%}{len(faultAll):>10}{faultShare:>11.1%}{marker}")
+              f"{normalShare:>11.1%}{costCell}{len(faultAll):>10}{faultShare:>11.1%}"
+              f"{holdCell}{appliedTotal:>7}  {holdSpread}{marker}")
+
+    # ━━━ H5a 의 올바른 측정 — 같은 실행 안의 반사실 ━━━
+    thresholds = observedThresholds(cells)
+    if thresholds:
+        print("\n━━━ 🔴 같은 실행 안의 반사실 (H5a) — κ 만 다르게 했다면 ━━━")
+        print("관측된 θ: " + " / ".join(f"{b} {t:.5f}" for b, t in sorted(thresholds.items())))
+        print(f"{'정책':<6}{'셀':>4}{'p̄ 보류':>9}{'p_eff 보류':>12}{'게이팅 몫':>11}  반복별 몫")
+        for policy in sorted(byPolicy):
+            if policy not in GATED:
+                continue
+            rows = [counterfactualHold(c, thresholds) for c in byPolicy[policy]]
+            rows = [r for r in rows if r]
+            if not rows:
+                continue
+            # 🔒 계산이 로그와 맞는지 먼저 본다. 어긋나면 반사실을 믿을 수 없다.
+            mismatched = [r for r in rows if abs(r["effectiveHold"] - r["loggedHold"]) > 1e-9]
+            deltas = [r["effectiveHold"] - r["meanHold"] for r in rows]
+            means = [r["meanHold"] for r in rows]
+            effs = [r["effectiveHold"] for r in rows]
+            deltaSpread = "[" + " ".join(f"{d:+.1%}" for d in sorted(deltas)) + "]"
+            print(f"{policy:<6}{len(rows):>4}{statistics.median(means):>9.1%}"
+                  f"{statistics.median(effs):>12.1%}"
+                  f"{statistics.median(deltas):>+11.1%}  {deltaSpread}")
+            report.setdefault(policy, {}).update({
+                "counterfactualMeanHold": statistics.median(means),
+                "counterfactualEffectiveHold": statistics.median(effs),
+                "gatingShare": statistics.median(deltas),
+                "gatingShareValues": sorted(deltas)})
+            if mismatched:
+                print(f"       🔴 계산과 로그가 어긋나는 셀 {len(mismatched)} 건 — "
+                      f"반사실을 신뢰할 수 없다")
+            else:
+                print(f"       ✅ 계산한 `p_eff` 보류가 로그의 실제 보류와 "
+                      f"{len(rows)}/{len(rows)} 일치")
+        # ── 선별 투입 결정만을 분모로 — 보고할 숫자는 이것이다 (J27)
+        gateable = gateableBottlenecks(cells, thresholds)
+        clampScale = {}
+        for bottleneck in thresholds:
+            samples = [d["meanRisk"] - d["effectiveRisk"]
+                       for c in cells for d in allDecisions(c)
+                       if d.get("bottleneck") == bottleneck
+                       and d["meanRisk"] - d["effectiveRisk"] > 0]
+            clampScale[bottleneck] = statistics.median(samples) if samples else 0.0
+        print(f"\n  {'병목':<5}{'θ':>10}{'클램프 p50':>12}{'θ/클램프':>10}  분류")
+        for bottleneck, threshold in sorted(thresholds.items()):
+            scale = clampScale[bottleneck]
+            ratio = threshold / scale if scale > 0 else float("inf")
+            kind = "**선별 투입** — 게이팅 대상" if gateable[bottleneck] else "상시 투입 — 대상 아님"
+            print(f"  {bottleneck:<5}{threshold:>10.5f}{scale:>12.4f}{ratio:>10.2f}  {kind}")
+        selective = {b for b, ok in gateable.items() if ok}
+        if selective:
+            print(f"\n  ━━ 선별 투입 결정만을 분모로 ({'·'.join(sorted(selective))} 판정) ━━")
+            print(f"  {'정책':<6}{'결정':>6}{'p̄ 보류':>9}{'p_eff 보류':>12}{'게이팅 몫':>11}  반복별")
+            for policy in sorted(byPolicy):
+                if policy not in GATED:
+                    continue
+                subset = [counterfactualHold(c, thresholds, only=selective)
+                          for c in byPolicy[policy]]
+                subset = [r for r in subset if r]
+                if not subset:
+                    continue
+                deltas = [r["effectiveHold"] - r["meanHold"] for r in subset]
+                spreadText = "[" + " ".join(f"{d:+.1%}" for d in sorted(deltas)) + "]"
+                print(f"  {policy:<6}{sum(r['decisions'] for r in subset):>6}"
+                      f"{statistics.median(r['meanHold'] for r in subset):>9.1%}"
+                      f"{statistics.median(r['effectiveHold'] for r in subset):>12.1%}"
+                      f"{statistics.median(deltas):>+11.1%}  {spreadText}")
+                report.setdefault(policy, {})["selectiveGatingShare"] = statistics.median(deltas)
+            print("  🔴 **이것이 보고할 숫자다.** 전체 결정으로 나눈 값은 상시 투입")
+            print("     조치의 결정을 분모에 넣어 게이팅 성능을 희석한다 (J27).")
+        print("  ⚠️ **A6 을 별도 실행으로 두고 A5 와 맞대면 κ 가 분리되지 않는다** —")
+        print("     폐루프에서 위험도 분포가 내생적이므로 두 실행은 다른 분포를 만난다.")
+        print("     반사실은 같은 결정 레코드에 `p̄`·`p_eff` 를 각각 대입하므로")
+        print("     입력·θ·병목 판정이 동일하고 **차이가 κ 뿐이다**.")
+
+    print("  ⚠️ **`오탐 비용` 은 `Dₐ·Rₐ` 의 결정당 평균이다** — 횟수와 함께 읽는다.")
+    print(f"     조치별 Dₐ·Rₐ: " + " / ".join(f"{a} {c:.5f}" for a, c in sorted(costs.items())))
+    print("     횟수로는 커 보여도 공짜인 조치면 비용은 0 에 가깝다 (J26).")
 
     print("\n━━━ 성능 (장애 구간 포함, 입구 기준) ━━━")
-    print(f"{'정책':<6}{'goodput':>10}{'p95':>9}{'에러율':>9}")
+    print(f"{'정책':<6}{'goodput':>10}{'(범위)':>12}{'p95':>9}{'(범위)':>12}{'에러율':>9}")
     for policy in sorted(byPolicy):
         goodputs = [c["entryLoad"]["goodputRps"] for c in byPolicy[policy]
                     if c["entryLoad"].get("goodputRps") is not None]
@@ -151,8 +515,11 @@ def main() -> int:
         report[policy].update({"goodputMedian": statistics.median(goodputs),
                                "p95Median": statistics.median(p95s),
                                "errorRateMedian": statistics.median(errors)})
-        print(f"{policy:<6}{statistics.median(goodputs):>10.1f}"
-              f"{statistics.median(p95s):>9.0f}{statistics.median(errors):>9.1%}")
+        report[policy]["goodputSpread"] = spread(goodputs)
+        report[policy]["p95Spread"] = spread(p95s)
+        print(f"{policy:<6}{statistics.median(goodputs):>10.1f}{spread(goodputs):>12}"
+              f"{statistics.median(p95s):>9.0f}{spread(p95s):>12}"
+              f"{statistics.median(errors):>9.1%}")
 
     print("\n━━━ 판정 ━━━")
     a5 = report.get("A5", {})
@@ -167,7 +534,25 @@ def main() -> int:
         print("  정상 구간 결정이 없다. 워밍업이 정상 구간을 다 먹었는지 확인한다.")
         return 0
 
+    a5Hold = a5.get("holdShareMedian")
+    a6Hold = a6.get("holdShareMedian")
     print(f"  정상 구간 조치 비율 — A5 {a5Normal:.1%} vs A6 {a6Normal:.1%}")
+    if a5Hold is not None and a6Hold is not None:
+        print(f"  보류율           — A5 {a5Hold:.1%} vs A6 {a6Hold:.1%}  "
+              f"(차이 {a5Hold - a6Hold:+.1%})")
+        a5Values = a5.get("holdShareValues") or []
+        a6Values = a6.get("holdShareValues") or []
+        a5Held = sum(1 for v in a5Values if v > 0)
+        a6Held = sum(1 for v in a6Values if v > 0)
+        print(f"  참은 반복 수       — A5 {a5Held}/{len(a5Values)} vs A6 {a6Held}/{len(a6Values)}")
+        if a5Held == 0 and a6Held == 0:
+            print("  🔴 **어느 반복에서도 보류가 없다.** 게이팅이 아무것도 하지 않았다 —")
+            print("     H5a 를 보류로 논증할 수 없다.")
+        elif a5Held > a6Held and a5Hold == 0.0:
+            print(f"  ⚠️ **방향은 맞으나 재현되지 않는다.** A5 는 {a5Held}/{len(a5Values)} 회만")
+            print("     참았고 중앙값은 0 이다. **중앙값만 보면 \"참지 않았다\" 로 읽힌다.**")
+            print("     효과의 부호는 예측과 같으나 크기가 반복 간 산포 안이다 —")
+            print("     **이 부하 수준에서는 게이팅이 실증되지 않았다.**")
     if a6Normal > a5Normal + 0.05:
         print("  ✅ **A5 가 A6 보다 덜 헛발질한다.** 불확실성을 할인해 참은 결과이며,")
         print("     H5a(장애 미발생 시 개입 비용)에서 A5 가 우월하다는 직접 증거다.")

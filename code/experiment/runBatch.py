@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import itertools
 import json
 import os
@@ -64,9 +65,11 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "chain"))
 sys.path.insert(0, str(HERE.parent / "calibration"))
 sys.path.insert(0, str(HERE.parent / "control"))
+sys.path.insert(0, str(HERE.parent / "model"))
 
 import controlLoop  # noqa: E402
 import loadGen  # noqa: E402
+import policyEngine  # noqa: E402
 import metricScraper  # noqa: E402
 import runChain  # noqa: E402
 
@@ -124,6 +127,28 @@ class HostLoadSampler:
         }
 
 
+def profileFingerprint() -> dict:
+    """셀을 만든 **엔진 파라미터**를 기록한다.
+
+    🔴 2026-11-02 신설. 종전 원장에는 이것이 없었다. `Dₐ` 를 배선하고 A5 를 다시
+    돌리면 **배선 전 셀과 구분이 되지 않아** 집계가 두 코호트를 섞는다. `cellKey`
+    가 같으므로 원장만 보고는 알 수 없다 — 조용히 틀린 숫자가 나오는 경로다.
+
+    지문은 `(조치, 노드종류, Dₐ, Rₐ, mₐ)` 전체의 해시다. 값 하나만 바뀌어도
+    달라지므로 코호트 분리의 기준이 된다.
+    """
+    profiles = sorted(
+        (p.name, p.nodeType, p.disruption, p.reversibility,
+         tuple(sorted(p.mitigationByBottleneck.items())))
+        for p in policyEngine.defaultProfiles())
+    digest = hashlib.sha256(repr(profiles).encode("utf-8")).hexdigest()[:12]
+    return {
+        "digest": digest,
+        "disruption": {f"{p.name}/{p.nodeType}": p.disruption
+                       for p in policyEngine.defaultProfiles()},
+    }
+
+
 def cellKey(policy: str, scenario: str, repeat: int) -> str:
     return f"{policy}|{scenario}|{repeat}"
 
@@ -156,8 +181,14 @@ def runCell(policy: str, scenario: str, repeat: int, arguments) -> dict:
     """셀 하나. 기동부터 정리까지 한 번 돌린다."""
     key = cellKey(policy, scenario, repeat)
     environment = runChain.buildEnvironment(scenario, arguments)
-    tracePath = RESULTS_DIR / f"trace-{policy}-{scenario}-r{repeat}.jsonl"
-    decisionPath = RESULTS_DIR / f"decisions-{policy}-{scenario}-r{repeat}.jsonl"
+    # 🔴 파일명에 엔진 지문을 넣는다 (2026-11-02). 넣지 않으면 `Dₐ` 를 배선하고
+    #    다시 돌릴 때 **같은 경로를 덮어쓴다.** 원장의 배선 전 셀이 가리키는
+    #    `decisionPath` 가 배선 후 파일이 되어, 그 셀을 집계하면 조용히 틀린다.
+    #    원장 항목의 `actionProfiles.digest` 와 같은 값이다.
+    digest = profileFingerprint()["digest"]
+    stem = f"{policy}-{scenario}-r{repeat}-{digest}"
+    tracePath = RESULTS_DIR / f"trace-{stem}.jsonl"
+    decisionPath = RESULTS_DIR / f"decisions-{stem}.jsonl"
 
     # 셀 사이를 확실히 정리한다. 안 하면 이전 상태가 남아 다음 셀을 오염시킨다.
     runChain.composeDown(environment)
@@ -227,6 +258,8 @@ def runCell(policy: str, scenario: str, repeat: int, arguments) -> dict:
         "hostLoad": hostLoad.summary() if hostLoad is not None else None,
         "callGraph": json.loads((HERE.parent / "chain" / "callGraph.json")
                                 .read_text(encoding="utf-8")),
+        # 🔴 엔진 파라미터의 지문. 이것이 다르면 다른 코호트다 (profileFingerprint 주석).
+        "actionProfiles": profileFingerprint(),
     }
 
 
@@ -280,7 +313,16 @@ def main() -> int:
     random.Random(arguments.seed).shuffle(cells)
 
     done = readLedger(ledgerPath) if arguments.resume else {}
-    completed = {k for k, v in done.items() if v["status"] == "done"}
+    # 🔴 `--resume` 은 **같은 엔진 파라미터로 만든 셀만** 완료로 본다 (2026-11-02).
+    #    `cellKey` 만 보면, `Dₐ` 를 배선하고 다시 돌릴 때 배선 전 셀이 "완료" 로
+    #    잡혀 **한 셀도 돌지 않는다.** 조용히 아무것도 안 하는 경로다.
+    currentDigest = profileFingerprint()["digest"]
+    completed = {k for k, v in done.items()
+                 if v["status"] == "done"
+                 and ((v.get("actionProfiles") or {}).get("digest")) == currentDigest}
+    staleSkipped = sum(1 for k, v in done.items()
+                       if v["status"] == "done"
+                       and ((v.get("actionProfiles") or {}).get("digest")) != currentDigest)
     pending = [c for c in cells if cellKey(*c) not in completed]
 
     perCellSeconds = arguments.warmup + arguments.normalSeconds + arguments.faultSeconds + 55
@@ -288,6 +330,10 @@ def main() -> int:
           f"× 반복 {arguments.repeats})")
     if arguments.resume:
         print(f"원장에서 완료 {len(completed)} 건 확인 → 남은 {len(pending)} 셀")
+        print(f"엔진 지문 {currentDigest}")
+        if staleSkipped:
+            print(f"  ⚠️ 다른 엔진 파라미터로 만든 완료 셀 {staleSkipped} 건은 "
+                  f"**완료로 보지 않는다** — θ 가 다르므로 다시 돌려야 한다")
     print(f"셀당 약 {perCellSeconds / 60:.1f}분 → 예상 {len(pending) * perCellSeconds / 3600:.1f}시간")
     unsupported = [p for p in policies if p not in COMPOSE_POLICIES]
     if unsupported:

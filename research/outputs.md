@@ -24,7 +24,7 @@
 - **벤치마크 시스템** — 자작 Spring 구성 6~7개 서비스(의존 깊이 4단) + LLM 노드. **공개 대상**이며 자작 벤치마크의 재현성을 확보하는 핵심 산출물이다
 - **코드** — 예측기 3단(규칙/GBM/GAT), Policy Engine, Actuator 4종, 앱 레벨 장애 주입 필터 (`code/model`, `code/backend`, `code/simulator`, `code/utils`)
 - **실험 데이터/결과** — S1·S2·S3 시나리오 실측 데이터, 조치 정책 비교(A1~A6), 예측기 3단 비교(B1~B3), **오탐 비용·조치 리드타임 `ℓₐ` 측정 결과** (`data/raw`, `data/processed`, `data/sample`)
-- **학회 논문** — 2027 춘계 학술대회 4~6p (S1 중심)
+- **학회 논문** — 2027 춘계 학술대회 **2~3p** (S1 중심). ⚠️ 종전 `4~6p` 는 출처 없는 숫자였다([challenges.md](challenges.md) J20). 투고 시점에 CFP 로 재확인한다
 - **다이어그램/그림** — 아키텍처 다이어그램, 실험 결과 그래프 (`assets/diagrams`, `assets/figures`, `assets/images`)
 
 위 항목들은 실험 착수 후 순차적으로 채워질 예정이며, 진행 경과는 [research/timeline.md](timeline.md)의 마일스톤을 참고.

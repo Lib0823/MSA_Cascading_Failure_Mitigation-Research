@@ -202,15 +202,59 @@ def defaultProfiles() -> list[ActionProfile]:
     SCALE_OUT           0.50    —          게이트 ② 대기 (K8s 필요)
     ==================  ======  ========  ===================================
 
-    **그래도 아직 배선하지 않는다.** Scale-out 이 빠진 상태로 일부만 바꾸면 조치
-    간 상대 비용이 부분적으로만 실측이 되고, 게이트 ② 에서 **A5 vs A6 를 또 한 번
-    전부 재측정**해야 한다. 네 값이 갖춰진 뒤 한 번에 바꾼다. 판단 근거는 §2-B.
+    🔴 **2026-11-02 — 두 값을 배선했다. 판단이 바뀐 근거는 측정이다.**
+
+    J19 는 *"Scale-out 이 빠진 상태로 일부만 바꾸면 게이트 ② 에서 또 전부
+    재측정해야 한다"* 며 유보했다. **그 전제가 Compose 범위에서는 성립하지 않는다.**
+
+    S1 20셀의 결정 로그 **690건에서 선택된 조치는 두 개뿐**이었다.
+
+        BULKHEAD 380 · CIRCUIT_BREAKER 429 · 보류 226
+        BROWNOUT 0 · SCALE_OUT 0
+
+    **Brownout 과 Scale-out 은 한 번도 선택되지 않는다** — Brownout 은 Compose
+    토폴로지에 선택 호출이 없어 무동작이고, Scale-out 은 K8s 가 필요하다. 따라서
+    **이 둘을 가정값으로 남겨도 Compose 결과는 달라지지 않는다.** 게이트 ② 의
+    재측정은 Scale-out 이 **새 조치(A3)로 들어오기 때문에** 어차피 필요하다.
+
+    **배선 기준은 "측정이 파라미터의 정의와 맞는가" 다.**
+
+    ==================  ==========  ====================================
+    조치                 배선         근거
+    ==================  ==========  ====================================
+    BULKHEAD            **0.716**   ✅ 동시성을 **무조건** 제한하므로 비용이
+                                    즉시·무조건 발생한다. `Dₐ` 의 정의와 일치.
+                                    0.703 의 독립 재현이라 신뢰할 수 있다
+    CIRCUIT_BREAKER     **0.002**   ✅ `Dₐ` 가 **무조건적** 비용으로 정의돼
+                                    있고, CB 의 무조건적 비용은 실제로 0 에
+                                    가깝다. 측정이 정의와 일치한다 — §2-B 가
+                                    *"장전은 싸다"* 를 결과로 받기로 한 대로다
+    BROWNOUT            0.30 유지    🔴 측정이 **무동작**이었다. 0.001 은
+                                    "무료" 가 아니라 "아무것도 하지 않음" 이다
+    SCALE_OUT           0.50 유지    게이트 ② 대기 (K8s 필요)
+    ==================  ==========  ====================================
+
+    **유도되는 `θ` (R=0.1, L=1)**
+
+        S1 판정 → BULKHEAD          θ = 0.716·0.1 / (0.8 − 0.716·0.9) = 0.460
+        S3 판정 → CIRCUIT_BREAKER   θ = 0.002·0.1 / (0.8 − 0.002·0.9) = 0.00025
+        S3 의 BULKHEAD · S1 의 CB    분모 ≤ 0 → θ = ∞ (자동 배제, 종전과 같다)
+
+    종전 가정값에서는 θ 가 **0.0435 · 0.0226** 이었고 `p_eff` 의 p50(0.063) 보다
+    작아 **게이트가 상시 열려 있었다**([[research/challenges.md]] J22). θ_BH 가
+    0.460 이 되면 게이팅이 물릴 자리가 생긴다.
+
+    ⚠️ **`llm` 종류 프로파일은 건드리지 않았다.** Compose 콜그래프에 `llm` 노드가
+    없어 쓰이지 않으며, 실측은 서비스 노드에서 했다.
+
+    ⚠️ **이 배선으로 종전 A5 vs A6 결과(S3·64워커 2회)는 무효가 된다.** 조치의
+    상대 비용이 바뀌었기 때문이다. 재측정으로 대체한다.
     """
     return [
-        ActionProfile("CIRCUIT_BREAKER", "service", disruption=0.15, reversibility=0.1,
+        ActionProfile("CIRCUIT_BREAKER", "service", disruption=0.002, reversibility=0.1,
                       leadTimeSeconds=0.05,
                       mitigationByBottleneck={"S1": -0.3, "S2": 0.0, "S3": 0.8}),
-        ActionProfile("BULKHEAD", "service", disruption=0.25, reversibility=0.1,
+        ActionProfile("BULKHEAD", "service", disruption=0.716, reversibility=0.1,
                       leadTimeSeconds=0.1,
                       mitigationByBottleneck={"S1": 0.8, "S2": 0.0, "S3": 0.2}),
         ActionProfile("BROWNOUT", "service", disruption=0.3, reversibility=0.1,

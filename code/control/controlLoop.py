@@ -121,8 +121,24 @@ class ControlLoop:
             return f"failed:{type(exception).__name__}"
 
     # ── 예측 ──────────────────────────────────────────────────────────────
-    def predict(self, features: np.ndarray) -> tuple[float, float, str]:
-        """`(p̄, u, ŝ)` 를 낸다. 게이트 ① 과 같은 규약이다."""
+    def predict(self, features: np.ndarray) -> tuple[float, float, str, dict]:
+        """`(p̄, u, ŝ, P(·))` 를 낸다. 게이트 ① 과 같은 규약에 **사후확률을 더한다.**
+
+        🔴 **왜 사후확률을 함께 내는가** (2026-11-02, [[research/challenges.md]] J26)
+
+        종전에는 `ŝ = argmax_b P(b)` 만 냈고, Policy Engine 이 그것을 **확실한 것으로**
+        받아 `mₐ(ŝ)` 로 `θ` 를 유도했다. 그런데 `p̄` 가 낮을 때 `argmax` 는 노이즈이고,
+        **그 노이즈가 `θ` 를 고르므로 개입 여부를 정한다.** 실측에서 정상 구간 120건
+        중 119건이 S3 로 판정돼 `θ_CB = 0.00025` 가 적용되고 전부 개입했다. 같은
+        결정들이 S1 판정이었다면 `θ_BH = 0.46` 이라 **전부 보류**였다.
+
+        `κ` 로 위반 확률의 불확실성은 할인하면서 **병목 유형은 확실한 것으로 취급하는
+        것이 구조적 비일관**이다. 사후확률을 내보내면 비용함수가 그것을 주변화할 수
+        있다 — `m̄ₐ = Σ_b P(b)·mₐ(b) / p̄` 로 두면 `θ` 식이 **그대로 보존된다.**
+
+        지금은 **기록만 한다.** 주변화를 켜는 것은 별도 결정이며, 사후확률이 로그에
+        남아야 그 효과를 재측정 없이 반사실로 가늠할 수 있다.
+        """
         assert features.shape[0] == self.expectedDim, (
             f"feature 차원 불일치: {features.shape[0]} != {self.expectedDim} — "
             "학습과 추론의 feature 공간이 어긋났다")
@@ -136,7 +152,8 @@ class ControlLoop:
         bottleneckIndexes = [i for i, name in enumerate(self.classes) if name != NORMAL_LABEL]
         bottleneck = (self.classes[bottleneckIndexes[
             int(np.argmax(meanProba[bottleneckIndexes]))]] if bottleneckIndexes else NORMAL_LABEL)
-        return meanRisk, uncertainty, bottleneck
+        posterior = {name: float(meanProba[i]) for i, name in enumerate(self.classes)}
+        return meanRisk, uncertainty, bottleneck, posterior
 
     # ── 정책별 조치 결정 ──────────────────────────────────────────────────
     def decide(self, node: str, meanRisk: float, uncertainty: float, bottleneck: str) -> dict:
@@ -201,13 +218,15 @@ class ControlLoop:
                 features = self.builder.buildFeatures(node)
                 if features is None:
                     continue
-                meanRisk, uncertainty, bottleneck = self.predict(features)
+                meanRisk, uncertainty, bottleneck, posterior = self.predict(features)
                 decision = self.decide(node, meanRisk, uncertainty, bottleneck)
                 outcome = self.applyRemediation(node, decision["action"])
                 self.decisions.append({
                     "timestamp": tickStart, "tick": self.tickCount, "node": node,
                     "policy": self.policy, "meanRisk": meanRisk, "uncertainty": uncertainty,
-                    "bottleneck": bottleneck, "outcome": outcome, **decision})
+                    "bottleneck": bottleneck, "outcome": outcome,
+                    # 🔴 주변화의 반사실을 로그만으로 계산할 수 있게 한다 (J26).
+                    "bottleneckProba": posterior, **decision})
 
     def __enter__(self) -> "ControlLoop":
         self.thread.start()

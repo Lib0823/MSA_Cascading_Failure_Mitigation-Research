@@ -39,10 +39,14 @@
 이것은 §2-B 의 `E[비용|a]`·`E[비용|보류]` 에 `p=0`·`p=1` 을 대입한 것이며 **새
 가정을 넣지 않는다.** `mₐ`·`Dₐ` 는 엔진 프로파일에서 가져온다.
 
-⚠️ **`p=1` 은 과대평가다.** 장애 구간이라도 그 노드가 영향을 받지 않았을 수 있다
-(흡수된 장애). 따라서 미개입 비용이 실제보다 크게 잡히고, **최적 `κ` 는 보수적
-(작은 쪽)으로 치우친다.** 노드 단위 정답 라벨이 있으면 교정된다 — [[J22]] ④ 가
-그것을 게이트 ② 로 넘긴 이유다.
+✅ **2026-11-02 — 노드 단위 정답 라벨로 교정했다**([[research/challenges.md]] J28).
+`p` 의 정답을 [relabel.py](../chain/relabel.py) 의 `positive(v,t)` 에서 가져온다.
+종전에는 주입 전/후 창으로 대체했고, 그것이 **장애창 결정의 67.3% 를 잘못 "장애"
+로 세어** 미개입 비용을 3배 과대평가했다.
+
+⚠️ 라벨 규칙 자체에는 임계(`latencyMultiplier` 등)가 들어 있으므로 **오라클이 아니라
+규칙**이다. 다만 **학습과 평가가 같은 정의를 쓴다** — 다른 정의를 쓰면 모델을 그
+어긋남으로 벌주게 된다.
 
 ⚠️ **한계**: 궤적을 고정한다. `κ` 를 바꾸면 실제로는 조치가 달라져 다음 틱의
 위험도가 달라진다([[research/challenges.md]] J24 가 그것 때문에 A6 을 기준선에서
@@ -64,6 +68,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import comparePolicies as cmp  # noqa: E402
+import groundTruth  # noqa: E402
 
 DEFAULT_KAPPAS = (0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0)
 BASELINE_KAPPA = 1.0   # controlLoop 의 기본값. 로그의 p_eff 가 이 값으로 만들어졌다.
@@ -153,22 +158,27 @@ def decisionRows(cell: dict, settleSeconds: float = 10.0) -> list[dict]:
     """
     rows = []
     injectedAt = cell.get("injectedAt")
+    # 🔴 **노드 단위 정답 라벨을 쓴다** (2026-11-02, [[research/challenges.md]] J28).
+    #    종전에는 주입 전/후 창으로 대체했는데, 장애창 결정의 **67.3% 는 그 노드가
+    #    영향받지 않았다.** 미개입 비용이 3배 과대평가됐고 κ 의 최적이 틀렸다.
+    annotated = {(r.get("node"), r["timestamp"]): r.get("truth")
+                 for r in groundTruth.annotate(cell, groundTruth.labelingArguments())}
     for entry in cmp.allDecisions(cell):
         mean, effective = entry["meanRisk"], entry["effectiveRisk"]
-        # 주입 ±settle 은 과도 구간이므로 라벨을 주지 않는다 — comparePolicies 와 같다.
-        window = None
-        if injectedAt is not None:
-            offset = entry["timestamp"] - injectedAt
-            if offset < -settleSeconds:
-                window = "normal"
-            elif offset > settleSeconds:
-                window = "fault"
+        truth = annotated.get((entry.get("node"), entry["timestamp"]))
+        if truth is None:
+            window = None            # 접합 실패 — 추측하지 않는다
+        elif truth == groundTruth.NORMAL:
+            window = "normal"
+        else:
+            window = "fault"
         rows.append({
             "bottleneck": entry.get("bottleneck"),
             "meanRisk": mean,
             "rootU": (mean - effective) / BASELINE_KAPPA,
             "clamped": effective <= 0.0 < mean,
             "window": window,
+            "truth": truth,
         })
     return rows
 
@@ -325,11 +335,9 @@ def main() -> int:
                     verdict = f"✅ 오탐 {normals} 건을 절약할 수 있다"
                 print(f"{bottleneck:<5}{threshold:>10.5f}{kappa:>6.2f}{label:<18}"
                       f"{len(band):>5}{normals:>10}  {verdict}")
-        print("  ⚠️ **`p=0/1` 라벨은 에피소드 단위 창이다** — 장애 구간이라도 그 노드가")
-        print("     영향받지 않았을 수 있다. 따라서 '정상' 로 센 것은 **하한**이고,")
-        print("     '전부 장애' 라는 판정은 **그 띠에 절약할 오탐이 없었다**는 뜻으로만")
-        print("     읽는다. 캘리브레이션의 정도는 이 라벨로 정할 수 없다 — 노드 단위")
-        print("     정답 라벨이 필요하다([[research/challenges.md]] J22 ④).")
+        print("  ✅ **`p=0/1` 은 노드 단위 정답 라벨이다**(relabel.py 의 `positive(v,t)`) —")
+        print("     장애 구간이라도 그 노드가 영향받지 않았으면 '정상' 이다. 종전의 창")
+        print("     라벨은 장애창 결정의 67.3% 를 잘못 '장애' 로 셌다 (J28).")
 
     if rowsOut:
         best = min(rowsOut, key=lambda r: r["realisedCost"])

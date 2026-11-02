@@ -133,6 +133,82 @@ def splitDecisions(cell: dict, settleSeconds: float) -> tuple[list[dict], list[d
     return normal, fault
 
 
+def allDecisions(cell: dict) -> list[dict]:
+    """셀의 결정 전체. 구간을 나누지 않는다."""
+    if not cell.get("decisionPath"):
+        return []
+    path = HERE / cell["decisionPath"]
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()]
+
+
+def counterfactualHold(cell: dict, thresholds: dict[str, float]) -> dict | None:
+    """🔴 **같은 실행 안에서** `p̄` 로 판정했다면 몇 건을 보류했을까.
+
+    왜 이것이 H5a 의 올바른 측정인가 (2026-11-02)
+    ============================================
+
+    A6(κ=0) 을 **별도 실행**으로 두고 A5 와 비교하면 `κ` 의 효과가 분리되지 않는다.
+    폐루프에서 **위험도 분포가 내생적**이기 때문이다 — 정책이 다른 조치를 걸면
+    시스템 상태가 달라지고, 그러면 다음 틱의 위험도가 달라진다. 두 실행은 애초에
+    **다른 분포를 만난다.**
+
+    2026-11-02 실측이 그것을 드러냈다. S1 판정 결정에서 `p̄` 가 θ 를 미달한 비율이
+
+        A5 의 실행:  3.6%
+        A6 의 실행: 17.0%     ← 4.7 배
+
+    였다. 이 상태에서 보류율을 맞대면 `κ` 가 아니라 **분포 차이를 재게 된다.**
+    실제로 A6 이 **더 많이** 참았다(5.8% vs 4.3%) — `p_eff ≤ p̄` 이므로 같은 입력
+    에서는 **일어날 수 없는 방향**이다.
+
+    반사실은 **같은 결정 레코드**에 `p̄` 와 `p_eff` 를 각각 대입한다. 입력·θ·병목
+    판정이 모두 동일하므로 **차이는 `κ` 뿐이다.**
+
+    ⚠️ **한계**: 궤적을 고정하므로 *"덜 개입했을 때 시스템이 어떻게 됐을지"* 는
+    답하지 않는다. H5a 가 묻는 것은 **오탐 개입 횟수**이므로 그 양에는 맞는다.
+    """
+    decisions = allDecisions(cell)
+    if not decisions:
+        return None
+    withMean = withEffective = 0
+    for entry in decisions:
+        threshold = thresholds.get(entry.get("bottleneck"))
+        if threshold is None:
+            continue
+        if entry["meanRisk"] < threshold:
+            withMean += 1
+        if entry["effectiveRisk"] < threshold:
+            withEffective += 1
+    total = len(decisions)
+    return {"decisions": total, "meanHold": withMean / total,
+            "effectiveHold": withEffective / total,
+            "loggedHold": sum(1 for d in decisions if d.get("action") == HOLD) / total}
+
+
+def observedThresholds(cells: list[dict]) -> dict[str, float]:
+    """결정 로그에서 병목별 θ 를 **관측해서** 가져온다.
+
+    손으로 적어 넣지 않는다 — 엔진 파라미터가 바뀌면 그 숫자가 조용히 낡는다.
+    보류 레코드의 θ 는 `inf` 이므로 조치가 선택된 레코드만 본다.
+    """
+    found: dict[str, float] = {}
+    for cell in cells:
+        # 🔴 `GATED` 만 본다. A2 의 `threshold` 는 `p̄ > 0.5` 규칙의 상수이지
+        #    비용함수가 유도한 `θ` 가 아니다 — 섞으면 반사실이 엉뚱한 임계를 쓴다.
+        if cell.get("policy") not in GATED:
+            continue
+        for entry in allDecisions(cell):
+            bottleneck, threshold = entry.get("bottleneck"), entry.get("threshold")
+            if entry.get("action") == HOLD or bottleneck is None:
+                continue
+            if isinstance(threshold, (int, float)) and math.isfinite(threshold):
+                found.setdefault(bottleneck, threshold)
+    return found
+
+
 def actionShare(decisions: list[dict]) -> float:
     """조치가 나간 비율. 보류는 조치가 아니다."""
     if not decisions:
@@ -194,6 +270,34 @@ def main() -> int:
         print("\n⚠️ `--pool` — 코호트를 섞었다. goodput·p95 의 중앙값은 **읽지 않는다.**")
     print()
 
+    # 🔒 결정 로그가 덮어써졌는가 (2026-11-02).
+    #    `Dₐ` 를 배선하고 다시 돌리면 종전 파일명 규칙이 **같은 경로에 썼다.**
+    #    파일을 실제로 소유한 것은 **마지막에 기록된 셀**이고, 그보다 앞선 셀의
+    #    로그는 사라졌다. 그 셀에서는 **결정 파일 기반 지표를 내지 않는다** —
+    #    `goodput`·`holdShare`·`적용` 은 원장에 들어 있어 영향받지 않으므로 셀
+    #    자체는 버리지 않는다.
+    latestOwner: dict[str, str] = {}
+    for entry in loadLedger(ledgerPath):
+        path, stamp = entry.get("decisionPath"), entry.get("recordedAt") or ""
+        if path and stamp >= latestOwner.get(path, ""):
+            latestOwner[path] = stamp
+    overwritten = [c for c in cells
+                   if c.get("decisionPath")
+                   and (c.get("recordedAt") or "") != latestOwner.get(c["decisionPath"])]
+    if overwritten:
+        print(f"🔴 **결정 로그가 덮어써진 셀 {len(overwritten)} 건** — 나중에 돌린 셀이")
+        print("   같은 경로에 썼다. 그 파일의 내용은 이 셀의 것이 아니다.")
+        print("   **결정 파일 기반 지표(정상/장애 결정·조치 비율·반사실)를 내지 않는다.**")
+        print("   원장에서 오는 goodput·보류율·적용 은 영향받지 않는다.")
+        for cell in sorted(overwritten, key=lambda c: c["cellKey"])[:6]:
+            print(f"     {cell['cellKey']}  {cell['decisionPath']}")
+        if len(overwritten) > 6:
+            print(f"     … 외 {len(overwritten) - 6} 건")
+        print("   → 배선 전 로그는 git 이력에 있다 (commit c425b87).")
+        print("   → 이후 실행은 파일명에 지문이 들어가 충돌하지 않는다.\n")
+        for cell in overwritten:
+            cell["decisionPath"] = None   # splitDecisions·allDecisions 가 빈 값을 낸다
+
     byPolicy: dict[str, list[dict]] = collections.defaultdict(list)
     for cell in cells:
         byPolicy[cell["policy"]].append(cell)
@@ -247,6 +351,44 @@ def main() -> int:
         print(f"{policy:<6}{len(byPolicy[policy]):>4}{len(normalAll):>10}"
               f"{normalShare:>11.1%}{len(faultAll):>10}{faultShare:>11.1%}"
               f"{holdCell}{appliedTotal:>7}  {holdSpread}{marker}")
+
+    # ━━━ H5a 의 올바른 측정 — 같은 실행 안의 반사실 ━━━
+    thresholds = observedThresholds(cells)
+    if thresholds:
+        print("\n━━━ 🔴 같은 실행 안의 반사실 (H5a) — κ 만 다르게 했다면 ━━━")
+        print("관측된 θ: " + " / ".join(f"{b} {t:.5f}" for b, t in sorted(thresholds.items())))
+        print(f"{'정책':<6}{'셀':>4}{'p̄ 보류':>9}{'p_eff 보류':>12}{'게이팅 몫':>11}  반복별 몫")
+        for policy in sorted(byPolicy):
+            if policy not in GATED:
+                continue
+            rows = [counterfactualHold(c, thresholds) for c in byPolicy[policy]]
+            rows = [r for r in rows if r]
+            if not rows:
+                continue
+            # 🔒 계산이 로그와 맞는지 먼저 본다. 어긋나면 반사실을 믿을 수 없다.
+            mismatched = [r for r in rows if abs(r["effectiveHold"] - r["loggedHold"]) > 1e-9]
+            deltas = [r["effectiveHold"] - r["meanHold"] for r in rows]
+            means = [r["meanHold"] for r in rows]
+            effs = [r["effectiveHold"] for r in rows]
+            deltaSpread = "[" + " ".join(f"{d:+.1%}" for d in sorted(deltas)) + "]"
+            print(f"{policy:<6}{len(rows):>4}{statistics.median(means):>9.1%}"
+                  f"{statistics.median(effs):>12.1%}"
+                  f"{statistics.median(deltas):>+11.1%}  {deltaSpread}")
+            report.setdefault(policy, {}).update({
+                "counterfactualMeanHold": statistics.median(means),
+                "counterfactualEffectiveHold": statistics.median(effs),
+                "gatingShare": statistics.median(deltas),
+                "gatingShareValues": sorted(deltas)})
+            if mismatched:
+                print(f"       🔴 계산과 로그가 어긋나는 셀 {len(mismatched)} 건 — "
+                      f"반사실을 신뢰할 수 없다")
+            else:
+                print(f"       ✅ 계산한 `p_eff` 보류가 로그의 실제 보류와 "
+                      f"{len(rows)}/{len(rows)} 일치")
+        print("  ⚠️ **A6 을 별도 실행으로 두고 A5 와 맞대면 κ 가 분리되지 않는다** —")
+        print("     폐루프에서 위험도 분포가 내생적이므로 두 실행은 다른 분포를 만난다.")
+        print("     반사실은 같은 결정 레코드에 `p̄`·`p_eff` 를 각각 대입하므로")
+        print("     입력·θ·병목 판정이 동일하고 **차이가 κ 뿐이다**.")
 
     print("\n━━━ 성능 (장애 구간 포함, 입구 기준) ━━━")
     print(f"{'정책':<6}{'goodput':>10}{'(범위)':>12}{'p95':>9}{'(범위)':>12}{'에러율':>9}")

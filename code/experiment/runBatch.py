@@ -181,8 +181,14 @@ def runCell(policy: str, scenario: str, repeat: int, arguments) -> dict:
     """셀 하나. 기동부터 정리까지 한 번 돌린다."""
     key = cellKey(policy, scenario, repeat)
     environment = runChain.buildEnvironment(scenario, arguments)
-    tracePath = RESULTS_DIR / f"trace-{policy}-{scenario}-r{repeat}.jsonl"
-    decisionPath = RESULTS_DIR / f"decisions-{policy}-{scenario}-r{repeat}.jsonl"
+    # 🔴 파일명에 엔진 지문을 넣는다 (2026-11-02). 넣지 않으면 `Dₐ` 를 배선하고
+    #    다시 돌릴 때 **같은 경로를 덮어쓴다.** 원장의 배선 전 셀이 가리키는
+    #    `decisionPath` 가 배선 후 파일이 되어, 그 셀을 집계하면 조용히 틀린다.
+    #    원장 항목의 `actionProfiles.digest` 와 같은 값이다.
+    digest = profileFingerprint()["digest"]
+    stem = f"{policy}-{scenario}-r{repeat}-{digest}"
+    tracePath = RESULTS_DIR / f"trace-{stem}.jsonl"
+    decisionPath = RESULTS_DIR / f"decisions-{stem}.jsonl"
 
     # 셀 사이를 확실히 정리한다. 안 하면 이전 상태가 남아 다음 셀을 오염시킨다.
     runChain.composeDown(environment)

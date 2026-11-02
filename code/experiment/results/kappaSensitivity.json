@@ -1,0 +1,88 @@
+{
+  "policy": "A5",
+  "cells": 5,
+  "cohort": [
+    "s1",
+    32,
+    "c299de2c4f92"
+  ],
+  "thresholds": {
+    "S3": 0.00025056376847907793,
+    "S1": 0.460154241645244
+  },
+  "baselineHoldShare": 0.014492753623188406,
+  "curve": [
+    {
+      "kappa": 0.0,
+      "holdShare": 0.014492753623188406,
+      "gatingShare": 0.0,
+      "falsePositiveShare": 1.0,
+      "missedShare": 0.0,
+      "realisedCost": 0.39261052631578947
+    },
+    {
+      "kappa": 0.25,
+      "holdShare": 0.028985507246376812,
+      "gatingShare": 0.014492753623188406,
+      "falsePositiveShare": 1.0,
+      "missedShare": 0.0,
+      "realisedCost": 0.39261052631578947
+    },
+    {
+      "kappa": 0.5,
+      "holdShare": 0.028985507246376812,
+      "gatingShare": 0.014492753623188406,
+      "falsePositiveShare": 1.0,
+      "missedShare": 0.027777777777777776,
+      "realisedCost": 0.39261052631578947
+    },
+    {
+      "kappa": 0.75,
+      "holdShare": 0.043478260869565216,
+      "gatingShare": 0.02898550724637681,
+      "falsePositiveShare": 1.0,
+      "missedShare": 0.030303030303030304,
+      "realisedCost": 0.39261052631578947
+    },
+    {
+      "kappa": 1.0,
+      "holdShare": 0.043478260869565216,
+      "gatingShare": 0.02898550724637681,
+      "falsePositiveShare": 1.0,
+      "missedShare": 0.030303030303030304,
+      "realisedCost": 0.3940842105263158
+    },
+    {
+      "kappa": 1.5,
+      "holdShare": 0.10144927536231885,
+      "gatingShare": 0.08695652173913045,
+      "falsePositiveShare": 0.9583333333333334,
+      "missedShare": 0.06060606060606061,
+      "realisedCost": 0.39555789473684216
+    },
+    {
+      "kappa": 2.0,
+      "holdShare": 0.15942028985507245,
+      "gatingShare": 0.14492753623188404,
+      "falsePositiveShare": 0.8333333333333334,
+      "missedShare": 0.15151515151515152,
+      "realisedCost": 0.3999508771929825
+    },
+    {
+      "kappa": 3.0,
+      "holdShare": 0.3333333333333333,
+      "gatingShare": 0.3188405797101449,
+      "falsePositiveShare": 0.375,
+      "missedShare": 0.18181818181818182,
+      "realisedCost": 0.4013929824561404
+    },
+    {
+      "kappa": 5.0,
+      "holdShare": 0.6231884057971014,
+      "gatingShare": 0.6086956521739131,
+      "falsePositiveShare": 0.0,
+      "missedShare": 0.2727272727272727,
+      "realisedCost": 0.4308421052631579
+    }
+  ]
+}

@@ -28,6 +28,7 @@
         0.028985507246376812,
         0.028985507246376812
       ],
+      "selectiveGatingShare": 0.07692307692307693,
       "goodputMedian": 185.65874058560138,
       "p95Median": 393.1581670003652,
       "errorRateMedian": 0.027846994535519125,
@@ -59,6 +60,7 @@
         0.0,
         0.0
       ],
+      "selectiveGatingShare": 0.0,
       "goodputMedian": 186.88995947827942,
       "p95Median": 392.3848340018594,
       "errorRateMedian": 0.028456703910614525,

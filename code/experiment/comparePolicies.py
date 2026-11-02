@@ -145,7 +145,41 @@ def allDecisions(cell: dict) -> list[dict]:
             if line.strip()]
 
 
-def counterfactualHold(cell: dict, thresholds: dict[str, float]) -> dict | None:
+def gateableBottlenecks(cells: list[dict], thresholds: dict[str, float]) -> dict[str, bool]:
+    """병목별로 **게이팅의 대상인가** — `θ` 가 클램프 폭에 닿는가.
+
+    🔴 **왜 모집단을 가려야 하는가** (2026-11-02, [[research/challenges.md]] J27)
+
+    게이트가 결정을 바꾸는 조건은 `θ <= p̄ < θ + κ√u` 다. `θ` 가 클램프 폭
+    `κ√u` 보다 **훨씬 작으면** `p_eff` 가 이미 `θ` 를 넘어 있어 창이 닫힌다 —
+    그 조치는 **상시 투입**이고 *"언제 걸까"* 라는 질문이 성립하지 않는다.
+
+    실측에서 `θ_CB = 0.00025` 이고 클램프 `p50 = 0.0139` 였다. `θ` 가 클램프의
+    **1/56** 이므로 CB 결정은 게이팅 대상이 아니다. 그런데 그 결정이 345건 중
+    235건이었다 — **분모에 넣으면 게이팅 성능이 2/3 만큼 희석된다.**
+
+    `오탐 개입 99.2%` 도 같은 이유로 오해를 부른다. 그 개입은 전부 `Dₐ·Rₐ = 0.0002`
+    인 CB 장전이고, 비용함수는 **그것을 상시 투입하라고 말하고 있다.**
+
+    기준: `θ > κ·median(√u)`. 넘지 못하면 상시 투입으로 본다.
+    """
+    clamps: dict[str, list[float]] = collections.defaultdict(list)
+    for cell in cells:
+        for entry in allDecisions(cell):
+            bottleneck = entry.get("bottleneck")
+            if bottleneck is None:
+                continue
+            clamps[bottleneck].append(entry["meanRisk"] - entry["effectiveRisk"])
+    verdict = {}
+    for bottleneck, threshold in thresholds.items():
+        samples = [c for c in clamps.get(bottleneck, []) if c > 0]
+        scale = statistics.median(samples) if samples else 0.0
+        verdict[bottleneck] = threshold > scale
+    return verdict
+
+
+def counterfactualHold(cell: dict, thresholds: dict[str, float],
+                       only: set[str] | None = None) -> dict | None:
     """🔴 **같은 실행 안에서** `p̄` 로 판정했다면 몇 건을 보류했을까.
 
     왜 이것이 H5a 의 올바른 측정인가 (2026-11-02)
@@ -172,6 +206,8 @@ def counterfactualHold(cell: dict, thresholds: dict[str, float]) -> dict | None:
     답하지 않는다. H5a 가 묻는 것은 **오탐 개입 횟수**이므로 그 양에는 맞는다.
     """
     decisions = allDecisions(cell)
+    if only is not None:
+        decisions = [d for d in decisions if d.get("bottleneck") in only]
     if not decisions:
         return None
     withMean = withEffective = 0
@@ -420,6 +456,42 @@ def main() -> int:
             else:
                 print(f"       ✅ 계산한 `p_eff` 보류가 로그의 실제 보류와 "
                       f"{len(rows)}/{len(rows)} 일치")
+        # ── 선별 투입 결정만을 분모로 — 보고할 숫자는 이것이다 (J27)
+        gateable = gateableBottlenecks(cells, thresholds)
+        clampScale = {}
+        for bottleneck in thresholds:
+            samples = [d["meanRisk"] - d["effectiveRisk"]
+                       for c in cells for d in allDecisions(c)
+                       if d.get("bottleneck") == bottleneck
+                       and d["meanRisk"] - d["effectiveRisk"] > 0]
+            clampScale[bottleneck] = statistics.median(samples) if samples else 0.0
+        print(f"\n  {'병목':<5}{'θ':>10}{'클램프 p50':>12}{'θ/클램프':>10}  분류")
+        for bottleneck, threshold in sorted(thresholds.items()):
+            scale = clampScale[bottleneck]
+            ratio = threshold / scale if scale > 0 else float("inf")
+            kind = "**선별 투입** — 게이팅 대상" if gateable[bottleneck] else "상시 투입 — 대상 아님"
+            print(f"  {bottleneck:<5}{threshold:>10.5f}{scale:>12.4f}{ratio:>10.2f}  {kind}")
+        selective = {b for b, ok in gateable.items() if ok}
+        if selective:
+            print(f"\n  ━━ 선별 투입 결정만을 분모로 ({'·'.join(sorted(selective))} 판정) ━━")
+            print(f"  {'정책':<6}{'결정':>6}{'p̄ 보류':>9}{'p_eff 보류':>12}{'게이팅 몫':>11}  반복별")
+            for policy in sorted(byPolicy):
+                if policy not in GATED:
+                    continue
+                subset = [counterfactualHold(c, thresholds, only=selective)
+                          for c in byPolicy[policy]]
+                subset = [r for r in subset if r]
+                if not subset:
+                    continue
+                deltas = [r["effectiveHold"] - r["meanHold"] for r in subset]
+                spreadText = "[" + " ".join(f"{d:+.1%}" for d in sorted(deltas)) + "]"
+                print(f"  {policy:<6}{sum(r['decisions'] for r in subset):>6}"
+                      f"{statistics.median(r['meanHold'] for r in subset):>9.1%}"
+                      f"{statistics.median(r['effectiveHold'] for r in subset):>12.1%}"
+                      f"{statistics.median(deltas):>+11.1%}  {spreadText}")
+                report.setdefault(policy, {})["selectiveGatingShare"] = statistics.median(deltas)
+            print("  🔴 **이것이 보고할 숫자다.** 전체 결정으로 나눈 값은 상시 투입")
+            print("     조치의 결정을 분모에 넣어 게이팅 성능을 희석한다 (J27).")
         print("  ⚠️ **A6 을 별도 실행으로 두고 A5 와 맞대면 κ 가 분리되지 않는다** —")
         print("     폐루프에서 위험도 분포가 내생적이므로 두 실행은 다른 분포를 만난다.")
         print("     반사실은 같은 결정 레코드에 `p̄`·`p_eff` 를 각각 대입하므로")

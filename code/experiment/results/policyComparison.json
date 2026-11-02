@@ -1,81 +1,67 @@
 {
-  "cells": 20,
+  "cells": 10,
   "settleSeconds": 10.0,
-  "hostSaturationMax": 0.315,
+  "hostSaturationMax": 0.133,
   "report": {
-    "A2": {
-      "normalDecisions": 120,
-      "normalActionShare": 0.0,
-      "faultDecisions": 165,
-      "faultActionShare": 0.6303030303030303,
-      "holdShareMedian": 0.6376811594202898,
-      "appliedTotal": 30,
-      "holdShareValues": [
-        0.6376811594202898,
-        0.6376811594202898,
-        0.6376811594202898,
-        0.6376811594202898,
-        0.6521739130434783
-      ],
-      "goodputMedian": 187.61756831062033,
-      "p95Median": 401.2712500007183,
-      "errorRateMedian": 0.0,
-      "goodputSpread": "187~188",
-      "p95Spread": "399~404"
-    },
-    "A4": {
-      "normalDecisions": 0,
-      "normalActionShare": NaN,
-      "faultDecisions": 0,
-      "faultActionShare": NaN,
-      "holdShareMedian": null,
-      "appliedTotal": 0,
-      "holdShareValues": [],
-      "goodputMedian": 195.98343756218162,
-      "p95Median": 336.8455420022656,
-      "errorRateMedian": 0.0,
-      "goodputSpread": "196~199",
-      "p95Spread": "323~339"
-    },
     "A5": {
       "normalDecisions": 120,
-      "normalActionShare": 0.975,
-      "faultDecisions": 165,
-      "faultActionShare": 1.0,
-      "holdShareMedian": 0.0,
-      "appliedTotal": 57,
+      "normalActionShare": 0.9916666666666667,
+      "faultDecisions": 168,
+      "faultActionShare": 0.9642857142857143,
+      "holdShareMedian": 0.043478260869565216,
+      "appliedTotal": 62,
       "holdShareValues": [
-        0.0,
-        0.0,
-        0.0,
         0.028985507246376812,
-        0.043478260869565216
+        0.028985507246376812,
+        0.043478260869565216,
+        0.043478260869565216,
+        0.057971014492753624
       ],
-      "goodputMedian": 184.72633425315476,
-      "p95Median": 393.56074999886914,
-      "errorRateMedian": 0.031967248813205,
-      "goodputSpread": "175~188",
-      "p95Spread": "361~401"
+      "counterfactualMeanHold": 0.014492753623188406,
+      "counterfactualEffectiveHold": 0.043478260869565216,
+      "gatingShare": 0.028985507246376812,
+      "gatingShareValues": [
+        0.02898550724637681,
+        0.02898550724637681,
+        0.028985507246376812,
+        0.028985507246376812,
+        0.028985507246376812
+      ],
+      "goodputMedian": 185.65874058560138,
+      "p95Median": 393.1581670003652,
+      "errorRateMedian": 0.027846994535519125,
+      "goodputSpread": "185~191",
+      "p95Spread": "374~401"
     },
     "A6": {
       "normalDecisions": 120,
-      "normalActionShare": 1.0,
+      "normalActionShare": 0.9666666666666667,
       "faultDecisions": 165,
-      "faultActionShare": 1.0,
-      "holdShareMedian": 0.0,
-      "appliedTotal": 31,
+      "faultActionShare": 0.9272727272727272,
+      "holdShareMedian": 0.057971014492753624,
+      "appliedTotal": 44,
       "holdShareValues": [
+        0.028985507246376812,
+        0.057971014492753624,
+        0.057971014492753624,
+        0.08695652173913043,
+        0.10144927536231885
+      ],
+      "counterfactualMeanHold": 0.057971014492753624,
+      "counterfactualEffectiveHold": 0.057971014492753624,
+      "gatingShare": 0.0,
+      "gatingShareValues": [
         0.0,
         0.0,
         0.0,
         0.0,
         0.0
       ],
-      "goodputMedian": 183.5650125336066,
-      "p95Median": 397.78887500142446,
-      "errorRateMedian": 0.029185867895545316,
-      "goodputSpread": "175~185",
-      "p95Spread": "383~400"
+      "goodputMedian": 186.88995947827942,
+      "p95Median": 392.3848340018594,
+      "errorRateMedian": 0.028456703910614525,
+      "goodputSpread": "185~190",
+      "p95Spread": "354~395"
     }
   }
 }

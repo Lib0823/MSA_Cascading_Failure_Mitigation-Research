@@ -67,6 +67,8 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from scipy import stats  # noqa: E402
+
 import comparePolicies as cmp  # noqa: E402
 import groundTruth  # noqa: E402
 
@@ -339,10 +341,72 @@ def main() -> int:
         print("     장애 구간이라도 그 노드가 영향받지 않았으면 '정상' 이다. 종전의 창")
         print("     라벨은 장애창 결정의 67.3% 를 잘못 '장애' 로 셌다 (J28).")
 
+    # ━━━ 🔴 짝지은 검정 — "최소" 가 구별되는지 본다 ━━━
+    #
+    # 중앙값만 보고 `κ` 를 고르면 셀 간 분산에 속는다. 같은 셀 안에서 `κ` 만
+    # 바꾼 **짝지은 차이**를 보고, `κ` 를 여러 개 시험했으므로 **다중비교를
+    # 보정**한다 ([[research/challenges.md]] J29).
+    baselineCosts = [realisedCost(rows, parameters, 0.0) for rows in perCell]
+    baselineCosts = [c["cost"] for c in baselineCosts if c]
+    if len(baselineCosts) >= 3:
+        candidates = [k for k in kappas if k > 0]
+        print(f"\n━━━ 짝지은 검정 (κ=0 대비, n={len(baselineCosts)}) ━━━")
+        print(f"{'κ':>6}{'평균 차이':>12}{'표준편차':>11}{'t':>8}{'보정 p':>10}"
+              f"{'더 싼 셀':>10}  판정")
+        correctionCount = max(1, len(candidates))
+        results = []
+        for kappa in candidates:
+            values = [realisedCost(rows, parameters, kappa) for rows in perCell]
+            values = [c["cost"] for c in values if c]
+            if len(values) != len(baselineCosts):
+                continue
+            deltas = [a - b for a, b in zip(values, baselineCosts)]
+            mean = statistics.mean(deltas)
+            deviation = statistics.stdev(deltas) if len(deltas) > 1 else 0.0
+            if deviation <= 0:
+                continue
+            tValue = mean / (deviation / math.sqrt(len(deltas)))
+            # 🔴 **t 분포를 써야 한다** (2026-11-02 정정). 처음에 정규 근사를 쓰고
+            #    주석에 "보수적" 이라고 적었는데 **반대다** — 작은 n 에서 정규 근사는
+            #    t 분포보다 꼬리가 얇아 **p 를 작게** 낸다. 즉 유의하지 않은 것을
+            #    유의하다고 말하게 된다.
+            tail = 2.0 * stats.t.sf(abs(tValue), len(deltas) - 1)
+            adjusted = min(1.0, tail * correctionCount)
+            cheaper = sum(1 for d in deltas if d < 0)
+            verdict = ("**유의**" if adjusted < 0.05 else "구별되지 않는다")
+            mark = "  ← 현재" if abs(kappa - BASELINE_KAPPA) < 1e-9 else ""
+            print(f"{kappa:>6.2f}{mean:>+12.5f}{deviation:>11.5f}{tValue:>8.2f}"
+                  f"{adjusted:>10.3f}{f'{cheaper}/{len(deltas)}':>10}  {verdict}{mark}")
+            results.append({"kappa": kappa, "meanDelta": mean, "t": tValue,
+                            "adjustedP": adjusted, "cheaperCells": cheaper,
+                            "cells": len(deltas)})
+        significant = [r for r in results if r["adjustedP"] < 0.05]
+        # 🔴 인접 `κ` 에서 유의성이 들쭉날쭉하면 노이즈 신호다 — 실제 효과라면
+        #    `κ` 에 대해 매끄럽게 변한다. 판정을 내기 **전에** 본다.
+        flags = [r["adjustedP"] < 0.05 for r in results]
+        isolated = (any(flags) and not all(flags)
+                    and sum(1 for a, b in zip(flags, flags[1:]) if a != b) > 1)
+        print(f"\n  ⚠️ `κ` {correctionCount} 개를 시험했으므로 Bonferroni 로 보정했다 "
+              f"(t 분포, df={len(baselineCosts) - 1}).")
+        if not significant:
+            print("  🔴 **보정 후 유의한 `κ` 가 없다.** 아래 '비용 최소' 는 중앙값일")
+            print("     뿐이며 셀 간 분산과 구별되지 않는다 — `κ` 선택의 근거로 쓰지 않는다.")
+        elif isolated:
+            names = ", ".join(f"κ={r['kappa']:.2f}" for r in significant)
+            print(f"  🔴 **{names} 만 유의한데 인접 `κ` 는 그렇지 않다 — 노이즈 신호다.**")
+            print("     실제 효과라면 `κ` 에 대해 매끄럽게 변해야 한다. 고립된 유의성은")
+            print("     **`κ` 선택의 근거로 쓰지 않는다.** 그리고 `κ` 목록을 결과를 본 뒤")
+            print("     늘렸다면 실효 다중성은 보정한 것보다 크다.")
+        else:
+            pick = min(significant, key=lambda r: r["meanDelta"])
+            print(f"  ✅ 보정 후에도 유의하고 인접 `κ` 와 일관된다 — 최선 "
+                  f"κ={pick['kappa']:.2f} ({pick['meanDelta']:+.5f}, "
+                  f"보정 p={pick['adjustedP']:.3f})")
+
     if rowsOut:
         best = min(rowsOut, key=lambda r: r["realisedCost"])
         current = next((r for r in rowsOut if abs(r["kappa"] - BASELINE_KAPPA) < 1e-9), None)
-        print(f"\n**비용 최소: κ={best['kappa']:.2f}** — 실현 비용 {best['realisedCost']:.3f} "
+        print(f"\n(중앙값 기준) 비용 최소: κ={best['kappa']:.2f} — 실현 비용 {best['realisedCost']:.3f} "
               f"(오탐 개입 {best['falsePositiveShare']:.1%} / 미개입 {best['missedShare']:.1%})")
         if current:
             gap = current["realisedCost"] - best["realisedCost"]

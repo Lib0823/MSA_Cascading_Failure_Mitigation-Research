@@ -44,6 +44,78 @@ def powerSource() -> str | None:
     return None
 
 
+# 실험 자체의 프로세스. 이것을 뺀 나머지가 측정을 오염시킬 수 있는 "외부" CPU 다.
+# VM(vfkit 의 Virtualization 프로세스)·하니스(python)·kubectl·caffeinate.
+EXPERIMENT_PROCESSES = ("Virtualization", "vfkit", "python", "Python", "kubectl",
+                        "caffeinate", "minikube", "colima", "limactl", "qemu")
+
+
+def foreignCpu() -> tuple[float, list[tuple[str, float]]]:
+    """실험과 무관한 프로세스의 CPU 합(%)과 상위 목록. `ps` 의 %cpu 는 최대 1분의 감쇠 평균이다.
+
+    🔴 왜 필요한가 (2026-11-22, J30) — 충전기를 꽂자 macOS 가 배터리 동안 미뤄 둔 작업을
+    몰아서 시작했다. `mobileassetd` 177%, 이어 `duetexpertd` 76%·`mdworker` 61%·
+    `ecosystemanalyticsd` 86%. 1분 평균 부하는 이 정도 경합을 "포화"(> 코어 수)로 잡지
+    못한다 — 실험 부하 3~4 에 데몬 1~2 코어가 얹혀도 8 미만이다.
+    """
+    completed = subprocess.run(["ps", "-Ao", "%cpu,comm"], capture_output=True, text=True,
+                               check=False)
+    perProcess: dict[str, float] = {}
+    for line in completed.stdout.splitlines()[1:]:
+        parts = line.strip().split(None, 1)
+        if len(parts) != 2:
+            continue
+        try:
+            usage = float(parts[0])
+        except ValueError:
+            continue
+        name = parts[1].rsplit("/", 1)[-1]
+        if any(marker in parts[1] for marker in EXPERIMENT_PROCESSES):
+            continue
+        perProcess[name] = perProcess.get(name, 0.0) + usage
+    top = sorted(perProcess.items(), key=lambda kv: -kv[1])[:5]
+    return round(sum(perProcess.values()), 1), [(n, round(u, 1)) for n, u in top]
+
+
+class ForeignCpuSampler:
+    """셀 동안 외부 CPU 를 기록한다. 셀을 사후에 판정하기 위한 것이다 — 막지는 않는다."""
+
+    def __init__(self, intervalSeconds: float = 5.0) -> None:
+        self.intervalSeconds = intervalSeconds
+        self.samples: list[float] = []
+        self.offenders: dict[str, list[float]] = {}
+        self.stopFlag = threading.Event()
+        self.thread = threading.Thread(target=self.loop, daemon=True)
+
+    def loop(self) -> None:
+        while not self.stopFlag.wait(self.intervalSeconds):
+            total, top = foreignCpu()
+            self.samples.append(total)
+            for name, usage in top:
+                self.offenders.setdefault(name, []).append(usage)
+
+    def __enter__(self) -> "ForeignCpuSampler":
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exceptionInfo: object) -> None:
+        self.stopFlag.set()
+        self.thread.join(timeout=10)
+
+    def summary(self) -> dict:
+        if not self.samples:
+            return {"samples": 0}
+        count = len(self.samples)
+        # 표본마다 상위 5 개만 남기므로, 빠진 표본은 0 으로 보고 평균을 낸다.
+        offenders = sorted(((name, round(sum(values) / count, 1))
+                            for name, values in self.offenders.items()),
+                           key=lambda kv: -kv[1])[:5]
+        return {"samples": count,
+                "percentMedian": round(statistics.median(self.samples), 1),
+                "percentMax": round(max(self.samples), 1),
+                "topProcesses": offenders}
+
+
 class HostLoadSampler:
     """호스트 포화. `os.getloadavg()` 는 의존성이 없고 macOS·Linux 모두에서 돈다.
 

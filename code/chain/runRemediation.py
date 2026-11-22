@@ -29,6 +29,7 @@ CB        **역효과**        **정답**
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime as dt
 import json
 import os
@@ -47,7 +48,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "calibra
 import loadGen  # noqa: E402
 import metricScraper  # noqa: E402
 import runChain  # noqa: E402  (사슬 기동·주입 로직을 재사용한다)
-from hostLoad import HostLoadSampler, NodeCpuSampler, powerSource  # noqa: E402
+from hostLoad import (  # noqa: E402
+    ForeignCpuSampler, HostLoadSampler, NodeCpuSampler, foreignCpu, powerSource)
 
 HERE = pathlib.Path(__file__).resolve().parent
 RESULTS_DIR = HERE / "results"
@@ -66,6 +68,18 @@ SCALE_OUT_TARGET = "payment"
 # 만드는 것이다.
 SCENARIOS = ("s1", "s3")
 KNOWN_SCENARIOS = ("normal", "s1", "s3")
+# DB max_connections 기본값. S1 의 점유 세션 수(24)와 짝을 이루는 값이다.
+DEFAULT_MAX_CONNECTIONS = 30
+
+
+def budgetSuffix(maxConnections: int) -> str:
+    """기본 예산이 아니면 `mc{n}`. 키·파일명에 넣어 예산이 다른 셀과 섞이지 않게 한다.
+
+    🔴 J31 — 예산을 실험 요인으로 돌리기 시작했다. 예산이 키에 없으면 `--resume` 이 다른
+    예산의 셀을 완료로 보고 건너뛰고, `disruptionByAction` 의 기준선(NONE)에 다른 예산의
+    셀이 섞인다(J21·J23·J24 와 같은 계열의 결함).
+    """
+    return "" if maxConnections == DEFAULT_MAX_CONNECTIONS else f"mc{maxConnections}"
 
 
 def setRemediation(action: str) -> None:
@@ -90,16 +104,19 @@ def runCell(scenario: str, remediation: str, repeat: int,
     environment = runChain.buildEnvironment(scenario, arguments)
     environment["BULKHEAD_MAX_CONCURRENT"] = str(arguments.bulkheadMaxConcurrent)
     backend = runChain.BACKEND
-    # 🔴 파일명에 백엔드와 반복을 넣는다. 같은 RUN_STAMP 로 반복을 돌리면 경로가 겹쳐
+    budgetTag = budgetSuffix(arguments.maxConnections)
+    # 🔴 파일명에 백엔드·예산·반복을 넣는다. 같은 RUN_STAMP 로 반복을 돌리면 경로가 겹쳐
     #    덮어쓰고(J24), 백엔드가 없으면 Compose 셀과 구분되지 않는다.
-    if backend == "compose" and repeat == 1:
+    if backend == "compose" and repeat == 1 and not budgetTag:
         stem = f"{scenario}-{remediation.lower()}-{RUN_STAMP}"   # 종전 형식 유지
     else:
-        stem = f"{backend}-{scenario}-{remediation.lower()}-r{repeat}-{RUN_STAMP}"
+        stem = "-".join([backend, *([budgetTag] if budgetTag else []), scenario,
+                         remediation.lower(), f"r{repeat}", RUN_STAMP])
     tracePath = RESULTS_DIR / f"trace-{stem}.jsonl"
     RESULTS_DIR.mkdir(exist_ok=True)
 
-    print(f"\n━━━ [{backend}] {scenario} × {remediation} × r{repeat} ━━━", flush=True)
+    budgetLabel = f" × {budgetTag}" if budgetTag else ""
+    print(f"\n━━━ [{backend}] {scenario} × {remediation}{budgetLabel} × r{repeat} ━━━", flush=True)
     runChain.composeDown(environment)
     hog = runChain.ConnectionHog(arguments.hogSessions, environment)
     injectedAt = None
@@ -110,7 +127,9 @@ def runCell(scenario: str, remediation: str, repeat: int,
     watcher = None
     scaledAt = None
     podTraffic = None
+    dbConnections = None
     hostLoad = HostLoadSampler()
+    foreign = ForeignCpuSampler()
     nodeCpu = NodeCpuSampler() if backend == "k8s" else None
     samplersStarted = False
     try:
@@ -120,8 +139,10 @@ def runCell(scenario: str, remediation: str, repeat: int,
             cluster = k8sBackend.clusterFingerprint()
             # 증설 여부와 무관하게 모든 K8s 셀에서 돈다 — 측정 부하를 대칭으로 둔다.
             podTraffic = k8sBackend.PodTrafficSampler(SCALE_OUT_TARGET).start()
+            dbConnections = k8sBackend.DbConnectionSampler(environment).start()
         setRemediation("NONE")
         hostLoad.__enter__()
+        foreign.__enter__()
         if nodeCpu is not None:
             nodeCpu.__enter__()
         samplersStarted = True
@@ -162,12 +183,15 @@ def runCell(scenario: str, remediation: str, repeat: int,
         # 기동이 실패했으면 샘플러는 시작하지 않았다 — 시작 안 한 스레드는 join 할 수 없다.
         if samplersStarted:
             hostLoad.__exit__(None, None, None)
+            foreign.__exit__(None, None, None)
             if nodeCpu is not None:
                 nodeCpu.__exit__(None, None, None)
         if watcher is not None:
             watcher.stop()
         if podTraffic is not None:
             podTraffic.stop()
+        if dbConnections is not None:
+            dbConnections.stop()
         runChain.composeDown(environment)
 
     scaleOut = None
@@ -182,9 +206,21 @@ def runCell(scenario: str, remediation: str, repeat: int,
     cell = {
         "backend": backend, "repeat": repeat, "powerSource": powerSource(),
         "hostLoad": hostLoad.summary(),
+        # 실험과 무관한 프로세스의 CPU — 셀을 사후에 판정한다(J30).
+        "foreignCpu": foreign.summary(),
         "nodeCpu": nodeCpu.summary() if nodeCpu is not None else None,
         "cluster": cluster, "scaleOut": scaleOut,
         "podTraffic": podTraffic.rates() if podTraffic is not None else None,
+        # 파드별 DB 커넥션 수(J31). 증설의 기전을 추정 없이 본다.
+        "dbConnections": dbConnections.samples if dbConnections is not None else None,
+        # 🔴 셀을 만든 구성. 이것이 없던 셀은 기본값으로 돌았다(scaleOutEffect.DEFAULT_CONFIG).
+        "config": {
+            "maxConnections": arguments.maxConnections, "hogSessions": arguments.hogSessions,
+            "workers": arguments.workers, "warmup": arguments.warmup,
+            "faultDelayMillis": arguments.faultDelayMillis,
+            "bulkheadMaxConcurrent": arguments.bulkheadMaxConcurrent,
+            "scaleOutReplicas": arguments.scaleOutReplicas,
+        },
         "scenario": scenario, "remediation": remediation,
         "injectedAt": injectedAt, "injectionNode": "payment",
         "remediationNode": REMEDIATION_NODE,
@@ -205,13 +241,15 @@ def runCell(scenario: str, remediation: str, repeat: int,
           f" / p95 {loadResult.get('latencyP95Millis', float('nan')):.0f} ms"
           f" / err {loadResult.get('errorRate', float('nan')):.1%}"
           f" / 호스트포화 {host.get('saturatedShare', float('nan')):.0%}"
+          f" / 외부CPU {cell['foreignCpu'].get('percentMedian', float('nan'))}%"
           + (f" / 노드포화 {node.get('saturatedShare', float('nan')):.0%}"
              f" (CPU {node.get('usageMedianCores', float('nan'))}/{node.get('allocatableCores')})"
              if node else "") + extra, flush=True)
     return cell
 
 
-def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float) -> bool:
+def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float,
+                     maxForeignCpu: float | None = None) -> bool:
     """호스트가 조용해질 때까지 기다린다. §4-1 의 측정 유효성 프로토콜.
 
     **이것이 J17 의 재발 방지다.** 정상 구간 기준선이 호스트 경쟁으로 밀려 올라가면
@@ -225,9 +263,14 @@ def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float) -> bool:
     deadline = time.time() + timeoutSeconds
     while True:
         load = os.getloadavg()[0]
-        if load <= ceiling:
+        # 🔴 부하만으로는 부족하다(J30) — 실험 부하에 데몬 1~2 코어가 얹혀도 부하는
+        #    상한 아래일 수 있다. 실험과 무관한 프로세스의 CPU 도 함께 본다.
+        foreign, top = foreignCpu() if maxForeignCpu is not None else (0.0, [])
+        foreignOk = maxForeignCpu is None or foreign <= maxForeignCpu
+        if load <= ceiling and foreignOk:
+            extra = f" / 외부 CPU {foreign:.0f}% ≤ {maxForeignCpu:.0f}%" if maxForeignCpu else ""
             print(f"✅ 호스트 부하 {load:.2f} / 상한 {ceiling:.2f}"
-                  f" ({coreCount}코어 × {maxLoadRatio}) — 측정 시작", flush=True)
+                  f" ({coreCount}코어 × {maxLoadRatio}){extra} — 측정 시작", flush=True)
             return True
         remaining = deadline - time.time()
         if remaining <= 0:
@@ -239,21 +282,26 @@ def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float) -> bool:
             print("   그래도 돌리려면 --maxLoadRatio 를 올리거나 --skipLoadCheck 를 쓴다.",
                   flush=True)
             return False
-        print(f"⏳ 호스트 부하 {load:.2f} > 상한 {ceiling:.2f} — 대기 "
-              f"(남은 {remaining:.0f}초)", flush=True)
+        reason = (f"부하 {load:.2f} > {ceiling:.2f}" if load > ceiling
+                  else f"외부 CPU {foreign:.0f}% > {maxForeignCpu:.0f}% "
+                       f"({', '.join(f'{n} {u:.0f}%' for n, u in top[:3])})")
+        print(f"⏳ {reason} — 대기 (남은 {remaining:.0f}초)", flush=True)
         time.sleep(10.0)
 
 
 def cellKey(scenario: str, remediation: str, repeat: int = 1,
-            backend: str = "compose") -> str:
-    """원장의 키. **백엔드와 반복이 키에 들어가야** `--resume` 이 셀을 혼동하지 않는다.
+            backend: str = "compose", maxConnections: int = DEFAULT_MAX_CONNECTIONS) -> str:
+    """원장의 키. **백엔드·반복·예산이 키에 들어가야** `--resume` 이 셀을 혼동하지 않는다.
 
     Compose 의 첫 반복은 종전 형식(`scenario|remediation`)을 유지한다 — 기존 원장의
-    완료 셀을 `--resume` 이 그대로 알아보게 하기 위해서다.
+    완료 셀을 `--resume` 이 그대로 알아보게 하기 위해서다. 예산도 기본값이면 키에 넣지
+    않는다 — 같은 이유다.
     """
-    if backend == "compose" and repeat == 1:
+    budgetTag = budgetSuffix(maxConnections)
+    if backend == "compose" and repeat == 1 and not budgetTag:
         return f"{scenario}|{remediation}"
-    return f"{backend}|{scenario}|{remediation}|r{repeat}"
+    key = f"{backend}|{scenario}|{remediation}|r{repeat}"
+    return f"{key}|{budgetTag}" if budgetTag else key
 
 
 def readLedger(path: pathlib.Path) -> dict[str, dict]:
@@ -291,7 +339,9 @@ def main() -> int:
     parser.add_argument("--warmup", type=float, default=60.0)
     parser.add_argument("--normalSeconds", type=float, default=50.0)
     parser.add_argument("--faultSeconds", type=float, default=70.0)
-    parser.add_argument("--maxConnections", type=int, default=30)
+    parser.add_argument("--maxConnections", default=str(DEFAULT_MAX_CONNECTIONS),
+                        help="DB max_connections. 쉼표로 여럿(예: 30,70)을 주면 예산이 실험 "
+                             "요인이 되어 셀 순서와 함께 섞인다(J31)")
     parser.add_argument("--hogSessions", type=int, default=24)
     parser.add_argument("--faultDelayMillis", type=int, default=400)
     # 호스트가 포화인 상태로 재면 기준선이 오염된다(J17). 기본으로 막는다.
@@ -301,6 +351,8 @@ def main() -> int:
                         help="부하가 내려오기를 기다리는 시간")
     parser.add_argument("--skipLoadCheck", action="store_true",
                         help="부하 점검을 건너뛴다 — 오염을 감수한다는 뜻이다")
+    parser.add_argument("--maxForeignCpu", type=float, default=100.0,
+                        help="셀 시작 시 실험과 무관한 프로세스 CPU 합(%%)의 상한")
     parser.add_argument("--resume", action="store_true",
                         help="원장에 있는 셀은 건너뛴다 — 중단된 실행을 이어 받는다")
     parser.add_argument("--bulkheadMaxConcurrent", type=int, default=6,
@@ -323,6 +375,7 @@ def main() -> int:
 
     scenarios = [s.strip() for s in arguments.scenarios.split(",") if s.strip()]
     remediations = [r.strip().upper() for r in arguments.remediations.split(",") if r.strip()]
+    budgets = [int(b) for b in arguments.maxConnections.split(",") if b.strip()]
 
     unknownScenario = [s for s in scenarios if s not in KNOWN_SCENARIOS]
     unknownRemediation = [r for r in remediations if r not in REMEDIATIONS]
@@ -355,16 +408,17 @@ def main() -> int:
 
     if arguments.skipLoadCheck:
         print("⚠️ 부하 점검을 건너뛴다(--skipLoadCheck) — 기준선 오염을 감수한다")
-    elif not waitForQuietHost(arguments.maxLoadRatio, arguments.loadWaitSeconds):
+    elif not waitForQuietHost(arguments.maxLoadRatio, arguments.loadWaitSeconds,
+                              arguments.maxForeignCpu):
         return 1
 
     RESULTS_DIR.mkdir(exist_ok=True)
     ledgerPath = RESULTS_DIR / "remediation-ledger.jsonl"
     done = readLedger(ledgerPath)
-    plan = [(s, r, k) for s in scenarios for r in remediations
+    plan = [(s, r, b, k) for s in scenarios for r in remediations for b in budgets
             for k in range(1, arguments.repeats + 1)]
-    pending = [(s, r, k) for s, r, k in plan
-               if cellKey(s, r, k, arguments.backend) not in done]
+    pending = [(s, r, b, k) for s, r, b, k in plan
+               if cellKey(s, r, k, arguments.backend, b) not in done]
     if arguments.resume and len(pending) < len(plan):
         print(f"원장에서 완료 {len(plan) - len(pending)} 건 확인 → 남은 {len(pending)} 셀")
     elif not arguments.resume:
@@ -378,13 +432,25 @@ def main() -> int:
           f" → 예상 {len(pending) * ((arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1) / 60:.1f}시간\n")
 
     cells = []
-    for scenario, remediation, repeat in pending:
-        try:
-            cell = runCell(scenario, remediation, repeat, arguments)
-        except Exception as error:   # 한 셀의 실패가 나머지를 죽이지 않게 한다
-            print(f"  ❌ {scenario}×{remediation}×r{repeat} 실패: {error}", flush=True)
+    for scenario, remediation, budget, repeat in pending:
+        label = f"{scenario}×{remediation}×r{repeat}" + (
+            f"×{budgetSuffix(budget)}" if budgetSuffix(budget) else "")
+        # 🔴 셀마다 확인한다(J30). 배치 시작 때 한 번만 보면 90분 사이에 끼어든 데몬을
+        #    막지 못한다. 조용해지지 않으면 이 셀을 건너뛴다 — 원장에 남지 않으므로
+        #    --resume 이 나중에 다시 돈다.
+        if not arguments.skipLoadCheck and not waitForQuietHost(
+                arguments.maxLoadRatio, arguments.loadWaitSeconds, arguments.maxForeignCpu):
+            print(f"  ⏭ {label} 건너뜀 — 호스트가 조용해지지 않았다", flush=True)
             continue
-        cell["cellKey"] = cellKey(scenario, remediation, repeat, arguments.backend)
+        # 셀마다 예산만 바꾼 사본을 넘긴다 — runChain.buildEnvironment 가 이 값을 읽는다.
+        cellArguments = copy.copy(arguments)
+        cellArguments.maxConnections = budget
+        try:
+            cell = runCell(scenario, remediation, repeat, cellArguments)
+        except Exception as error:   # 한 셀의 실패가 나머지를 죽이지 않게 한다
+            print(f"  ❌ {label} 실패: {error}", flush=True)
+            continue
+        cell["cellKey"] = cellKey(scenario, remediation, repeat, arguments.backend, budget)
         cells.append(cell)
         # **셀마다 기록한다.** 종전에는 전부 돌린 뒤 한 번에 썼으므로 중간에
         # 멈추면 그때까지의 작업이 전부 사라졌다(노트북 sleep·kill·전원).

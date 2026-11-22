@@ -300,6 +300,74 @@ class PodTrafficSampler:
         return out
 
 
+def podAddresses() -> dict[str, str]:
+    """파드 IP → 파드 이름. DB 가 보는 것은 클라이언트 IP 뿐이다."""
+    completed = kubectl("-n", NAMESPACE, "get", "pods", "-o", "json", check=False, timeout=10)
+    if completed.returncode != 0:
+        return {}
+    addresses = {}
+    for pod in json.loads(completed.stdout)["items"]:
+        address = pod.get("status", {}).get("podIP")
+        if address:
+            addresses[address] = pod["metadata"]["name"]
+    return addresses
+
+
+CONNECTIONS_SQL = ("SELECT coalesce(host(client_addr), 'local'), count(*) "
+                   "FROM pg_stat_activity WHERE usename = '{user}' GROUP BY 1")
+
+
+class DbConnectionSampler:
+    """앱 사용자의 DB 커넥션 수를 **파드별로** 5초마다 기록한다 — 예산 분할의 직접 증거다(J31).
+
+    `podTraffic` 으로도 신규 파드의 커넥션 수를 역산할 수는 있다(포화된 파드의 처리량 =
+    커넥션 수 × 커넥션당 처리율). 그러나 그것은 포화를 전제한 추정이다. DB 쪽
+    `pg_stat_activity` 를 클라이언트 IP 로 묶으면 추정 없이 센다. S1 의 점유 세션은 db-0
+    안에서 소켓으로 붙으므로 `local` 로 잡힌다.
+    """
+
+    def __init__(self, environment: dict[str, str], intervalSeconds: float = 5.0) -> None:
+        self.appUser = environment.get("DB_APP_USER", "appuser")
+        self.superUser = environment.get("DB_USER", "cascade")
+        self.database = environment.get("DB_NAME", "cascade")
+        self.intervalSeconds = intervalSeconds
+        self.samples: list[dict] = []
+        self.stopFlag = threading.Event()
+        self.thread = threading.Thread(target=self.loop, daemon=True)
+
+    def sampleOnce(self) -> dict | None:
+        completed = kubectl("-n", NAMESPACE, "exec", "db-0", "--", "psql", "-U", self.superUser,
+                            "-d", self.database, "-tAc", CONNECTIONS_SQL.format(user=self.appUser),
+                            check=False, timeout=10)
+        if completed.returncode != 0:
+            return None
+        names = podAddresses()
+        connections = {}
+        for line in completed.stdout.splitlines():
+            if "|" not in line:
+                continue
+            address, count = line.rsplit("|", 1)
+            connections[names.get(address, address)] = int(count)
+        return {"timestamp": time.time(), "connections": connections}
+
+    def loop(self) -> None:
+        while not self.stopFlag.wait(self.intervalSeconds):
+            try:
+                sample = self.sampleOnce()
+                if sample is not None:
+                    self.samples.append(sample)
+            except Exception:  # noqa: BLE001
+                pass
+
+    def start(self) -> "DbConnectionSampler":
+        self.thread.start()
+        return self
+
+    def stop(self) -> None:
+        self.stopFlag.set()
+        self.thread.join(timeout=20)
+
+
 def clusterFingerprint() -> dict:
     """셀을 만든 클러스터 — 셀과 함께 원장에 남긴다. 다른 클러스터의 셀과 섞지 않기 위해서다."""
     nodes = json.loads(kubectl("get", "nodes", "-o", "json").stdout)["items"]

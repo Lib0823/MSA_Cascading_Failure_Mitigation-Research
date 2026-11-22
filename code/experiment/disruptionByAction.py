@@ -50,6 +50,12 @@ import statistics
 CHAIN_DIR = pathlib.Path(__file__).resolve().parent.parent / "chain"
 DEFAULT_LEDGER = CHAIN_DIR / "results" / "remediation-ledger.jsonl"
 ENTRY_NODE = "gateway"
+# runRemediation.DEFAULT_MAX_CONNECTIONS 와 같다. `config` 가 없는 셀은 이 값으로 돌았다.
+DEFAULT_MAX_CONNECTIONS = 30
+
+
+def budgetOf(cell: dict) -> int:
+    return (cell.get("config") or {}).get("maxConnections", DEFAULT_MAX_CONNECTIONS)
 
 
 def loadCells(ledgerPath: pathlib.Path) -> list[dict]:
@@ -92,7 +98,7 @@ def windowValues(cell: dict, node: str, low: float, high: float, key: str) -> li
 
 
 def measure(cells: list[dict], settleSeconds: float, endSeconds: float,
-            backend: str = "compose") -> dict:
+            backend: str = "compose", maxConnections: int = DEFAULT_MAX_CONNECTIONS) -> dict:
     """조치별 처리량 중앙값과 `NONE` 대비 손실."""
     byAction: dict[str, list[dict]] = collections.defaultdict(list)
     for cell in cells:
@@ -100,6 +106,8 @@ def measure(cells: list[dict], settleSeconds: float, endSeconds: float,
             continue   # 장애가 섞인 셀은 Dₐ 가 아니다
         if cell.get("backend", "compose") != backend:
             continue   # 백엔드가 다르면 기준선(NONE)도 다르다 — 섞으면 손실 비율이 틀린다
+        if budgetOf(cell) != maxConnections:
+            continue   # 예산이 다르면 증설 비용 자체가 다르다(J31) — 같은 이유로 거른다
         byAction[cell["remediation"]].append(cell)
 
     measured = {}
@@ -146,11 +154,14 @@ def main() -> int:
     parser.add_argument("--availabilityLoss", type=float, default=1.0, help="L")
     parser.add_argument("--backend", default="compose",
                         help="이 백엔드의 셀만 쓴다. 기준선 NONE 도 같은 백엔드여야 한다")
+    parser.add_argument("--maxConnections", type=int, default=DEFAULT_MAX_CONNECTIONS,
+                        help="이 DB 예산의 셀만 쓴다(J31)")
     arguments = parser.parse_args()
 
     cells = loadCells(pathlib.Path(arguments.ledger))
     normalCells = [c for c in cells if c.get("scenario") == "normal"
-                   and c.get("backend", "compose") == arguments.backend]
+                   and c.get("backend", "compose") == arguments.backend
+                   and budgetOf(c) == arguments.maxConnections]
     print(f"원장 {len(cells)} 셀 / 그중 normal {len(normalCells)} 셀")
     if not normalCells:
         print("❌ `normal` 셀이 없다. 먼저 돌려야 한다:")
@@ -158,7 +169,8 @@ def main() -> int:
         print("     --remediations NONE,BULKHEAD,CIRCUIT_BREAKER,BROWNOUT --resume")
         return 1
 
-    measured = measure(cells, arguments.settleSeconds, arguments.endSeconds, arguments.backend)
+    measured = measure(cells, arguments.settleSeconds, arguments.endSeconds, arguments.backend,
+                       arguments.maxConnections)
     if not measured:
         print("❌ `NONE` 기준선 셀이 없다 — 손실을 계산할 수 없다")
         return 1

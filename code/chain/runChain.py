@@ -57,6 +57,40 @@ NODE_ENDPOINTS = {
 }
 ENTRY_TARGETS = ["127.0.0.1:18091"]
 
+# ── 실행 백엔드 (2026-11-22, research/challenges.md J30) ─────────────────────
+# 하니스가 Compose 에 닿는 곳은 다섯 군데뿐이다 — 기동(composeUp)·정지(composeDown)·
+# DB 안 명령(ConnectionHog)·장애 주입(setFault)·엔드포인트(NODE_ENDPOINTS·ENTRY_TARGETS).
+# `useBackend("k8s")` 가 그 다섯을 k8sBackend 로 돌린다. runRemediation·runBatch·
+# controlLoop 는 전부 `runChain.X` 로 부르므로 **수정 없이** 따라온다.
+#
+# 함수 이름은 composeUp 그대로 둔다 — 호출부가 여럿이고, 이름을 바꾸면 Compose 경로를
+# 건드리게 된다. 의미는 "사슬을 띄운다" 로 읽는다.
+BACKENDS = ("compose", "k8s")
+BACKEND = "compose"
+
+
+def useBackend(name: str) -> None:
+    """실행 백엔드를 바꾼다. 엔드포인트는 **제자리에서** 갈아 끼운다 — 다른 모듈이
+    `runChain.NODE_ENDPOINTS` 를 이미 참조하고 있어도 같은 객체를 보게 하기 위해서다."""
+    global BACKEND
+    if name not in BACKENDS:
+        raise ValueError(f"알 수 없는 백엔드: {name} (가능: {BACKENDS})")
+    BACKEND = name
+    if name == "k8s":
+        import k8sBackend   # noqa: PLC0415 — Compose 경로에서는 kubectl 을 요구하지 않는다
+        nodes, entry = k8sBackend.endpoints()
+        NODE_ENDPOINTS.clear()
+        NODE_ENDPOINTS.update(nodes)
+        ENTRY_TARGETS[:] = entry
+
+
+def dbExecCommand(*command: str) -> list[str]:
+    """DB 컨테이너 안에서 도는 명령. 백엔드마다 경로가 다르다."""
+    if BACKEND == "k8s":
+        import k8sBackend   # noqa: PLC0415
+        return k8sBackend.dbExecCommand(*command)
+    return composeCommand("exec", "-T", "db", *command)
+
 SCENARIOS = ("normal", "s1", "s3")
 
 
@@ -66,6 +100,10 @@ def composeCommand(*arguments: str) -> list[str]:
 
 
 def composeUp(environment: dict[str, str]) -> None:
+    if BACKEND == "k8s":
+        import k8sBackend   # noqa: PLC0415
+        k8sBackend.up(environment)
+        return
     completed = subprocess.run(
         composeCommand("up", "-d", "--wait", "--wait-timeout", "240"),
         env=environment, capture_output=True, text=True, check=False)
@@ -75,13 +113,24 @@ def composeUp(environment: dict[str, str]) -> None:
 
 
 def composeDown(environment: dict[str, str]) -> None:
+    if BACKEND == "k8s":
+        import k8sBackend   # noqa: PLC0415
+        k8sBackend.down(environment)
+        return
     subprocess.run(composeCommand("down", "-v", "--remove-orphans"),
                    env=environment, check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def setFault(node: str, delayMillis: int) -> None:
-    """필터 지연을 런타임에 바꾼다 (S3 주입)."""
+    """필터 지연을 런타임에 바꾼다 (S3 주입).
+
+    K8s 에서는 **파드마다** 건다 — NodePort 로 보내면 파드 하나만 받는다.
+    """
+    if BACKEND == "k8s":
+        import k8sBackend   # noqa: PLC0415
+        k8sBackend.setFault(node, delayMillis)
+        return
     url = NODE_ENDPOINTS[node] + "/fault?" + urllib.parse.urlencode({"delayMillis": delayMillis})
     request = urllib.request.Request(url, method="POST")
     with urllib.request.urlopen(request, timeout=5) as response:
@@ -128,14 +177,14 @@ class ConnectionHog:
             f"-c 'SELECT pg_sleep(3600)' >/dev/null 2>&1 & done; wait"
         )
         self.process = subprocess.Popen(
-            composeCommand("exec", "-T", "db", "bash", "-c", script),
+            dbExecCommand("bash", "-c", script),
             env=self.environment, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def stop(self) -> None:
         if self.process is not None:
             self.process.terminate()
         subprocess.run(
-            composeCommand("exec", "-T", "db", "psql",
+            dbExecCommand("psql",
                            "-U", self.environment.get("DB_USER", "cascade"),
                            "-d", self.environment.get("DB_NAME", "cascade"),
                            "-tAc", "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "

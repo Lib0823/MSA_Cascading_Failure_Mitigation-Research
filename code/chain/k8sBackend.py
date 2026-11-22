@@ -186,6 +186,31 @@ def setFault(node: str, delayMillis: int) -> list[str]:
     return applied
 
 
+HPA_MANIFEST = REPO / "deploy" / "k8s" / "parity" / "hpa-payment.yaml"
+
+
+def applyPaymentHpa() -> None:
+    """A1(HPA) — 기본 매니페스트와 같은 사양의 HPA 를 payment 에 건다(J32)."""
+    kubectl("apply", "-f", str(HPA_MANIFEST))
+
+
+def hpaStatus(name: str = "payment") -> dict | None:
+    """셀 끝의 HPA 상태 — 마지막으로 본 CPU 사용률과 목표 레플리카."""
+    completed = kubectl("-n", NAMESPACE, "get", "hpa", name, "-o", "json", check=False, timeout=10)
+    if completed.returncode != 0:
+        return None
+    status = json.loads(completed.stdout).get("status", {})
+    utilization = None
+    for metric in status.get("currentMetrics") or []:
+        resource = metric.get("resource") or {}
+        if resource.get("name") == "cpu":
+            utilization = (resource.get("current") or {}).get("averageUtilization")
+    return {"currentReplicas": status.get("currentReplicas"),
+            "desiredReplicas": status.get("desiredReplicas"),
+            "cpuUtilizationPercent": utilization,
+            "lastScaleTime": status.get("lastScaleTime")}
+
+
 def scale(deployment: str, replicas: int) -> None:
     kubectl("-n", NAMESPACE, "scale", f"deployment/{deployment}", f"--replicas={replicas}")
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 FACTORS = (
     ("maxConnections", 30, "mc"),          # DB max_connections (J31 예산 대조)
     ("paymentKeepAlive", 100, "ka"),       # payment Tomcat maxKeepAliveRequests (J32)
+    ("paymentHpa", 0, "hpa"),              # payment 에 HPA(A1)를 거는가 (J32)
     ("workers", 32, "w"),
     ("hogSessions", 24, "hog"),
     ("faultDelayMillis", 400, "fd"),

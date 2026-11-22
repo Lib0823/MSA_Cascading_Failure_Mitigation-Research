@@ -85,7 +85,7 @@ def cellConfig(arguments: argparse.Namespace) -> dict:
     """
     return {
         "maxConnections": arguments.maxConnections,
-        "paymentKeepAlive": arguments.paymentKeepAlive,
+        "paymentKeepAlive": arguments.paymentKeepAlive, "paymentHpa": arguments.paymentHpa,
         "hogSessions": arguments.hogSessions, "workers": arguments.workers,
         "warmup": arguments.warmup, "normalSeconds": arguments.normalSeconds,
         "faultSeconds": arguments.faultSeconds,
@@ -145,6 +145,8 @@ def runCell(scenario: str, remediation: str, repeat: int,
     scaledAt = None
     podTraffic = None
     dbConnections = None
+    hpaWatcher = None
+    hpaFinal = None
     hostLoad = HostLoadSampler()
     foreign = ForeignCpuSampler()
     nodeCpu = NodeCpuSampler() if backend == "k8s" else None
@@ -155,6 +157,10 @@ def runCell(scenario: str, remediation: str, repeat: int,
             import k8sBackend   # noqa: PLC0415
             cluster = k8sBackend.clusterFingerprint()
             # 증설 여부와 무관하게 모든 K8s 셀에서 돈다 — 측정 부하를 대칭으로 둔다.
+            if arguments.paymentHpa:
+                # A1 — 워밍업 전에 건다. HPA 는 상시 정책이라 정상 구간부터 작동해야 한다.
+                k8sBackend.applyPaymentHpa()
+                hpaWatcher = k8sBackend.ReplicaWatcher(SCALE_OUT_TARGET, intervalSeconds=2.0).start()
             podTraffic = k8sBackend.PodTrafficSampler(SCALE_OUT_TARGET).start()
             dbConnections = k8sBackend.DbConnectionSampler(environment).start()
         setRemediation("NONE")
@@ -194,6 +200,9 @@ def runCell(scenario: str, remediation: str, repeat: int,
 
             loadThread.join(timeout=arguments.faultSeconds + 120)
             snapshot = readRemediationSnapshot()
+            if hpaWatcher is not None:
+                import k8sBackend   # noqa: PLC0415
+                hpaFinal = k8sBackend.hpaStatus()
             sampleCount = scraper.sampleCount
         hog.stop()
     finally:
@@ -209,6 +218,8 @@ def runCell(scenario: str, remediation: str, repeat: int,
             podTraffic.stop()
         if dbConnections is not None:
             dbConnections.stop()
+        if hpaWatcher is not None:
+            hpaWatcher.stop()
         runChain.composeDown(environment)
 
     scaleOut = None
@@ -228,6 +239,9 @@ def runCell(scenario: str, remediation: str, repeat: int,
         "nodeCpu": nodeCpu.summary() if nodeCpu is not None else None,
         "cluster": cluster, "scaleOut": scaleOut,
         "podTraffic": podTraffic.rates() if podTraffic is not None else None,
+        # A1(HPA) 셀의 레플리카 시간선(2초)과 셀 끝의 HPA 상태(J32).
+        "hpa": ({"timeline": hpaWatcher.timeline, "final": hpaFinal}
+                if hpaWatcher is not None else None),
         # 파드별 DB 커넥션 수(J31). 증설의 기전을 추정 없이 본다.
         "dbConnections": dbConnections.samples if dbConnections is not None else None,
         # 🔴 셀을 만든 구성. 이것이 없던 셀은 기본값으로 돌았다(cohort.DEFAULTS).
@@ -352,6 +366,9 @@ def main() -> int:
     parser.add_argument("--maxConnections", default=str(DEFAULT_MAX_CONNECTIONS),
                         help="DB max_connections. 쉼표로 여럿(예: 30,70)을 주면 예산이 실험 "
                              "요인이 되어 셀 순서와 함께 섞인다(J31)")
+    parser.add_argument("--paymentHpa", default="0",
+                        help="1 이면 payment 에 HPA(A1, 30-hpa.yaml 과 같은 사양)를 건다. "
+                             "K8s 전용. 쉼표로 0,1 을 주면 요인이 된다(J32)")
     parser.add_argument("--paymentKeepAlive", default=str(DEFAULT_PAYMENT_KEEP_ALIVE),
                         help="payment Tomcat maxKeepAliveRequests. 1 이면 연결 재사용이 꺼져 "
                              "요청 단위 분산이 된다. 쉼표로 여럿을 주면 요인이 된다(J32)")
@@ -390,6 +407,7 @@ def main() -> int:
     remediations = [r.strip().upper() for r in arguments.remediations.split(",") if r.strip()]
     budgets = [int(b) for b in arguments.maxConnections.split(",") if b.strip()]
     keepAlives = [int(k) for k in arguments.paymentKeepAlive.split(",") if k.strip()]
+    hpas = [int(h) for h in arguments.paymentHpa.split(",") if h.strip()]
 
     unknownScenario = [s for s in scenarios if s not in KNOWN_SCENARIOS]
     unknownRemediation = [r for r in remediations if r not in REMEDIATIONS]
@@ -400,6 +418,13 @@ def main() -> int:
     infra = [r for r in remediations if r in INFRA_REMEDIATIONS]
     if infra and arguments.backend != "k8s":
         print(f"❌ {infra} 는 오케스트레이터가 거는 조치다 — --backend k8s 에서만 된다")
+        return 1
+    if any(hpas) and arguments.backend != "k8s":
+        print("❌ --paymentHpa 1 은 K8s 에서만 된다 — Compose 에는 HPA 가 없다")
+        return 1
+    if "SCALE_OUT" in remediations and any(hpas):
+        # 강제 증설과 HPA 가 같은 Deployment 의 replicas 를 두고 다툰다(§4-3 주 2).
+        print("❌ SCALE_OUT 과 HPA 를 한 셀에 겹치지 않는다 — 둘이 replicas 를 두고 다툰다")
         return 1
     if "SCALE_OUT" in remediations and "s3" in scenarios:
         # setFault 는 주입 시점의 파드에만 걸린다. 증설로 새로 뜬 파드는 장애 없이 돌아
@@ -429,18 +454,19 @@ def main() -> int:
     RESULTS_DIR.mkdir(exist_ok=True)
     ledgerPath = RESULTS_DIR / "remediation-ledger.jsonl"
     done = readLedger(ledgerPath)
-    def argumentsFor(budget: int, keepAlive: int) -> argparse.Namespace:
+    def argumentsFor(budget: int, keepAlive: int, hpa: int) -> argparse.Namespace:
         """셀마다 요인만 바꾼 사본 — runChain.buildEnvironment 와 runCell 이 이 값을 읽는다."""
         cellArguments = copy.copy(arguments)
         cellArguments.maxConnections = budget
         cellArguments.paymentKeepAlive = keepAlive
+        cellArguments.paymentHpa = hpa
         return cellArguments
 
-    plan = list(itertools.product(scenarios, remediations, budgets, keepAlives,
+    plan = list(itertools.product(scenarios, remediations, budgets, keepAlives, hpas,
                                   range(1, arguments.repeats + 1)))
-    pending = [(s, r, b, a, k) for s, r, b, a, k in plan
-               if cellKey(s, r, k, arguments.backend, cohortTag(cellConfig(argumentsFor(b, a))))
-               not in done]
+    pending = [(s, r, b, a, h, k) for s, r, b, a, h, k in plan
+               if cellKey(s, r, k, arguments.backend,
+                          cohortTag(cellConfig(argumentsFor(b, a, h)))) not in done]
     if arguments.resume and len(pending) < len(plan):
         print(f"원장에서 완료 {len(plan) - len(pending)} 건 확인 → 남은 {len(pending)} 셀")
     elif not arguments.resume:
@@ -454,8 +480,8 @@ def main() -> int:
           f" → 예상 {len(pending) * ((arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1) / 60:.1f}시간\n")
 
     cells = []
-    for scenario, remediation, budget, keepAlive, repeat in pending:
-        cellArguments = argumentsFor(budget, keepAlive)
+    for scenario, remediation, budget, keepAlive, hpa, repeat in pending:
+        cellArguments = argumentsFor(budget, keepAlive, hpa)
         tag = cohortTag(cellConfig(cellArguments))
         label = f"{scenario}×{remediation}×r{repeat}" + (f"×{tag}" if tag else "")
         # 🔴 셀마다 확인한다(J30). 배치 시작 때 한 번만 보면 90분 사이에 끼어든 데몬을

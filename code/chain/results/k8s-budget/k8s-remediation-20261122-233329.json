@@ -1,0 +1,1530 @@
+[
+  {
+    "backend": "k8s",
+    "repeat": 1,
+    "powerSource": "AC",
+    "hostLoad": {
+      "coreCount": 8,
+      "loadSamples": 93,
+      "loadMedian": 3.44,
+      "loadMax": 4.96,
+      "saturatedShare": 0.0
+    },
+    "foreignCpu": {
+      "samples": 37,
+      "percentMedian": 43.3,
+      "percentMax": 105.3,
+      "topProcesses": [
+        [
+          "WindowServer",
+          13.5
+        ],
+        [
+          "ecosystemd",
+          10.8
+        ],
+        [
+          "trustd",
+          6.6
+        ],
+        [
+          "ecosystemanalyticsd",
+          4.5
+        ],
+        [
+          "Code Helper (Renderer)",
+          3.9
+        ]
+      ]
+    },
+    "nodeCpu": {
+      "allocatableCores": 6.0,
+      "samples": 37,
+      "errors": 0,
+      "saturationRatio": 0.9,
+      "usageMedianCores": 1.07,
+      "usageMaxCores": 1.32,
+      "saturatedShare": 0.0
+    },
+    "cluster": {
+      "kubernetesVersion": "v1.37.0",
+      "containerRuntime": "containerd://2.3.4",
+      "kernel": "6.6.152",
+      "osImage": "Buildroot 2025.02.16",
+      "nodeCount": 1,
+      "allocatableCpu": "6",
+      "allocatableMemory": "8131620Ki",
+      "images": {
+        "docker.io/library/postgres:16": "sha256:6162f3765f7563b273a879894c5751d41285f922dd75ba0ba508a89e024e43ca",
+        "docker.io/library/cascade-app:0.1.0": "sha256:c9be4448825d119f531ce8880eeea4f494e556992123929a385f5d8f8ce9603c"
+      }
+    },
+    "scaleOut": {
+      "target": "payment",
+      "replicas": 3,
+      "scaledAt": 1795358137.4908009,
+      "leadTimeSeconds": 5.2,
+      "timeline": [
+        {
+          "timestamp": 1795358137.489416,
+          "spec": 1,
+          "ready": 1
+        },
+        {
+          "timestamp": 1795358138.536715,
+          "spec": 3,
+          "ready": 1
+        },
+        {
+          "timestamp": 1795358139.575246,
+          "spec": 3,
+          "ready": 1
+        },
+        {
+          "timestamp": 1795358140.628769,
+          "spec": 3,
+          "ready": 1
+        },
+        {
+          "timestamp": 1795358141.6722,
+          "spec": 3,
+          "ready": 1
+        },
+        {
+          "timestamp": 1795358142.730155,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358143.7895548,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358144.864167,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358145.916397,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358146.959504,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358148.003716,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358149.038678,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358150.084627,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358151.138292,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358152.1991382,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358153.258929,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358154.316597,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358155.3754969,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358156.441313,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358157.4961011,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358158.554755,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358159.6202009,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358160.658178,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358161.7168388,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358162.774131,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358163.818002,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358164.875435,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358165.924261,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358166.97838,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358168.0368938,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358169.099222,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358170.1419258,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358171.205665,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358172.274375,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358173.327845,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358174.3815281,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358175.439937,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358176.5080059,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358177.57491,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358178.643527,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358179.694918,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358180.7397351,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358181.793833,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358182.8516202,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358183.897245,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358184.947965,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358186.0162299,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358187.056355,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358188.120996,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358189.1739452,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358190.227114,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358191.2882502,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358192.331892,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358193.387785,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358194.4417741,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358195.494661,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358196.533539,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358197.5688121,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358198.625591,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358199.675719,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358200.7358809,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358201.787424,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358202.833514,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358203.880494,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358204.927802,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358205.982442,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358207.033005,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358208.074518,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358209.148426,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358210.195283,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358211.2636878,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358212.327518,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358213.3665779,
+          "spec": 3,
+          "ready": 3
+        },
+        {
+          "timestamp": 1795358214.412728,
+          "spec": 3,
+          "ready": 3
+        }
+      ]
+    },
+    "podTraffic": [
+      {
+        "timestamp": 1795358037.662029,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 325.29
+        }
+      },
+      {
+        "timestamp": 1795358042.769181,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 325.62
+        }
+      },
+      {
+        "timestamp": 1795358047.877949,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 325.52
+        }
+      },
+      {
+        "timestamp": 1795358052.981576,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 326.63
+        }
+      },
+      {
+        "timestamp": 1795358058.09203,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 323.45
+        }
+      },
+      {
+        "timestamp": 1795358063.1971672,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 324.18
+        }
+      },
+      {
+        "timestamp": 1795358068.3108191,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 324.62
+        }
+      },
+      {
+        "timestamp": 1795358073.434953,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 323.96
+        }
+      },
+      {
+        "timestamp": 1795358078.541055,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 321.18
+        }
+      },
+      {
+        "timestamp": 1795358083.6554298,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 324.58
+        }
+      },
+      {
+        "timestamp": 1795358088.7679648,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 320.78
+        }
+      },
+      {
+        "timestamp": 1795358093.878222,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 322.88
+        }
+      },
+      {
+        "timestamp": 1795358098.9887109,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 322.87
+        }
+      },
+      {
+        "timestamp": 1795358104.1071029,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 320.61
+        }
+      },
+      {
+        "timestamp": 1795358109.222545,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 324.31
+        }
+      },
+      {
+        "timestamp": 1795358114.3343801,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 320.82
+        }
+      },
+      {
+        "timestamp": 1795358119.442871,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 324.95
+        }
+      },
+      {
+        "timestamp": 1795358124.556111,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 320.74
+        }
+      },
+      {
+        "timestamp": 1795358129.6632462,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 321.12
+        }
+      },
+      {
+        "timestamp": 1795358134.760583,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 321.74
+        }
+      },
+      {
+        "timestamp": 1795358140.115454,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 192.35
+        }
+      },
+      {
+        "timestamp": 1795358145.340425,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 50.34
+        }
+      },
+      {
+        "timestamp": 1795358150.563709,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.44,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358155.788372,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.23,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358161.018974,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 47.6,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358166.252482,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.72,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358171.471452,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 47.71,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358176.698744,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.21,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358181.93293,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.15,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358187.166162,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.15,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358192.400504,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.33,
+          "payment-9f66c6bd-jf8rm": 0.19,
+          "payment-9f66c6bd-v9f42": 0.19
+        }
+      },
+      {
+        "timestamp": 1795358197.6466749,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.04,
+          "payment-9f66c6bd-jf8rm": 0.0,
+          "payment-9f66c6bd-v9f42": 0.0
+        }
+      },
+      {
+        "timestamp": 1795358202.865889,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 48.86,
+          "payment-9f66c6bd-jf8rm": 0.96,
+          "payment-9f66c6bd-v9f42": 0.38
+        }
+      },
+      {
+        "timestamp": 1795358208.117314,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 45.32,
+          "payment-9f66c6bd-jf8rm": 0.95,
+          "payment-9f66c6bd-v9f42": 0.95
+        }
+      },
+      {
+        "timestamp": 1795358213.362015,
+        "rps": {
+          "payment-9f66c6bd-7np4s": 2.1,
+          "payment-9f66c6bd-jf8rm": 0.95,
+          "payment-9f66c6bd-v9f42": 0.95
+        }
+      }
+    ],
+    "dbConnections": [
+      {
+        "timestamp": 1795358032.5611148,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358037.693707,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358042.811795,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358047.929076,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358053.052612,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358058.1799839,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358063.29381,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358068.4036212,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358073.515114,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358078.636152,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358083.746287,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358088.859918,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358093.982396,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358099.102588,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358104.216798,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358109.329417,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358114.442949,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358119.562614,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358124.671148,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358129.785304,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358134.904463,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 20
+        }
+      },
+      {
+        "timestamp": 1795358140.051906,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358145.191458,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358150.314888,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358155.449357,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358160.580711,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358165.715489,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358170.850452,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358175.985891,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358181.1196759,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358186.235321,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358191.3620229,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358196.499169,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358201.626038,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358206.756384,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358211.903025,
+        "connections": {
+          "payment-9f66c6bd-7np4s": 3,
+          "local": 24
+        }
+      }
+    ],
+    "config": {
+      "maxConnections": 30,
+      "hogSessions": 24,
+      "workers": 32,
+      "warmup": 60.0,
+      "faultDelayMillis": 400,
+      "bulkheadMaxConcurrent": 6,
+      "scaleOutReplicas": 3
+    },
+    "scenario": "s1",
+    "remediation": "SCALE_OUT",
+    "injectedAt": 1795358137.438826,
+    "injectionNode": "payment",
+    "remediationNode": "orders",
+    "tracePath": "results/k8s-budget/trace-k8s-s1-scale_out-r1-20261122-233329.jsonl",
+    "normalSeconds": 50.0,
+    "faultSeconds": 70.0,
+    "entryLoad": {
+      "targets": [
+        "192.168.64.2:31091"
+      ],
+      "workerCount": 32,
+      "durationSeconds": 120.01,
+      "requestCount": 19504,
+      "successCount": 19504,
+      "errorCount": 0,
+      "errorRate": 0.0,
+      "throughputRps": 162.52028492907658,
+      "goodputRps": 162.52028492907658,
+      "latencyMeanMillis": 192.82915146909747,
+      "latencyP50Millis": 119.64499999885447,
+      "latencyP95Millis": 684.7996249998687,
+      "latencyP99Millis": 690.2642089989968,
+      "statusCounts": {
+        "200": 19504
+      }
+    },
+    "remediationSnapshot": {
+      "serviceName": "orders",
+      "remediation": "NONE"
+    },
+    "nodeSampleCount": 549,
+    "callGraph": {
+      "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+      "nodes": [
+        "gateway",
+        "orders",
+        "payment"
+      ],
+      "callEdges": [
+        [
+          "gateway",
+          "orders"
+        ],
+        [
+          "orders",
+          "payment"
+        ]
+      ],
+      "injectionPoint": "payment"
+    },
+    "cellKey": "k8s|s1|SCALE_OUT|r1"
+  },
+  {
+    "backend": "k8s",
+    "repeat": 1,
+    "powerSource": "AC",
+    "hostLoad": {
+      "coreCount": 8,
+      "loadSamples": 90,
+      "loadMedian": 3.58,
+      "loadMax": 4.27,
+      "saturatedShare": 0.0
+    },
+    "foreignCpu": {
+      "samples": 35,
+      "percentMedian": 26.0,
+      "percentMax": 162.7,
+      "topProcesses": [
+        [
+          "ecosystemd",
+          10.0
+        ],
+        [
+          "trustd",
+          6.4
+        ],
+        [
+          "Code Helper (Renderer)",
+          5.3
+        ],
+        [
+          "ecosystemanalyticsd",
+          5.1
+        ],
+        [
+          "duetexpertd",
+          3.3
+        ]
+      ]
+    },
+    "nodeCpu": {
+      "allocatableCores": 6.0,
+      "samples": 35,
+      "errors": 0,
+      "saturationRatio": 0.9,
+      "usageMedianCores": 1.07,
+      "usageMaxCores": 1.1,
+      "saturatedShare": 0.0
+    },
+    "cluster": {
+      "kubernetesVersion": "v1.37.0",
+      "containerRuntime": "containerd://2.3.4",
+      "kernel": "6.6.152",
+      "osImage": "Buildroot 2025.02.16",
+      "nodeCount": 1,
+      "allocatableCpu": "6",
+      "allocatableMemory": "8131620Ki",
+      "images": {
+        "docker.io/library/postgres:16": "sha256:6162f3765f7563b273a879894c5751d41285f922dd75ba0ba508a89e024e43ca",
+        "docker.io/library/cascade-app:0.1.0": "sha256:c9be4448825d119f531ce8880eeea4f494e556992123929a385f5d8f8ce9603c"
+      }
+    },
+    "scaleOut": null,
+    "podTraffic": [
+      {
+        "timestamp": 1795358253.186709,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 325.04
+        }
+      },
+      {
+        "timestamp": 1795358258.294601,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 325.38
+        }
+      },
+      {
+        "timestamp": 1795358263.400306,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 325.13
+        }
+      },
+      {
+        "timestamp": 1795358268.501837,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 325.0
+        }
+      },
+      {
+        "timestamp": 1795358273.6171992,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 324.51
+        }
+      },
+      {
+        "timestamp": 1795358278.7235231,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 324.11
+        }
+      },
+      {
+        "timestamp": 1795358283.838366,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 321.61
+        }
+      },
+      {
+        "timestamp": 1795358288.963146,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 320.01
+        }
+      },
+      {
+        "timestamp": 1795358294.088765,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 323.86
+        }
+      },
+      {
+        "timestamp": 1795358299.212849,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 320.06
+        }
+      },
+      {
+        "timestamp": 1795358304.340398,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 323.74
+        }
+      },
+      {
+        "timestamp": 1795358309.449822,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 320.98
+        }
+      },
+      {
+        "timestamp": 1795358314.548307,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 321.66
+        }
+      },
+      {
+        "timestamp": 1795358319.6621509,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 322.46
+        }
+      },
+      {
+        "timestamp": 1795358324.770494,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 323.2
+        }
+      },
+      {
+        "timestamp": 1795358329.886442,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 320.57
+        }
+      },
+      {
+        "timestamp": 1795358334.981298,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 321.89
+        }
+      },
+      {
+        "timestamp": 1795358340.0753741,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 321.94
+        }
+      },
+      {
+        "timestamp": 1795358345.1793191,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 321.32
+        }
+      },
+      {
+        "timestamp": 1795358350.281176,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 321.45
+        }
+      },
+      {
+        "timestamp": 1795358355.386744,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 196.84
+        }
+      },
+      {
+        "timestamp": 1795358360.486582,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.65
+        }
+      },
+      {
+        "timestamp": 1795358365.5974112,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 48.52
+        }
+      },
+      {
+        "timestamp": 1795358370.696932,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.06
+        }
+      },
+      {
+        "timestamp": 1795358375.8063118,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.56
+        }
+      },
+      {
+        "timestamp": 1795358380.9363468,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.95
+        }
+      },
+      {
+        "timestamp": 1795358386.0792189,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.25
+        }
+      },
+      {
+        "timestamp": 1795358391.204041,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 48.39
+        }
+      },
+      {
+        "timestamp": 1795358396.341595,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.3
+        }
+      },
+      {
+        "timestamp": 1795358401.4703932,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.38
+        }
+      },
+      {
+        "timestamp": 1795358406.583352,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.53
+        }
+      },
+      {
+        "timestamp": 1795358411.687232,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.61
+        }
+      },
+      {
+        "timestamp": 1795358416.80351,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.69
+        }
+      },
+      {
+        "timestamp": 1795358421.920523,
+        "rps": {
+          "payment-9f66c6bd-5jt46": 47.49
+        }
+      }
+    ],
+    "dbConnections": [
+      {
+        "timestamp": 1795358248.085927,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358253.225887,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358258.345102,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358263.470392,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358268.5813608,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358273.7126322,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358278.820456,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358283.928391,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358289.040837,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358294.155689,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358299.264808,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358304.384819,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358309.497843,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358314.607622,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358319.728226,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358324.841291,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358329.95079,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358335.0595021,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358340.171099,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358345.277432,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358350.384819,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 20
+        }
+      },
+      {
+        "timestamp": 1795358355.4871309,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358360.595045,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358365.6977868,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358370.805175,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358375.9146812,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358381.020034,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358386.125188,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358391.236767,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358396.365865,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358401.489293,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358406.628745,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358411.735183,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358416.849696,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      },
+      {
+        "timestamp": 1795358421.9594991,
+        "connections": {
+          "payment-9f66c6bd-5jt46": 3,
+          "local": 24
+        }
+      }
+    ],
+    "config": {
+      "maxConnections": 30,
+      "hogSessions": 24,
+      "workers": 32,
+      "warmup": 60.0,
+      "faultDelayMillis": 400,
+      "bulkheadMaxConcurrent": 6,
+      "scaleOutReplicas": 3
+    },
+    "scenario": "s1",
+    "remediation": "NONE",
+    "injectedAt": 1795358352.930411,
+    "injectionNode": "payment",
+    "remediationNode": "orders",
+    "tracePath": "results/k8s-budget/trace-k8s-s1-none-r1-20261122-233329.jsonl",
+    "normalSeconds": 50.0,
+    "faultSeconds": 70.0,
+    "entryLoad": {
+      "targets": [
+        "192.168.64.2:31091"
+      ],
+      "workerCount": 32,
+      "durationSeconds": 120.0,
+      "requestCount": 19441,
+      "successCount": 19441,
+      "errorCount": 0,
+      "errorRate": 0.0,
+      "throughputRps": 162.0028280506276,
+      "goodputRps": 162.0028280506276,
+      "latencyMeanMillis": 197.11845294357266,
+      "latencyP50Millis": 119.14312499720836,
+      "latencyP95Millis": 694.0654579993861,
+      "latencyP99Millis": 701.596957998845,
+      "statusCounts": {
+        "200": 19441
+      }
+    },
+    "remediationSnapshot": {
+      "serviceName": "orders",
+      "remediation": "NONE"
+    },
+    "nodeSampleCount": 528,
+    "callGraph": {
+      "comment": "호출 간선은 호출자 → 피호출자로 저장한다. 전파는 그 반대 방향으로 흐르므로 v 의 상류는 v 가 호출하는 쪽이다 (code/model/smokeTest.py C7 에서 실증).",
+      "nodes": [
+        "gateway",
+        "orders",
+        "payment"
+      ],
+      "callEdges": [
+        [
+          "gateway",
+          "orders"
+        ],
+        [
+          "orders",
+          "payment"
+        ]
+      ],
+      "injectionPoint": "payment"
+    },
+    "cellKey": "k8s|s1|NONE|r1"
+  }
+]

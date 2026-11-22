@@ -1,6 +1,6 @@
 {
   "conditions": {
-    "mc30|normal|NONE": {
+    "base|normal|NONE": {
       "metric": "throughputRps",
       "n": 5,
       "mean": 317.9485604336807,
@@ -23,7 +23,7 @@
       "latencyP95MedianMillis": 134.217727,
       "errorRateMedian": 0.0
     },
-    "mc30|normal|SCALE_OUT": {
+    "base|normal|SCALE_OUT": {
       "metric": "throughputRps",
       "n": 5,
       "mean": 147.94570157011398,
@@ -46,7 +46,7 @@
       "latencyP95MedianMillis": 447.392426,
       "errorRateMedian": 0.0
     },
-    "mc30|s1|NONE": {
+    "base|s1|NONE": {
       "metric": "goodputRps",
       "n": 5,
       "mean": 47.07967568941192,
@@ -69,7 +69,7 @@
       "latencyP95MedianMillis": 715.827881,
       "errorRateMedian": 0.0
     },
-    "mc30|s1|SCALE_OUT": {
+    "base|s1|SCALE_OUT": {
       "metric": "goodputRps",
       "n": 5,
       "mean": 47.24880670745269,
@@ -94,7 +94,7 @@
     }
   },
   "effects": {
-    "mc30|normal": {
+    "base|normal": {
       "relative": -0.5346866758310949,
       "relativeCi95": [
         -0.634995397155056,
@@ -122,7 +122,7 @@
       "disruption": 0.5346866758310949,
       "disruptionMedianBased": 0.5456682982517967
     },
-    "mc30|s1": {
+    "base|s1": {
       "relative": 0.0035924422920101495,
       "relativeCi95": [
         0.0004330375012639191,
@@ -155,12 +155,13 @@
     }
   },
   "cells": {
-    "k8s|s1|NONE|r2|mc30": {
+    "k8s-s1-none-r2-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "NONE"
       ],
+      "cellKey": "k8s|s1|NONE|r2",
       "repeat": 2,
       "disruptionWindow": {
         "throughputRps": 47.013285745577065,
@@ -183,16 +184,18 @@
       "podRates": {
         "payment-9f66c6bd-qrnkd": 47.415000000000006
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-qrnkd"
       ]
     },
-    "k8s|s1|NONE|r4|mc30": {
+    "k8s-s1-none-r4-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "NONE"
       ],
+      "cellKey": "k8s|s1|NONE|r4",
       "repeat": 4,
       "disruptionWindow": {
         "throughputRps": 47.154650572339214,
@@ -215,16 +218,18 @@
       "podRates": {
         "payment-9f66c6bd-vllpl": 47.785
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-vllpl"
       ]
     },
-    "k8s|s1|NONE|r5|mc30": {
+    "k8s-s1-none-r5-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "NONE"
       ],
+      "cellKey": "k8s|s1|NONE|r5",
       "repeat": 5,
       "disruptionWindow": {
         "throughputRps": 47.04041810674358,
@@ -247,16 +252,18 @@
       "podRates": {
         "payment-9f66c6bd-8wltn": 47.605000000000004
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-8wltn"
       ]
     },
-    "k8s|s1|NONE|r1|mc30": {
+    "k8s-s1-none-r1-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "NONE"
       ],
+      "cellKey": "k8s|s1|NONE|r1",
       "repeat": 1,
       "disruptionWindow": {
         "throughputRps": 46.99643990047315,
@@ -279,16 +286,18 @@
       "podRates": {
         "payment-9f66c6bd-rfvxc": 47.545
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-rfvxc"
       ]
     },
-    "k8s|s1|NONE|r3|mc30": {
+    "k8s-s1-none-r3-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "NONE"
       ],
+      "cellKey": "k8s|s1|NONE|r3",
       "repeat": 3,
       "disruptionWindow": {
         "throughputRps": 47.22296050964976,
@@ -311,16 +320,18 @@
       "podRates": {
         "payment-9f66c6bd-8fxnh": 47.834999999999994
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-8fxnh"
       ]
     },
-    "k8s|normal|NONE|r4|mc30": {
+    "k8s-normal-none-r4-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "NONE"
       ],
+      "cellKey": "k8s|normal|NONE|r4",
       "repeat": 4,
       "disruptionWindow": {
         "throughputRps": 318.5064035412505,
@@ -343,16 +354,18 @@
       "podRates": {
         "payment-9f66c6bd-vxgdc": 321.75
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-vxgdc"
       ]
     },
-    "k8s|normal|NONE|r5|mc30": {
+    "k8s-normal-none-r5-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "NONE"
       ],
+      "cellKey": "k8s|normal|NONE|r5",
       "repeat": 5,
       "disruptionWindow": {
         "throughputRps": 317.6439494835371,
@@ -375,16 +388,18 @@
       "podRates": {
         "payment-9f66c6bd-bzlzc": 315.07
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-bzlzc"
       ]
     },
-    "k8s|normal|NONE|r3|mc30": {
+    "k8s-normal-none-r3-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "NONE"
       ],
+      "cellKey": "k8s|normal|NONE|r3",
       "repeat": 3,
       "disruptionWindow": {
         "throughputRps": 319.2876555683372,
@@ -407,16 +422,18 @@
       "podRates": {
         "payment-9f66c6bd-dvmmm": 321.06
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-dvmmm"
       ]
     },
-    "k8s|normal|NONE|r1|mc30": {
+    "k8s-normal-none-r1-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "NONE"
       ],
+      "cellKey": "k8s|normal|NONE|r1",
       "repeat": 1,
       "disruptionWindow": {
         "throughputRps": 316.7851309416304,
@@ -439,16 +456,18 @@
       "podRates": {
         "payment-9f66c6bd-j5kmf": 321.03
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-j5kmf"
       ]
     },
-    "k8s|normal|NONE|r2|mc30": {
+    "k8s-normal-none-r2-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "NONE"
       ],
+      "cellKey": "k8s|normal|NONE|r2",
       "repeat": 2,
       "disruptionWindow": {
         "throughputRps": 317.51966263364847,
@@ -471,16 +490,18 @@
       "podRates": {
         "payment-9f66c6bd-5pz7k": 321.09000000000003
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-5pz7k"
       ]
     },
-    "k8s|normal|SCALE_OUT|r5|mc30": {
+    "k8s-normal-scale_out-r5-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|normal|SCALE_OUT|r5",
       "repeat": 5,
       "disruptionWindow": {
         "throughputRps": 174.92236173279107,
@@ -505,16 +526,18 @@
         "payment-9f66c6bd-hdthq": 48.58,
         "payment-9f66c6bd-rv9zx": 60.7
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-rv9zx"
       ]
     },
-    "k8s|normal|SCALE_OUT|r1|mc30": {
+    "k8s-normal-scale_out-r1-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|normal|SCALE_OUT|r1",
       "repeat": 1,
       "disruptionWindow": {
         "throughputRps": 144.3157161188757,
@@ -535,20 +558,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": 12.929408073425293,
       "podRates": {
-        "payment-9f66c6bd-br2gd": 64.33,
         "payment-9f66c6bd-nzbls": 48.24,
+        "payment-9f66c6bd-br2gd": 64.33,
         "payment-9f66c6bd-wl6k4": 26.45
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-wl6k4"
       ]
     },
-    "k8s|normal|SCALE_OUT|r4|mc30": {
+    "k8s-normal-scale_out-r4-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|normal|SCALE_OUT|r4",
       "repeat": 4,
       "disruptionWindow": {
         "throughputRps": 115.51309019573505,
@@ -570,19 +595,21 @@
       "effectOnsetSeconds": 12.952059984207153,
       "podRates": {
         "payment-9f66c6bd-88dr7": 39.44,
-        "payment-9f66c6bd-2q4pm": 36.93,
-        "payment-9f66c6bd-lwrwh": 48.28
+        "payment-9f66c6bd-lwrwh": 48.28,
+        "payment-9f66c6bd-2q4pm": 36.93
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-2q4pm"
       ]
     },
-    "k8s|normal|SCALE_OUT|r2|mc30": {
+    "k8s-normal-scale_out-r2-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|normal|SCALE_OUT|r2",
       "repeat": 2,
       "disruptionWindow": {
         "throughputRps": 132.40020081077233,
@@ -603,20 +630,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": 12.948208808898926,
       "podRates": {
+        "payment-9f66c6bd-dpn7p": 40.03,
         "payment-9f66c6bd-zqklg": 48.75,
-        "payment-9f66c6bd-qzhjj": 64.24,
-        "payment-9f66c6bd-dpn7p": 40.03
+        "payment-9f66c6bd-qzhjj": 64.24
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-dpn7p"
       ]
     },
-    "k8s|normal|SCALE_OUT|r3|mc30": {
+    "k8s-normal-scale_out-r3-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "normal",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|normal|SCALE_OUT|r3",
       "repeat": 3,
       "disruptionWindow": {
         "throughputRps": 172.5771389923958,
@@ -637,20 +666,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": 12.924612045288086,
       "podRates": {
-        "payment-9f66c6bd-2579l": 80.54,
+        "payment-9f66c6bd-44pkr": 52.54,
         "payment-9f66c6bd-wnn6t": 32.26,
-        "payment-9f66c6bd-44pkr": 52.54
+        "payment-9f66c6bd-2579l": 80.54
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-44pkr"
       ]
     },
-    "k8s|s1|SCALE_OUT|r1|mc30": {
+    "k8s-s1-scale_out-r1-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|s1|SCALE_OUT|r1",
       "repeat": 1,
       "disruptionWindow": {
         "throughputRps": 47.39415808207311,
@@ -671,20 +702,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": null,
       "podRates": {
-        "payment-9f66c6bd-cdthj": 0.0,
         "payment-9f66c6bd-jxnhn": 48.09,
+        "payment-9f66c6bd-cdthj": 0.0,
         "payment-9f66c6bd-xc6kl": 0.0
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-jxnhn"
       ]
     },
-    "k8s|s1|SCALE_OUT|r3|mc30": {
+    "k8s-s1-scale_out-r3-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|s1|SCALE_OUT|r3",
       "repeat": 3,
       "disruptionWindow": {
         "throughputRps": 47.2593640053746,
@@ -705,20 +738,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": null,
       "podRates": {
-        "payment-9f66c6bd-ct5v8": 0.0,
+        "payment-9f66c6bd-zzjpp": 48.02,
         "payment-9f66c6bd-plgfd": 0.0,
-        "payment-9f66c6bd-zzjpp": 48.02
+        "payment-9f66c6bd-ct5v8": 0.0
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-zzjpp"
       ]
     },
-    "k8s|s1|SCALE_OUT|r5|mc30": {
+    "k8s-s1-scale_out-r5-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|s1|SCALE_OUT|r5",
       "repeat": 5,
       "disruptionWindow": {
         "throughputRps": 47.24330585307841,
@@ -739,20 +774,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": null,
       "podRates": {
-        "payment-9f66c6bd-5z5kx": 0.0,
         "payment-9f66c6bd-6pkc8": 0.0,
-        "payment-9f66c6bd-6jtnj": 48.11
+        "payment-9f66c6bd-6jtnj": 48.11,
+        "payment-9f66c6bd-5z5kx": 0.0
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-6jtnj"
       ]
     },
-    "k8s|s1|SCALE_OUT|r2|mc30": {
+    "k8s-s1-scale_out-r2-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|s1|SCALE_OUT|r2",
       "repeat": 2,
       "disruptionWindow": {
         "throughputRps": 47.19494234561873,
@@ -773,20 +810,22 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": null,
       "podRates": {
+        "payment-9f66c6bd-pdprj": 0.0,
         "payment-9f66c6bd-8bqvp": 0.0,
-        "payment-9f66c6bd-drzxx": 47.78,
-        "payment-9f66c6bd-pdprj": 0.0
+        "payment-9f66c6bd-drzxx": 47.78
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-drzxx"
       ]
     },
-    "k8s|s1|SCALE_OUT|r4|mc30": {
+    "k8s-s1-scale_out-r4-20261122-195336": {
       "condition": [
-        30,
+        "base",
         "s1",
         "SCALE_OUT"
       ],
+      "cellKey": "k8s|s1|SCALE_OUT|r4",
       "repeat": 4,
       "disruptionWindow": {
         "throughputRps": 47.119003652469175,
@@ -807,17 +846,19 @@
       "readyLeadSeconds": 5.2,
       "effectOnsetSeconds": null,
       "podRates": {
-        "payment-9f66c6bd-w4xsq": 0.0,
         "payment-9f66c6bd-p6wx2": 0.0,
-        "payment-9f66c6bd-7wm6h": 48.0
+        "payment-9f66c6bd-7wm6h": 48.0,
+        "payment-9f66c6bd-w4xsq": 0.0
       },
+      "podConnections": {},
       "originalPods": [
         "payment-9f66c6bd-7wm6h"
       ]
     }
   },
   "mechanism": {
-    "mc30": {
+    "base": {
+      "maxConnections": 30,
       "s1AppSlots": 3,
       "perConnectionRps": 15.868333333333334,
       "leftoverSlotsForNewPods": 7

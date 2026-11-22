@@ -120,6 +120,12 @@ def runCell(scenario: str, remediation: str, repeat: int,
     # 요청마다 새 연결을 열고, kube-proxy 가 요청마다 파드를 고른다.
     environment["PAYMENT_MAX_KEEP_ALIVE_REQUESTS"] = str(arguments.paymentKeepAlive)
     backend = runChain.BACKEND
+    if backend == "k8s" and scenario == "s3":
+        # 🔴 S3 × SCALE_OUT 의 전제(J33) — 증설로 **새로 뜬 파드도** 장애를 가져야 한다. setFault 는
+        #    주입 시점의 파드에만 걸리므로, 템플릿 기동값으로 payment 파드를 전부 장애 상태로 낳고
+        #    기존 파드만 기동 직후 0 으로 되돌린다. 주입 때 다시 켜면 신규 파드는 처음부터 느리다.
+        #    NONE 셀도 같은 절차를 밟는다 — 두 조건의 차이는 증설뿐이어야 한다.
+        environment["PAYMENT_FAULT_DELAY_MILLIS"] = str(arguments.faultDelayMillis)
     config = cellConfig(arguments)
     tag = cohortTag(config)
     # 🔴 파일명에 백엔드·코호트·반복을 넣는다. 같은 RUN_STAMP 로 반복을 돌리면 경로가 겹쳐
@@ -147,6 +153,7 @@ def runCell(scenario: str, remediation: str, repeat: int,
     dbConnections = None
     hpaWatcher = None
     hpaFinal = None
+    faultFinal = None
     hostLoad = HostLoadSampler()
     foreign = ForeignCpuSampler()
     nodeCpu = NodeCpuSampler() if backend == "k8s" else None
@@ -156,6 +163,11 @@ def runCell(scenario: str, remediation: str, repeat: int,
         if backend == "k8s":
             import k8sBackend   # noqa: PLC0415
             cluster = k8sBackend.clusterFingerprint()
+            if scenario == "s3":
+                k8sBackend.setFault("payment", 0)
+                states = k8sBackend.faultStates("payment")
+                if any(value != 0 for value in states.values()):
+                    raise RuntimeError(f"S3 기동값을 0 으로 되돌리지 못했다: {states}")
             # 증설 여부와 무관하게 모든 K8s 셀에서 돈다 — 측정 부하를 대칭으로 둔다.
             if arguments.paymentHpa:
                 # A1 — 워밍업 전에 건다. HPA 는 상시 정책이라 정상 구간부터 작동해야 한다.
@@ -203,6 +215,10 @@ def runCell(scenario: str, remediation: str, repeat: int,
             if hpaWatcher is not None:
                 import k8sBackend   # noqa: PLC0415
                 hpaFinal = k8sBackend.hpaStatus()
+            if backend == "k8s" and scenario == "s3":
+                import k8sBackend   # noqa: PLC0415
+                # 끝에서 확인한다 — 증설된 파드까지 전부 장애 상태여야 S3 × SCALE_OUT 이 성립한다.
+                faultFinal = k8sBackend.faultStates("payment")
             sampleCount = scraper.sampleCount
         hog.stop()
     finally:
@@ -242,6 +258,8 @@ def runCell(scenario: str, remediation: str, repeat: int,
         # A1(HPA) 셀의 레플리카 시간선(2초)과 셀 끝의 HPA 상태(J32).
         "hpa": ({"timeline": hpaWatcher.timeline, "final": hpaFinal}
                 if hpaWatcher is not None else None),
+        # K8s S3 셀 끝의 파드별 지연(J33). 신규 파드 포함 전부 faultDelayMillis 여야 한다.
+        "faultStates": faultFinal,
         # 파드별 DB 커넥션 수(J31). 증설의 기전을 추정 없이 본다.
         "dbConnections": dbConnections.samples if dbConnections is not None else None,
         # 🔴 셀을 만든 구성. 이것이 없던 셀은 기본값으로 돌았다(cohort.DEFAULTS).
@@ -426,12 +444,9 @@ def main() -> int:
         # 강제 증설과 HPA 가 같은 Deployment 의 replicas 를 두고 다툰다(§4-3 주 2).
         print("❌ SCALE_OUT 과 HPA 를 한 셀에 겹치지 않는다 — 둘이 replicas 를 두고 다툰다")
         return 1
-    if "SCALE_OUT" in remediations and "s3" in scenarios:
-        # setFault 는 주입 시점의 파드에만 걸린다. 증설로 새로 뜬 파드는 장애 없이 돌아
-        # 증설이 인위적으로 "효과 있음" 으로 나온다. S1 은 DB 측 제약이라 모든 파드에
-        # 똑같이 걸리므로 문제가 없다.
-        print("❌ S3 × SCALE_OUT 은 아직 막아 둔다 — 새로 뜬 파드에 장애가 전파되지 않는다")
-        return 1
+    # S3 × SCALE_OUT 은 J33 부터 허용한다 — runCell 이 신규 파드에도 장애를 전파하고 셀 끝에서
+    # 파드별 지연을 확인한다(faultStates). 종전에는 새로 뜬 파드가 장애 없이 돌아 증설이
+    # 인위적으로 "효과 있음" 으로 나오므로 막아 두었다.
 
     power = powerSource()
     if power == "Battery" and not arguments.allowBattery:

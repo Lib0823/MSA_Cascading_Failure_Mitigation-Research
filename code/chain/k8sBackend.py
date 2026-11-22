@@ -186,6 +186,19 @@ def setFault(node: str, delayMillis: int) -> list[str]:
     return applied
 
 
+def faultStates(node: str) -> dict[str, int | None]:
+    """파드마다 지금 걸린 지연(`GET /fault`). 장애가 의도대로 걸렸는지 셀 안에서 확인한다."""
+    states: dict[str, int | None] = {}
+    for pod in podsOf(node):
+        completed = kubectl("-n", NAMESPACE, "exec", pod, "--", "curl", "-fsS",
+                            "http://localhost:8080/fault", check=False, timeout=15)
+        try:
+            states[pod] = int(json.loads(completed.stdout)["delayMillis"])
+        except (ValueError, KeyError, json.JSONDecodeError):
+            states[pod] = None
+    return states
+
+
 HPA_MANIFEST = REPO / "deploy" / "k8s" / "parity" / "hpa-payment.yaml"
 
 

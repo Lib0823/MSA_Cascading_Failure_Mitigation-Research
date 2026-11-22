@@ -136,6 +136,9 @@ spec:
             - {name: DB_SLEEP_MILLIS, value: "${DB_SLEEP_MILLIS:-60}"}
             - {name: DB_BURN_ROWS, value: "${DB_BURN_ROWS:-1000}"}
             - {name: FAULT_DELAY_MILLIS, value: "${PAYMENT_FAULT_DELAY_MILLIS:-0}"}
+            # 연결당 요청 수 상한(server.tomcat.max-keep-alive-requests). 기본 100 은 Spring
+            # Boot 3.5 기본값과 같다. 1 이면 연결 재사용이 꺼져 요청 단위 분산이 된다(J32).
+            - {name: SERVER_TOMCAT_MAXKEEPALIVEREQUESTS, value: "${PAYMENT_MAX_KEEP_ALIVE_REQUESTS:-100}"}
           ports: [{containerPort: 8080, name: http}]
           resources:
             requests: {cpu: "100m", memory: 384Mi}

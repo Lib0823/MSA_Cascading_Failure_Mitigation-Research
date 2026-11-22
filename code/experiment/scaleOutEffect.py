@@ -53,6 +53,8 @@ import statistics
 from scipy import stats
 
 from disruptionByAction import CHAIN_DIR, ENTRY_NODE, loadCells, thresholdFor, windowValues
+# disruptionByAction 이 CHAIN_DIR 를 경로에 넣는다. 코호트 규칙은 runRemediation 과 한 곳에서.
+from cohort import DEFAULTS as COHORT_DEFAULTS, cellCohort  # noqa: E402
 
 RESULTS_DIR = pathlib.Path(__file__).resolve().parent / "results"
 DEFAULT_LEDGER = CHAIN_DIR / "results" / "remediation-ledger.jsonl"
@@ -63,8 +65,8 @@ POD_WINDOW = (20.0, 70.0)           # 증설 후 레플리카가 Ready 가 되�
 EQUIVALENCE_MARGIN = 0.10           # compareRemediation.EFFECT_THRESHOLD 와 같다
 ONSET_RPS = 5.0                     # 신규 파드 합계가 이것을 넘으면 "효과가 닿기 시작"
 
-# runRemediation 이 cell["config"] 를 남기기 전의 셀은 기본값으로 돌았다.
-DEFAULT_CONFIG = {"maxConnections": 30, "hogSessions": 24}
+# 전 요인이 기본값인 코호트의 이름. 그 밖의 코호트는 cohort.cohortTag 의 태그(mc70, ka1 …)다.
+BASE_LABEL = "base"
 # deploy/k8s/parity/compose-parity.yaml 의 postgres 인자와 같아야 한다.
 SUPERUSER_RESERVED = 3
 # 앱 풀 최대 — compose-parity.yaml HIKARI_MAX_POOL_SIZE 기본값.
@@ -72,7 +74,17 @@ POOL_MAX = 20
 
 
 def configOf(cell: dict) -> dict:
-    return {**DEFAULT_CONFIG, **(cell.get("config") or {})}
+    """runRemediation 이 cell["config"] 를 남기기 전의 셀은 기본값으로 돌았다."""
+    return {**COHORT_DEFAULTS, **(cell.get("config") or {})}
+
+
+def cohortLabel(cell: dict) -> str:
+    return cellCohort(cell) or BASE_LABEL
+
+
+def cellId(cell: dict) -> str:
+    """셀의 고유 이름. `cellKey` 는 실행이 다르면 겹친다(같은 코호트의 r1 은 매 실행 같은 키)."""
+    return pathlib.Path(cell["tracePath"]).stem.removeprefix("trace-")
 
 
 def entryWindow(cell: dict, low: float, high: float) -> dict:
@@ -182,14 +194,14 @@ def spearman(x: list[float], y: list[float]) -> dict:
 def analyze(cells: list[dict], maxForeignCpu: float) -> dict:
     byCondition: dict[tuple, list[dict]] = collections.defaultdict(list)
     for cell in cells:
-        budget = configOf(cell)["maxConnections"]
-        byCondition[(budget, cell["scenario"], cell["remediation"])].append(cell)
+        byCondition[(cohortLabel(cell), cell["scenario"], cell["remediation"])].append(cell)
 
     perCell = {}
     for key, group in byCondition.items():
         for cell in group:
-            perCell[cell["cellKey"] + f"|mc{key[0]}"] = {
-                "condition": list(key), "repeat": cell.get("repeat"),
+            perCell[cellId(cell)] = {
+                "condition": list(key), "cellKey": cell.get("cellKey"),
+                "repeat": cell.get("repeat"),
                 "disruptionWindow": entryWindow(cell, *DISRUPTION_WINDOW),
                 "mitigationWindow": entryWindow(cell, *MITIGATION_WINDOW),
                 "foreignCpuMedian": (cell.get("foreignCpu") or {}).get("percentMedian"),
@@ -208,10 +220,10 @@ def analyze(cells: list[dict], maxForeignCpu: float) -> dict:
         return (entry["disruptionWindow"]["throughputRps"] if scenario == "normal"
                 else entry["mitigationWindow"]["goodputRps"])
 
-    def values(budget: int, scenario: str, remediation: str, clean: bool = False) -> list[float]:
+    def values(label: str, scenario: str, remediation: str, clean: bool = False) -> list[float]:
         out = []
         for entry in perCell.values():
-            if entry["condition"] != [budget, scenario, remediation]:
+            if entry["condition"] != [label, scenario, remediation]:
                 continue
             if clean and (entry["foreignCpuMedian"] or 0.0) > maxForeignCpu:
                 continue
@@ -219,29 +231,28 @@ def analyze(cells: list[dict], maxForeignCpu: float) -> dict:
         return out
 
     report: dict = {"conditions": {}, "effects": {}, "cells": perCell}
-    for (budget, scenario, remediation) in sorted(byCondition):
-        vals = values(budget, scenario, remediation)
-        entries = [e for e in perCell.values() if e["condition"] == [budget, scenario, remediation]]
+    for (label, scenario, remediation) in sorted(byCondition):
+        vals = values(label, scenario, remediation)
+        entries = [e for e in perCell.values() if e["condition"] == [label, scenario, remediation]]
         window = "disruptionWindow" if scenario == "normal" else "mitigationWindow"
         p95 = [e[window]["latencyP95Millis"] for e in entries]
         errors = [e[window]["errorRate"] for e in entries]
-        report["conditions"][f"mc{budget}|{scenario}|{remediation}"] = {
+        report["conditions"][f"{label}|{scenario}|{remediation}"] = {
             "metric": "throughputRps" if scenario == "normal" else "goodputRps",
             **describe(vals),
             "latencyP95MedianMillis": statistics.median(p95),
             "errorRateMedian": statistics.median(errors),
         }
 
-    budgets = sorted({k[0] for k in byCondition})
-    for budget in budgets:
-        for scenario in sorted({k[1] for k in byCondition if k[0] == budget}):
-            control = values(budget, scenario, "NONE")
-            treatment = values(budget, scenario, "SCALE_OUT")
+    for label in sorted({k[0] for k in byCondition}):
+        for scenario in sorted({k[1] for k in byCondition if k[0] == label}):
+            control = values(label, scenario, "NONE")
+            treatment = values(label, scenario, "SCALE_OUT")
             if len(control) < 2 or len(treatment) < 2:
                 continue
             effect = relativeEffect(treatment, control)
-            cleanControl = values(budget, scenario, "NONE", clean=True)
-            cleanTreatment = values(budget, scenario, "SCALE_OUT", clean=True)
+            cleanControl = values(label, scenario, "NONE", clean=True)
+            cleanTreatment = values(label, scenario, "SCALE_OUT", clean=True)
             if len(cleanControl) >= 2 and len(cleanTreatment) >= 2:
                 cleanEffect = relativeEffect(cleanTreatment, cleanControl)
                 effect["cleanSubset"] = {
@@ -257,26 +268,29 @@ def analyze(cells: list[dict], maxForeignCpu: float) -> dict:
                 effect["mitigation"] = effect["relative"]
                 effect["mitigationMedianBased"] = (
                     statistics.median(treatment) / statistics.median(control) - 1.0)
-            report["effects"][f"mc{budget}|{scenario}"] = effect
+            report["effects"][f"{label}|{scenario}"] = effect
 
         # 커넥션당 처리율 — S1×NONE 의 payment 가 쥔 슬롯은 산술로 정해진다.
-        s1None = [e for e in perCell.values() if e["condition"] == [budget, "s1", "NONE"]]
-        hog = DEFAULT_CONFIG["hogSessions"]
+        members = [c for (l, _, _), group in byCondition.items() if l == label for c in group]
+        config = configOf(members[0])   # 같은 코호트면 예산·점유 수가 같다(코호트의 정의)
+        budget, hog = config["maxConnections"], config["hogSessions"]
+        s1None = [e for e in perCell.values() if e["condition"] == [label, "s1", "NONE"]]
         s1Slots = budget - SUPERUSER_RESERVED - hog
         if s1None and s1Slots > 0:
             podTotals = [sum(e["podRates"].values()) for e in s1None if e["podRates"]]
             if podTotals:
                 perConnection = statistics.median(podTotals) / s1Slots
-                report.setdefault("mechanism", {})[f"mc{budget}"] = {
-                    "s1AppSlots": s1Slots, "perConnectionRps": perConnection,
+                report.setdefault("mechanism", {})[label] = {
+                    "maxConnections": budget, "s1AppSlots": s1Slots,
+                    "perConnectionRps": perConnection,
                     "leftoverSlotsForNewPods": budget - SUPERUSER_RESERVED - POOL_MAX,
                 }
 
     # 오염 점검 — 조건 중앙값에서 벗어난 정도가 외부 CPU 와 함께 움직이는가.
     deviations, foreign, load = [], [], []
     for entry in perCell.values():
-        budget, scenario, remediation = entry["condition"]
-        center = statistics.median(values(budget, scenario, remediation))
+        label, scenario, remediation = entry["condition"]
+        center = statistics.median(values(label, scenario, remediation))
         if not center or entry["foreignCpuMedian"] is None:
             continue
         deviations.append(metric(entry, scenario) / center - 1.0)
@@ -338,7 +352,7 @@ def main() -> int:
               f"{row['min']:>8.1f}{row['max']:>8.1f}{row['latencyP95MedianMillis']:>7.0f}")
 
     baseline = report["composeBaseline"]
-    k8sNone = report["conditions"].get("mc30|normal|NONE")
+    k8sNone = report["conditions"].get(f"{BASE_LABEL}|normal|NONE")
     if baseline and k8sNone:
         gap = k8sNone["mean"] / baseline["throughputRps"] - 1.0
         print(f"\n등가성: Compose normal×NONE {baseline['throughputRps']:.1f} rps (같은 구간, 셀 1개)"
@@ -365,12 +379,12 @@ def main() -> int:
                   f" {clean['relative']:+.1%} [{low:+.1%}, {high:+.1%}]")
 
     print(f"\n━━━ θ (R={arguments.reversibility}, L={arguments.availabilityLoss}) ━━━")
-    for budget in sorted({e["condition"][0] for e in report["cells"].values()}):
-        normal = report["effects"].get(f"mc{budget}|normal")
+    for label in sorted({e["condition"][0] for e in report["cells"].values()}):
+        normal = report["effects"].get(f"{label}|normal")
         if not normal:
             continue
         for scenario in ("s1", "s3"):
-            fault = report["effects"].get(f"mc{budget}|{scenario}")
+            fault = report["effects"].get(f"{label}|{scenario}")
             if not fault:
                 continue
             theta = thresholdFor(normal["disruption"], fault["mitigation"],
@@ -383,7 +397,7 @@ def main() -> int:
             fault["mitigationNeededForFiniteTheta"] = needed
             fault["reversibilityNeededForFiniteTheta"] = reversibilityNeeded
             shown = "∞ (분모 ≤ 0 → 자동 배제)" if math.isinf(theta) else f"{theta:.3f}"
-            print(f"mc{budget} {scenario}: Dₐ {normal['disruption']:.3f} · mₐ {fault['mitigation']:+.3f}"
+            print(f"{label} {scenario}: Dₐ {normal['disruption']:.3f} · mₐ {fault['mitigation']:+.3f}"
                   f" → θ = {shown}")
             if reversibilityNeeded is not None:
                 print(f"{'':<10}θ 가 유한하려면 mₐ > {needed:.3f} (이 R 에서)"
@@ -402,7 +416,7 @@ def main() -> int:
     for name, entry in report["cells"].items():
         if entry["condition"][2] != "SCALE_OUT":
             continue
-        info = mechanism.get(f"mc{entry['condition'][0]}")
+        info = mechanism.get(entry["condition"][0])
         original = set(entry["originalPods"])
         parts, implied = [], 0.0
         measured = entry["podConnections"]
@@ -417,8 +431,8 @@ def main() -> int:
         if "local" in measured:
             tail += f" | 점유 세션 {measured['local']:.0f}"
         print(f"{name:<34} {' / '.join(parts)}{tail}")
-    for budget, info in mechanism.items():
-        print(f"  {budget}: 커넥션당 {info['perConnectionRps']:.1f} rps"
+    for label, info in mechanism.items():
+        print(f"  {label}: 커넥션당 {info['perConnectionRps']:.1f} rps"
               f" (S1×NONE payment 처리율 ÷ 슬롯 {info['s1AppSlots']})")
 
     contamination = report["contamination"]

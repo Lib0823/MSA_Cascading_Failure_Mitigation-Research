@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import copy
 import datetime as dt
+import itertools
 import json
 import os
 import pathlib
@@ -48,6 +49,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "calibra
 import loadGen  # noqa: E402
 import metricScraper  # noqa: E402
 import runChain  # noqa: E402  (사슬 기동·주입 로직을 재사용한다)
+from cohort import DEFAULTS as COHORT_DEFAULTS, cohortTag  # noqa: E402
 from hostLoad import (  # noqa: E402
     ForeignCpuSampler, HostLoadSampler, NodeCpuSampler, foreignCpu, powerSource)
 
@@ -69,17 +71,28 @@ SCALE_OUT_TARGET = "payment"
 SCENARIOS = ("s1", "s3")
 KNOWN_SCENARIOS = ("normal", "s1", "s3")
 # DB max_connections 기본값. S1 의 점유 세션 수(24)와 짝을 이루는 값이다.
-DEFAULT_MAX_CONNECTIONS = 30
+DEFAULT_MAX_CONNECTIONS = COHORT_DEFAULTS["maxConnections"]
+# payment Tomcat 의 maxKeepAliveRequests 기본값(Spring Boot 3.5 기본값과 같다).
+DEFAULT_PAYMENT_KEEP_ALIVE = COHORT_DEFAULTS["paymentKeepAlive"]
 
 
-def budgetSuffix(maxConnections: int) -> str:
-    """기본 예산이 아니면 `mc{n}`. 키·파일명에 넣어 예산이 다른 셀과 섞이지 않게 한다.
+def cellConfig(arguments: argparse.Namespace) -> dict:
+    """셀을 만든 구성. 원장에 남고, 기본값이 아닌 요인은 코호트 태그가 된다(cohort.py).
 
-    🔴 J31 — 예산을 실험 요인으로 돌리기 시작했다. 예산이 키에 없으면 `--resume` 이 다른
-    예산의 셀을 완료로 보고 건너뛰고, `disruptionByAction` 의 기준선(NONE)에 다른 예산의
-    셀이 섞인다(J21·J23·J24 와 같은 계열의 결함).
+    🔴 J31 — 예산을 실험 요인으로 돌리기 시작했다. 요인이 키에 없으면 `--resume` 이 다른
+    코호트의 셀을 완료로 보고 건너뛰고, `disruptionByAction` 의 기준선(NONE)에 다른
+    코호트의 셀이 섞인다(J21·J23·J24 와 같은 계열의 결함).
     """
-    return "" if maxConnections == DEFAULT_MAX_CONNECTIONS else f"mc{maxConnections}"
+    return {
+        "maxConnections": arguments.maxConnections,
+        "paymentKeepAlive": arguments.paymentKeepAlive,
+        "hogSessions": arguments.hogSessions, "workers": arguments.workers,
+        "warmup": arguments.warmup, "normalSeconds": arguments.normalSeconds,
+        "faultSeconds": arguments.faultSeconds,
+        "faultDelayMillis": arguments.faultDelayMillis,
+        "bulkheadMaxConcurrent": arguments.bulkheadMaxConcurrent,
+        "scaleOutReplicas": arguments.scaleOutReplicas,
+    }
 
 
 def setRemediation(action: str) -> None:
@@ -103,20 +116,24 @@ def runCell(scenario: str, remediation: str, repeat: int,
             arguments: argparse.Namespace) -> dict:
     environment = runChain.buildEnvironment(scenario, arguments)
     environment["BULKHEAD_MAX_CONCURRENT"] = str(arguments.bulkheadMaxConcurrent)
+    # 요청 단위 분산을 흉내 낸다(J32) — 1 이면 payment 가 응답마다 연결을 닫아 orders 가
+    # 요청마다 새 연결을 열고, kube-proxy 가 요청마다 파드를 고른다.
+    environment["PAYMENT_MAX_KEEP_ALIVE_REQUESTS"] = str(arguments.paymentKeepAlive)
     backend = runChain.BACKEND
-    budgetTag = budgetSuffix(arguments.maxConnections)
-    # 🔴 파일명에 백엔드·예산·반복을 넣는다. 같은 RUN_STAMP 로 반복을 돌리면 경로가 겹쳐
+    config = cellConfig(arguments)
+    tag = cohortTag(config)
+    # 🔴 파일명에 백엔드·코호트·반복을 넣는다. 같은 RUN_STAMP 로 반복을 돌리면 경로가 겹쳐
     #    덮어쓰고(J24), 백엔드가 없으면 Compose 셀과 구분되지 않는다.
-    if backend == "compose" and repeat == 1 and not budgetTag:
+    if backend == "compose" and repeat == 1 and not tag:
         stem = f"{scenario}-{remediation.lower()}-{RUN_STAMP}"   # 종전 형식 유지
     else:
-        stem = "-".join([backend, *([budgetTag] if budgetTag else []), scenario,
+        stem = "-".join([backend, *([tag] if tag else []), scenario,
                          remediation.lower(), f"r{repeat}", RUN_STAMP])
     tracePath = RESULTS_DIR / f"trace-{stem}.jsonl"
     RESULTS_DIR.mkdir(exist_ok=True)
 
-    budgetLabel = f" × {budgetTag}" if budgetTag else ""
-    print(f"\n━━━ [{backend}] {scenario} × {remediation}{budgetLabel} × r{repeat} ━━━", flush=True)
+    tagLabel = f" × {tag}" if tag else ""
+    print(f"\n━━━ [{backend}] {scenario} × {remediation}{tagLabel} × r{repeat} ━━━", flush=True)
     runChain.composeDown(environment)
     hog = runChain.ConnectionHog(arguments.hogSessions, environment)
     injectedAt = None
@@ -213,14 +230,8 @@ def runCell(scenario: str, remediation: str, repeat: int,
         "podTraffic": podTraffic.rates() if podTraffic is not None else None,
         # 파드별 DB 커넥션 수(J31). 증설의 기전을 추정 없이 본다.
         "dbConnections": dbConnections.samples if dbConnections is not None else None,
-        # 🔴 셀을 만든 구성. 이것이 없던 셀은 기본값으로 돌았다(scaleOutEffect.DEFAULT_CONFIG).
-        "config": {
-            "maxConnections": arguments.maxConnections, "hogSessions": arguments.hogSessions,
-            "workers": arguments.workers, "warmup": arguments.warmup,
-            "faultDelayMillis": arguments.faultDelayMillis,
-            "bulkheadMaxConcurrent": arguments.bulkheadMaxConcurrent,
-            "scaleOutReplicas": arguments.scaleOutReplicas,
-        },
+        # 🔴 셀을 만든 구성. 이것이 없던 셀은 기본값으로 돌았다(cohort.DEFAULTS).
+        "config": config,
         "scenario": scenario, "remediation": remediation,
         "injectedAt": injectedAt, "injectionNode": "payment",
         "remediationNode": REMEDIATION_NODE,
@@ -290,18 +301,17 @@ def waitForQuietHost(maxLoadRatio: float, timeoutSeconds: float,
 
 
 def cellKey(scenario: str, remediation: str, repeat: int = 1,
-            backend: str = "compose", maxConnections: int = DEFAULT_MAX_CONNECTIONS) -> str:
-    """원장의 키. **백엔드·반복·예산이 키에 들어가야** `--resume` 이 셀을 혼동하지 않는다.
+            backend: str = "compose", tag: str = "") -> str:
+    """원장의 키. **백엔드·반복·코호트가 키에 들어가야** `--resume` 이 셀을 혼동하지 않는다.
 
     Compose 의 첫 반복은 종전 형식(`scenario|remediation`)을 유지한다 — 기존 원장의
-    완료 셀을 `--resume` 이 그대로 알아보게 하기 위해서다. 예산도 기본값이면 키에 넣지
-    않는다 — 같은 이유다.
+    완료 셀을 `--resume` 이 그대로 알아보게 하기 위해서다. 코호트도 기본값(빈 태그)이면
+    키에 넣지 않는다 — 같은 이유다. 태그는 cohort.cohortTag 가 만든다.
     """
-    budgetTag = budgetSuffix(maxConnections)
-    if backend == "compose" and repeat == 1 and not budgetTag:
+    if backend == "compose" and repeat == 1 and not tag:
         return f"{scenario}|{remediation}"
     key = f"{backend}|{scenario}|{remediation}|r{repeat}"
-    return f"{key}|{budgetTag}" if budgetTag else key
+    return f"{key}|{tag}" if tag else key
 
 
 def readLedger(path: pathlib.Path) -> dict[str, dict]:
@@ -342,6 +352,9 @@ def main() -> int:
     parser.add_argument("--maxConnections", default=str(DEFAULT_MAX_CONNECTIONS),
                         help="DB max_connections. 쉼표로 여럿(예: 30,70)을 주면 예산이 실험 "
                              "요인이 되어 셀 순서와 함께 섞인다(J31)")
+    parser.add_argument("--paymentKeepAlive", default=str(DEFAULT_PAYMENT_KEEP_ALIVE),
+                        help="payment Tomcat maxKeepAliveRequests. 1 이면 연결 재사용이 꺼져 "
+                             "요청 단위 분산이 된다. 쉼표로 여럿을 주면 요인이 된다(J32)")
     parser.add_argument("--hogSessions", type=int, default=24)
     parser.add_argument("--faultDelayMillis", type=int, default=400)
     # 호스트가 포화인 상태로 재면 기준선이 오염된다(J17). 기본으로 막는다.
@@ -376,6 +389,7 @@ def main() -> int:
     scenarios = [s.strip() for s in arguments.scenarios.split(",") if s.strip()]
     remediations = [r.strip().upper() for r in arguments.remediations.split(",") if r.strip()]
     budgets = [int(b) for b in arguments.maxConnections.split(",") if b.strip()]
+    keepAlives = [int(k) for k in arguments.paymentKeepAlive.split(",") if k.strip()]
 
     unknownScenario = [s for s in scenarios if s not in KNOWN_SCENARIOS]
     unknownRemediation = [r for r in remediations if r not in REMEDIATIONS]
@@ -415,10 +429,18 @@ def main() -> int:
     RESULTS_DIR.mkdir(exist_ok=True)
     ledgerPath = RESULTS_DIR / "remediation-ledger.jsonl"
     done = readLedger(ledgerPath)
-    plan = [(s, r, b, k) for s in scenarios for r in remediations for b in budgets
-            for k in range(1, arguments.repeats + 1)]
-    pending = [(s, r, b, k) for s, r, b, k in plan
-               if cellKey(s, r, k, arguments.backend, b) not in done]
+    def argumentsFor(budget: int, keepAlive: int) -> argparse.Namespace:
+        """셀마다 요인만 바꾼 사본 — runChain.buildEnvironment 와 runCell 이 이 값을 읽는다."""
+        cellArguments = copy.copy(arguments)
+        cellArguments.maxConnections = budget
+        cellArguments.paymentKeepAlive = keepAlive
+        return cellArguments
+
+    plan = list(itertools.product(scenarios, remediations, budgets, keepAlives,
+                                  range(1, arguments.repeats + 1)))
+    pending = [(s, r, b, a, k) for s, r, b, a, k in plan
+               if cellKey(s, r, k, arguments.backend, cohortTag(cellConfig(argumentsFor(b, a))))
+               not in done]
     if arguments.resume and len(pending) < len(plan):
         print(f"원장에서 완료 {len(plan) - len(pending)} 건 확인 → 남은 {len(pending)} 셀")
     elif not arguments.resume:
@@ -432,9 +454,10 @@ def main() -> int:
           f" → 예상 {len(pending) * ((arguments.warmup + arguments.normalSeconds + arguments.faultSeconds) / 60 + 1) / 60:.1f}시간\n")
 
     cells = []
-    for scenario, remediation, budget, repeat in pending:
-        label = f"{scenario}×{remediation}×r{repeat}" + (
-            f"×{budgetSuffix(budget)}" if budgetSuffix(budget) else "")
+    for scenario, remediation, budget, keepAlive, repeat in pending:
+        cellArguments = argumentsFor(budget, keepAlive)
+        tag = cohortTag(cellConfig(cellArguments))
+        label = f"{scenario}×{remediation}×r{repeat}" + (f"×{tag}" if tag else "")
         # 🔴 셀마다 확인한다(J30). 배치 시작 때 한 번만 보면 90분 사이에 끼어든 데몬을
         #    막지 못한다. 조용해지지 않으면 이 셀을 건너뛴다 — 원장에 남지 않으므로
         #    --resume 이 나중에 다시 돈다.
@@ -442,15 +465,12 @@ def main() -> int:
                 arguments.maxLoadRatio, arguments.loadWaitSeconds, arguments.maxForeignCpu):
             print(f"  ⏭ {label} 건너뜀 — 호스트가 조용해지지 않았다", flush=True)
             continue
-        # 셀마다 예산만 바꾼 사본을 넘긴다 — runChain.buildEnvironment 가 이 값을 읽는다.
-        cellArguments = copy.copy(arguments)
-        cellArguments.maxConnections = budget
         try:
             cell = runCell(scenario, remediation, repeat, cellArguments)
         except Exception as error:   # 한 셀의 실패가 나머지를 죽이지 않게 한다
             print(f"  ❌ {label} 실패: {error}", flush=True)
             continue
-        cell["cellKey"] = cellKey(scenario, remediation, repeat, arguments.backend, budget)
+        cell["cellKey"] = cellKey(scenario, remediation, repeat, arguments.backend, tag)
         cells.append(cell)
         # **셀마다 기록한다.** 종전에는 전부 돌린 뒤 한 번에 썼으므로 중간에
         # 멈추면 그때까지의 작업이 전부 사라졌다(노트북 sleep·kill·전원).

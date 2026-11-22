@@ -74,6 +74,10 @@ def episodeRecords(chainDir: pathlib.Path) -> list[dict]:
         for record in json.loads(path.read_text(encoding="utf-8")):
             if record.get("injectedAt") is None:
                 continue
+            # 🔴 코퍼스는 Compose 에피소드다. K8s 셀이 섞이면 다른 환경의 분포가 학습에
+            #    들어간다(2026-11-22, J30). 필드가 없는 기존 레코드는 전부 Compose 다.
+            if record.get("backend", "compose") != "compose":
+                continue
             if not (chainDir / record["tracePath"]).exists():
                 continue   # 중단된 실행이 남긴 고아 기록
             found.append(record)

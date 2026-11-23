@@ -1,0 +1,207 @@
+{
+  "evaluation": "GroupKFold 4접기 out-of-fold",
+  "kappas": "0,0.5,1,2,4",
+  "ensembleSize": 5,
+  "calibration": "sigmoid",
+  "rows": [
+    {
+      "horizonSeconds": 10.0,
+      "episodes": 34,
+      "samples": 10886,
+      "middleConfidenceShare": 0.20659562741135404,
+      "holdSwing": 0.24205401433033252,
+      "falsePositiveRate": 0.37454164484023045,
+      "falsePositiveRateByFold": [
+        0.9381835473133618,
+        0.3565714285714286,
+        0.03529411764705882,
+        0.10297961317302666
+      ],
+      "falsePositiveCost": 0.0009070979570455737,
+      "falsePositiveCostByAction": {
+        "BULKHEAD": 0.0008345206914614981,
+        "CIRCUIT_BREAKER": 7.257726558407545e-05
+      },
+      "falsePositiveByWindow": {
+        "faultFree": {
+          "samples": 4959,
+          "rate": 0.35813672111312767,
+          "cost": 7.162734422262554e-05,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1776
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2677,
+          "rate": 0.40493089279043704,
+          "cost": 0.0024547627941725815,
+          "byAction": {
+            "CIRCUIT_BREAKER": 995,
+            "BULKHEAD": 89
+          }
+        }
+      },
+      "expectedCalibrationError": 0.04553793570779392
+    },
+    {
+      "horizonSeconds": 20.0,
+      "episodes": 34,
+      "samples": 10886,
+      "middleConfidenceShare": 0.2379202645599853,
+      "holdSwing": 0.1827117398493478,
+      "falsePositiveRate": 0.3685608072225173,
+      "falsePositiveRateByFold": [
+        0.930832927423283,
+        0.3293103448275862,
+        0.050920910075839654,
+        0.1045958795562599
+      ],
+      "falsePositiveCost": 0.0009363515666489643,
+      "falsePositiveCostByAction": {
+        "BULKHEAD": 0.0008650557620817844,
+        "CIRCUIT_BREAKER": 7.129580456718005e-05
+      },
+      "falsePositiveByWindow": {
+        "faultFree": {
+          "samples": 4883,
+          "rate": 0.3540856031128405,
+          "cost": 0.00011468359614990785,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1726,
+            "BULKHEAD": 3
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2649,
+          "rate": 0.3952434881087203,
+          "cost": 0.002450962627406568,
+          "byAction": {
+            "CIRCUIT_BREAKER": 959,
+            "BULKHEAD": 88
+          }
+        }
+      },
+      "expectedCalibrationError": 0.05102355274062175
+    },
+    {
+      "horizonSeconds": 30.0,
+      "episodes": 34,
+      "samples": 10886,
+      "middleConfidenceShare": 0.28247290097372774,
+      "holdSwing": 0.21137240492375525,
+      "falsePositiveRate": 0.36127477236207817,
+      "falsePositiveRateByFold": [
+        0.8948140900195695,
+        0.30348837209302326,
+        0.07929515418502203,
+        0.10752118644067797
+      ],
+      "falsePositiveCost": 0.0010474558114622389,
+      "falsePositiveCostByAction": {
+        "BULKHEAD": 0.0009779325120514194,
+        "CIRCUIT_BREAKER": 6.952329941081951e-05
+      },
+      "falsePositiveByWindow": {
+        "faultFree": {
+          "samples": 4821,
+          "rate": 0.35158680771624146,
+          "cost": 0.00012955818294959552,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1691,
+            "BULKHEAD": 4
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.37891953154514546,
+          "cost": 0.002719229316207027,
+          "byAction": {
+            "CIRCUIT_BREAKER": 905,
+            "BULKHEAD": 98
+          }
+        }
+      },
+      "expectedCalibrationError": 0.04337436958344705
+    },
+    {
+      "horizonSeconds": 45.0,
+      "episodes": 34,
+      "samples": 10886,
+      "middleConfidenceShare": 0.3574315634760242,
+      "holdSwing": 0.1579092412272644,
+      "falsePositiveRate": 0.3506916192026037,
+      "falsePositiveRateByFold": [
+        0.8987279843444227,
+        0.24501758499413834,
+        0.07312925170068027,
+        0.1086021505376344
+      ],
+      "falsePositiveCost": 0.0013579332790886898,
+      "falsePositiveCostByAction": {
+        "BULKHEAD": 0.001291402224030377,
+        "CIRCUIT_BREAKER": 6.653105505831302e-05
+      },
+      "falsePositiveByWindow": {
+        "faultFree": {
+          "samples": 4727,
+          "rate": 0.3331922995557436,
+          "cost": 0.000398942246668077,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1553,
+            "BULKHEAD": 22
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.38194182092935397,
+          "cost": 0.003070494899886664,
+          "byAction": {
+            "CIRCUIT_BREAKER": 900,
+            "BULKHEAD": 111
+          }
+        }
+      },
+      "expectedCalibrationError": 0.05064312673128798
+    },
+    {
+      "horizonSeconds": 60.0,
+      "episodes": 34,
+      "samples": 10886,
+      "middleConfidenceShare": 0.3576152856880397,
+      "holdSwing": 0.10959029946720555,
+      "falsePositiveRate": 0.34959792830857295,
+      "falsePositiveRateByFold": [
+        0.8610567514677103,
+        0.2742789876397881,
+        0.08132875143184422,
+        0.1066017316017316
+      ],
+      "falsePositiveCost": 0.0014420607877879239,
+      "falsePositiveCostByAction": {
+        "BULKHEAD": 0.0013759847349052747,
+        "CIRCUIT_BREAKER": 6.60760528826496e-05
+      },
+      "falsePositiveByWindow": {
+        "faultFree": {
+          "samples": 4690,
+          "rate": 0.34328358208955223,
+          "cost": 0.00035791044776119414,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1591,
+            "BULKHEAD": 19
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.36078579523989424,
+          "cost": 0.003362976955043445,
+          "byAction": {
+            "CIRCUIT_BREAKER": 833,
+            "BULKHEAD": 122
+          }
+        }
+      },
+      "expectedCalibrationError": 0.041199115326306816
+    }
+  ]
+}

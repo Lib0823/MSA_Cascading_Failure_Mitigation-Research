@@ -46,8 +46,12 @@ spec:
           resources:
             requests: {cpu: "200m", memory: 384Mi}
             limits: {cpu: "1", memory: 512Mi}
+          # 🔴 `/actuator/health` 가 아니라 readiness 그룹을 본다 (2026-11-22, J30).
+          #    전체 헬스는 `db` 지표를 포함하므로, DB 커넥션을 못 얻으면 9초 만에
+          #    파드가 Service 에서 빠진다(실측). S1 이 풀 고갈이 아니라 전면 장애가
+          #    되고, 증설된 파드는 Ready 가 못 되어 H4 의 역효과가 관측되지 않는다.
           readinessProbe:
-            httpGet: {path: /actuator/health, port: 8080}
+            httpGet: {path: /actuator/health/readiness, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 3
 ---
@@ -93,7 +97,7 @@ spec:
             requests: {cpu: "200m", memory: 384Mi}
             limits: {cpu: "1", memory: 512Mi}
           readinessProbe:
-            httpGet: {path: /actuator/health, port: 8080}
+            httpGet: {path: /actuator/health/readiness, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 3
 ---
@@ -136,7 +140,7 @@ spec:
             requests: {cpu: "200m", memory: 384Mi}
             limits: {cpu: "1", memory: 512Mi}
           readinessProbe:
-            httpGet: {path: /actuator/health, port: 8080}
+            httpGet: {path: /actuator/health/readiness, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 3
 ---
@@ -182,7 +186,7 @@ spec:
             requests: {cpu: "100m", memory: 320Mi}
             limits: {cpu: "500m", memory: 512Mi}
           readinessProbe:
-            httpGet: {path: /actuator/health, port: 8080}
+            httpGet: {path: /actuator/health/readiness, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 3
 ---
@@ -237,7 +241,7 @@ spec:
             requests: {cpu: "200m", memory: 384Mi}
             limits: {cpu: "1", memory: 512Mi}
           readinessProbe:
-            httpGet: {path: /actuator/health, port: 8080}
+            httpGet: {path: /actuator/health/readiness, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 3
 ---
@@ -286,6 +290,6 @@ spec:
             requests: {cpu: "200m", memory: 384Mi}
             limits: {cpu: "1", memory: 512Mi}
           readinessProbe:
-            httpGet: {path: /actuator/health, port: 8080}
+            httpGet: {path: /actuator/health/readiness, port: 8080}
             initialDelaySeconds: 10
             periodSeconds: 3

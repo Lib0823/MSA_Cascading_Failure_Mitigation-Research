@@ -121,10 +121,25 @@ docker run --rm -v "$(pwd):/work" -w /work ghcr.io/yannh/kubeconform:latest \
 
 ---
 
+## 실제 클러스터에 적용한 결과 (2026-11-22, [challenges.md](../../research/challenges.md) J30)
+
+맥북의 minikube(vfkit VM 드라이버, 내부는 kubeadm — K8s v1.37.0, containerd, cgroup v2)에
+**그대로 적용했고 수정 없이 떴다.** 7개 배포가 30초 만에 롤아웃됐고 재시작은 0회였다.
+
+| 항목 | 상태 |
+|---|---|
+| 클러스터 적용 | ✅ 완료 |
+| 🔴 readinessProbe | **수정** — `/actuator/health` 는 `db` 지표를 포함해, DB 커넥션을 못 얻으면 **9초 만에 파드가 Service 에서 빠졌다**(실측). readiness 그룹(`/actuator/health/readiness`)으로 바꾸고 같은 실험으로 재확인했다 |
+| 이미지 배포 경로 | ✅ 단일 노드 — Colima 에서 `docker save` 한 tar 를 `minikube image load`. config 다이제스트가 Compose 이미지와 같음을 확인했다 |
+| 부하 생성기 | ✅ [local/50-external-access.yaml](local/50-external-access.yaml) 의 NodePort 로 진입한다 |
+| `ℓₐ` 계측 | ✅ `runRemediation --remediations SCALE_OUT` 이 자동으로 잰다(1→3 레플리카 약 5초) |
+| `f5` (자원 사용률) | ✅ Prometheus 가 `kubelet-cadvisor` 를 긁는다 |
+
+⚠️ **Compose 결과와 비교할 때는 이 매니페스트가 아니라 [parity/](parity/compose-parity.yaml)
+를 쓴다.** 이 디렉터리의 6노드 토폴로지는 Compose 3노드와 달라서, 차이가 오케스트레이터
+에서 나왔다고 말할 수 없다.
+
 ## 아직 안 된 것
 
-- **클러스터에 실제로 적용해 본 적이 없다.** 스키마는 맞으나 동작은 미확인이다
-- **이미지 배포 경로 미정** — 단일 노드 로컬 빌드로 갈지 레지스트리를 세울지
-- **부하 생성기** — [code/calibration/loadGen.py](../../code/calibration/loadGen.py) 를 K8s 진입점
-  하나를 향하도록 바꾸면 된다. Compose 처럼 포트를 나열할 필요가 없다(Service 가 분배)
-- **`ℓₐ` 계측** — 파드 스케줄링·이미지 풀·JVM 기동. 클러스터가 있어야 잰다
+- **6노드 토폴로지의 측정** — 적용·동작만 확인했다. 실험은 parity 토폴로지로 먼저 한다
+- **증설된 노드의 노드별 지표** — NodePort 로는 파드 하나만 보인다. Prometheus 경로로 옮겨야 한다

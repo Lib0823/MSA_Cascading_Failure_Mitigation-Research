@@ -68,6 +68,8 @@ sys.path.insert(0, str(HERE.parent / "control"))
 sys.path.insert(0, str(HERE.parent / "model"))
 
 import controlLoop  # noqa: E402
+# 호스트 포화 샘플러는 code/chain/hostLoad.py 로 옮겼다 — runRemediation 도 쓴다.
+from hostLoad import HostLoadSampler  # noqa: E402
 import loadGen  # noqa: E402
 import policyEngine  # noqa: E402
 import metricScraper  # noqa: E402
@@ -82,49 +84,6 @@ COMPOSE_POLICIES = ("A2", "A4", "A5", "A6")
 # 주입이 구현된 시나리오. 여기 없는 이름은 **조용히 "주입 없음"으로 돌아간다** —
 # --scenarios 오타 하나로 장애 없는 데이터가 유효한 것처럼 쌓이므로 미리 막는다.
 KNOWN_SCENARIOS = ("normal", "s1", "s3")
-
-
-class HostLoadSampler:
-    """호스트 포화를 기록한다. §4-1 의 측정 유효성 프로토콜.
-
-    `os.getloadavg()` 를 쓴다 — 의존성이 없고 macOS·Linux 모두에서 돈다.
-    load > 코어 수 면 포화이며, 그 구간의 라벨은 신뢰할 수 없다.
-    """
-
-    def __init__(self, intervalSeconds: float = 2.0) -> None:
-        self.intervalSeconds = intervalSeconds
-        self.coreCount = os.cpu_count() or 1
-        self.samples: list[float] = []
-        self.stopFlag = threading.Event()
-        self.thread = threading.Thread(target=self.loop, daemon=True)
-
-    def loop(self) -> None:
-        while not self.stopFlag.wait(self.intervalSeconds):
-            try:
-                self.samples.append(os.getloadavg()[0])
-            except OSError:
-                pass
-
-    def __enter__(self) -> "HostLoadSampler":
-        self.thread.start()
-        return self
-
-    def __exit__(self, *exceptionInfo: object) -> None:
-        self.stopFlag.set()
-        self.thread.join(timeout=5)
-
-    def summary(self) -> dict:
-        if not self.samples:
-            return {"coreCount": self.coreCount, "loadSamples": 0}
-        saturated = sum(1 for v in self.samples if v > self.coreCount)
-        return {
-            "coreCount": self.coreCount,
-            "loadSamples": len(self.samples),
-            "loadMedian": round(statistics.median(self.samples), 2),
-            "loadMax": round(max(self.samples), 2),
-            # 이 비율이 높으면 해당 셀의 측정을 신뢰하면 안 된다.
-            "saturatedShare": round(saturated / len(self.samples), 3),
-        }
 
 
 def profileFingerprint() -> dict:

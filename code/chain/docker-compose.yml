@@ -66,6 +66,8 @@ services:
       DB_SLEEP_MILLIS: ${DB_SLEEP_MILLIS:-60}
       DB_BURN_ROWS: ${DB_BURN_ROWS:-1000}
       FAULT_DELAY_MILLIS: ${PAYMENT_FAULT_DELAY_MILLIS:-0}
+      # server.tomcat.max-keep-alive-requests — 기본 100 은 Spring Boot 기본값과 같다(J32)
+      SERVER_TOMCAT_MAXKEEPALIVEREQUESTS: ${PAYMENT_MAX_KEEP_ALIVE_REQUESTS:-100}
     ports: ["18093:8080"]
     depends_on:
       db: {condition: service_healthy}

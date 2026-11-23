@@ -1,0 +1,159 @@
+{
+  "effects": {
+    "normal": {
+      "relative": 0.5975342403340631,
+      "relativeCi95": [
+        0.5936338492875146,
+        0.6014346313806116
+      ],
+      "relativeCi90": [
+        0.5945440793906276,
+        0.6005244012774986
+      ],
+      "welchDf": 3.942439639990295,
+      "welchP": 2.3857410635490077e-10,
+      "mannWhitneyExactP": 0.1,
+      "equivalentWithin": 0.1,
+      "equivalent": false
+    }
+  },
+  "conditions": {
+    "base|s3": {
+      "n": 3,
+      "mean": 67.328289637731,
+      "sd": 0.12982566530380898,
+      "cv": 0.0019282483782426909,
+      "median": 67.2998247812366,
+      "min": 67.21505827766896,
+      "max": 67.46998585428743,
+      "ci95": [
+        67.00578480659674,
+        67.65079446886527
+      ],
+      "values": [
+        67.46998585428743,
+        67.21505827766896,
+        67.2998247812366
+      ]
+    },
+    "mc70|normal": {
+      "n": 3,
+      "mean": 316.77601858649444,
+      "sd": 0.5736964892094901,
+      "cv": 0.001811047729463285,
+      "median": 316.45168241878616,
+      "min": 316.43795452477156,
+      "max": 317.4384188159255,
+      "ci95": [
+        315.35087750255036,
+        318.2011596704385
+      ],
+      "values": [
+        316.45168241878616,
+        316.43795452477156,
+        317.4384188159255
+      ]
+    },
+    "mc70-hpa1|normal": {
+      "n": 3,
+      "mean": 506.06053620862446,
+      "sd": 0.5080988399971528,
+      "cv": 0.0010040277864853861,
+      "median": 506.11887603280854,
+      "min": 505.52578566014284,
+      "max": 506.536946932922,
+      "ci95": [
+        504.7983487188909,
+        507.322723698358
+      ],
+      "values": [
+        505.52578566014284,
+        506.536946932922,
+        506.11887603280854
+      ]
+    }
+  },
+  "cells": {
+    "k8s-mc70-hpa1-normal-none-r1-20261123-082302": {
+      "scenario": "normal",
+      "metric": 505.52578566014284,
+      "replicas": {
+        "firstScaleUpSeconds": 10.830095052719116,
+        "specAtInjection": 1,
+        "readyAtInjection": 1,
+        "maxSpec": 2,
+        "readyAtEnd": 2,
+        "final": {
+          "currentReplicas": 2,
+          "desiredReplicas": 2,
+          "cpuUtilizationPercent": 57,
+          "lastScaleTime": "2026-11-22T23:28:49Z"
+        }
+      },
+      "podRates": {
+        "payment-678b7866f7-f9j5h": 238.04,
+        "payment-678b7866f7-6w85m": 272.64
+      },
+      "podConnections": {
+        "payment-678b7866f7-f9j5h": 19.0,
+        "payment-678b7866f7-6w85m": 20.0
+      }
+    },
+    "k8s-mc70-hpa1-normal-none-r2-20261123-082302": {
+      "scenario": "normal",
+      "metric": 506.11887603280854,
+      "replicas": {
+        "firstScaleUpSeconds": -48.536827087402344,
+        "specAtInjection": 4,
+        "readyAtInjection": 4,
+        "maxSpec": 4,
+        "readyAtEnd": 4,
+        "final": {
+          "currentReplicas": 4,
+          "desiredReplicas": 4,
+          "cpuUtilizationPercent": 56,
+          "lastScaleTime": "2026-11-22T23:41:45Z"
+        }
+      },
+      "podRates": {
+        "payment-678b7866f7-rf86s": 110.42500000000001,
+        "payment-678b7866f7-nr272": 144.62,
+        "payment-678b7866f7-gvxxd": 115.46,
+        "payment-678b7866f7-9ztsz": 125.465
+      },
+      "podConnections": {
+        "payment-678b7866f7-rf86s": 18.0,
+        "payment-678b7866f7-nr272": 20.0,
+        "payment-678b7866f7-gvxxd": 13.0,
+        "payment-678b7866f7-9ztsz": 15.0
+      }
+    },
+    "k8s-mc70-hpa1-normal-none-r3-20261123-082302": {
+      "scenario": "normal",
+      "metric": 506.536946932922,
+      "replicas": {
+        "firstScaleUpSeconds": -17.987696170806885,
+        "specAtInjection": 3,
+        "readyAtInjection": 3,
+        "maxSpec": 3,
+        "readyAtEnd": 3,
+        "final": {
+          "currentReplicas": 3,
+          "desiredReplicas": 3,
+          "cpuUtilizationPercent": 60,
+          "lastScaleTime": "2026-11-22T23:38:46Z"
+        }
+      },
+      "podRates": {
+        "payment-678b7866f7-sdm6w": 225.55,
+        "payment-678b7866f7-nj854": 149.34,
+        "payment-678b7866f7-rp59k": 135.37
+      },
+      "podConnections": {
+        "payment-678b7866f7-nj854": 16.5,
+        "payment-678b7866f7-sdm6w": 20.0,
+        "payment-678b7866f7-rp59k": 14.0
+      }
+    }
+  }
+}

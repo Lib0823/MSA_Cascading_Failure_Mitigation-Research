@@ -1,0 +1,28 @@
+# A1(HPA) — Compose 등가 토폴로지의 payment 에만 건다 (J32).
+#
+# 사양은 기본 매니페스트 [30-hpa.yaml](../30-hpa.yaml) 의 payment HPA 와 **같다** —
+# 최소 1 · 최대 4 · CPU 60% · 스케일다운 안정화 300초 · 스케일업 즉시.
+# 같은 사양이어야 "현장에서 쓰는 오토스케일러" 라는 A1 의 지위가 유지된다.
+#
+# ⚠️ 기본 토폴로지와 다른 점 — DB 예산. 30-hpa.yaml 은 `max_connections` 50 을 전제로
+#    "2 × 풀 < 예산 < 4 × 풀" 규칙을 세웠다. 등가 토폴로지는 S1 점유 설계 때문에 30 이라
+#    **레플리카 2 개부터** 예산(앱용 27)을 넘는다. 셀의 config 에 예산이 함께 남는다.
+#
+# ⚠️ 셀마다 네임스페이스가 지워지므로 HPA 도 함께 사라진다 — 다음 셀로 새지 않는다.
+#    runRemediation `--paymentHpa 1` 이 up() 뒤에 적용한다. 이 파일은 템플릿이 아니다
+#    (치환 자리표시가 없다).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment
+  namespace: cascade-parity
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: payment}
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 60}}
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+    scaleUp: {stabilizationWindowSeconds: 0}

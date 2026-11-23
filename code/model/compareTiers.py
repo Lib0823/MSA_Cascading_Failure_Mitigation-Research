@@ -183,6 +183,10 @@ def loadAllEpisodes(chainDir: pathlib.Path, arguments) -> list[dict]:
         for record in json.loads(path.read_text(encoding="utf-8")):
             if record.get("injectedAt") is None:
                 continue
+            # 🔴 episodeValidity.episodeRecords 와 **같은 규칙**이어야 한다 — 어긋나면
+            #    검증이 보는 집합과 학습이 보는 집합이 달라진다. K8s 셀은 코퍼스가 아니다.
+            if record.get("backend", "compose") != "compose":
+                continue
             episodes.append(record)
     built = []
     for episode in episodes:

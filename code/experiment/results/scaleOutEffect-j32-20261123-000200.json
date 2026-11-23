@@ -1,0 +1,1542 @@
+{
+  "conditions": {
+    "base|normal|NONE": {
+      "metric": "throughputRps",
+      "n": 3,
+      "mean": 316.8087592116978,
+      "sd": 0.6534118391910875,
+      "cv": 0.002062480345609589,
+      "median": 316.6573791285958,
+      "min": 316.2443241995092,
+      "max": 317.52457430698837,
+      "ci95": [
+        315.1855942206591,
+        318.4319242027365
+      ],
+      "values": [
+        316.2443241995092,
+        316.6573791285958,
+        317.52457430698837
+      ],
+      "latencyP95MedianMillis": 134.217727,
+      "errorRateMedian": 0.0
+    },
+    "base|normal|SCALE_OUT": {
+      "metric": "throughputRps",
+      "n": 3,
+      "mean": 157.43588758927115,
+      "sd": 15.511231046755112,
+      "cv": 0.0985241121593687,
+      "median": 156.57174599052954,
+      "min": 142.3747910862853,
+      "max": 173.3611256909986,
+      "ci95": [
+        118.90385359035423,
+        195.96792158818806
+      ],
+      "values": [
+        173.3611256909986,
+        142.3747910862853,
+        156.57174599052954
+      ],
+      "latencyP95MedianMillis": 447.392426,
+      "errorRateMedian": 0.0
+    },
+    "base|s1|NONE": {
+      "metric": "goodputRps",
+      "n": 3,
+      "mean": 46.95406349239863,
+      "sd": 0.09708105503333553,
+      "cv": 0.00206757515351258,
+      "median": 46.93653524252436,
+      "min": 46.86694069649334,
+      "max": 47.058714538178215,
+      "ci95": [
+        46.71290078249381,
+        47.19522620230345
+      ],
+      "values": [
+        46.86694069649334,
+        47.058714538178215,
+        46.93653524252436
+      ],
+      "latencyP95MedianMillis": 715.827881,
+      "errorRateMedian": 0.0
+    },
+    "base|s1|SCALE_OUT": {
+      "metric": "goodputRps",
+      "n": 3,
+      "mean": 47.14679212229717,
+      "sd": 0.07606647201723171,
+      "cv": 0.001613396555589994,
+      "median": 47.18667100384692,
+      "min": 47.05907831859719,
+      "max": 47.1946270444474,
+      "ci95": [
+        46.957832530559365,
+        47.33575171403498
+      ],
+      "values": [
+        47.18667100384692,
+        47.1946270444474,
+        47.05907831859719
+      ],
+      "latencyP95MedianMillis": 715.827881,
+      "errorRateMedian": 0.0
+    },
+    "hpa1|normal|NONE": {
+      "metric": "throughputRps",
+      "n": 3,
+      "mean": 237.31358456945364,
+      "sd": 17.259692926494623,
+      "cv": 0.07272947715069929,
+      "median": 238.26191945600826,
+      "min": 219.59927514230347,
+      "max": 254.07955911004922,
+      "ci95": [
+        194.43813047751792,
+        280.18903866138936
+      ],
+      "values": [
+        254.07955911004922,
+        238.26191945600826,
+        219.59927514230347
+      ],
+      "latencyP95MedianMillis": 246.065832,
+      "errorRateMedian": 0.0
+    },
+    "hpa1|s1|NONE": {
+      "metric": "goodputRps",
+      "n": 3,
+      "mean": 47.169195187688466,
+      "sd": 0.15441999775253964,
+      "cv": 0.0032737467141021838,
+      "median": 47.21876286295069,
+      "min": 46.99607787479732,
+      "max": 47.292744825317385,
+      "ci95": [
+        46.78559464782298,
+        47.55279572755395
+      ],
+      "values": [
+        47.292744825317385,
+        47.21876286295069,
+        46.99607787479732
+      ],
+      "latencyP95MedianMillis": 715.827881,
+      "errorRateMedian": 0.0
+    },
+    "ka1|normal|NONE": {
+      "metric": "throughputRps",
+      "n": 3,
+      "mean": 319.3435335158525,
+      "sd": 2.4845158635851177,
+      "cv": 0.00778007256396123,
+      "median": 318.57905413616777,
+      "min": 317.3310921131622,
+      "max": 322.1204542982276,
+      "ci95": [
+        313.1716539636788,
+        325.51541306802625
+      ],
+      "values": [
+        322.1204542982276,
+        317.3310921131622,
+        318.57905413616777
+      ],
+      "latencyP95MedianMillis": 134.217727,
+      "errorRateMedian": 0.0
+    },
+    "ka1|normal|SCALE_OUT": {
+      "metric": "throughputRps",
+      "n": 3,
+      "mean": 1.3040509235003184,
+      "sd": 0.5582766042302462,
+      "cv": 0.42810951180627715,
+      "median": 0.9838190617194992,
+      "min": 0.9796449943512168,
+      "max": 1.9486887144302392,
+      "ci95": [
+        -0.08278504265594999,
+        2.6908868896565865
+      ],
+      "values": [
+        0.9838190617194992,
+        0.9796449943512168,
+        1.9486887144302392
+      ],
+      "latencyP95MedianMillis": 4652.881235999999,
+      "errorRateMedian": 0.0
+    },
+    "ka1|s1|NONE": {
+      "metric": "goodputRps",
+      "n": 3,
+      "mean": 46.985514328183655,
+      "sd": 0.0750240572003488,
+      "cv": 0.0015967486633501973,
+      "median": 47.02118317052827,
+      "min": 46.899310254217525,
+      "max": 47.036049559805164,
+      "ci95": [
+        46.799144238403755,
+        47.171884417963554
+      ],
+      "values": [
+        47.02118317052827,
+        47.036049559805164,
+        46.899310254217525
+      ],
+      "latencyP95MedianMillis": 715.827881,
+      "errorRateMedian": 0.0
+    },
+    "ka1|s1|SCALE_OUT": {
+      "metric": "goodputRps",
+      "n": 3,
+      "mean": 0.9646007893104248,
+      "sd": 0.004028296616884313,
+      "cv": 0.004176128261064422,
+      "median": 0.963859940205489,
+      "min": 0.960994339388335,
+      "max": 0.9689480883374504,
+      "ci95": [
+        0.9545939457703062,
+        0.9746076328505434
+      ],
+      "values": [
+        0.960994339388335,
+        0.9689480883374504,
+        0.963859940205489
+      ],
+      "latencyP95MedianMillis": 3221.22547,
+      "errorRateMedian": 0.0
+    }
+  },
+  "effects": {
+    "base|normal": {
+      "relative": -0.5030570241144456,
+      "relativeCi95": [
+        -0.6243787993493537,
+        -0.3817352488795375
+      ],
+      "relativeCi90": [
+        -0.5854722198259907,
+        -0.42064182840290054
+      ],
+      "welchDf": 2.0070980669011855,
+      "welchP": 0.0030987579852989164,
+      "mannWhitneyExactP": 0.1,
+      "equivalentWithin": 0.1,
+      "equivalent": false,
+      "cleanSubset": {
+        "maxForeignCpu": 100.0,
+        "nControl": 3,
+        "nTreatment": 3,
+        "relative": -0.5030570241144456,
+        "relativeCi95": [
+          -0.6243787993493537,
+          -0.3817352488795375
+        ]
+      },
+      "disruption": 0.5030570241144456,
+      "disruptionMedianBased": 0.5055484055940944
+    },
+    "base|s1": {
+      "relative": 0.004104620890367456,
+      "relativeCi95": [
+        -0.00020260515710421366,
+        0.008411846937839126
+      ],
+      "relativeCi90": [
+        0.0008177793445509327,
+        0.00739146243618398
+      ],
+      "welchDf": 3.7834982953224507,
+      "welchP": 0.057035762991715616,
+      "mannWhitneyExactP": 0.1,
+      "equivalentWithin": 0.1,
+      "equivalent": true,
+      "cleanSubset": {
+        "maxForeignCpu": 100.0,
+        "nControl": 3,
+        "nTreatment": 3,
+        "relative": 0.004104620890367456,
+        "relativeCi95": [
+          -0.00020260515710421366,
+          0.008411846937839126
+        ]
+      },
+      "mitigation": 0.004104620890367456,
+      "mitigationMedianBased": 0.005329233613646345,
+      "theta": null,
+      "mitigationNeededForFiniteTheta": 0.15091710723433371,
+      "reversibilityNeededForFiniteTheta": 0.9918406449098032
+    },
+    "ka1|normal": {
+      "relative": -0.99591646366174,
+      "relativeCi95": [
+        -1.0140855737391383,
+        -0.9777473535843417
+      ],
+      "relativeCi90": [
+        -1.0085570995470028,
+        -0.9832758277764774
+      ],
+      "welchDf": 2.2014510507336063,
+      "welchP": 8.303773830883666e-06,
+      "mannWhitneyExactP": 0.1,
+      "equivalentWithin": 0.1,
+      "equivalent": false,
+      "cleanSubset": {
+        "maxForeignCpu": 100.0,
+        "nControl": 3,
+        "nTreatment": 3,
+        "relative": -0.99591646366174,
+        "relativeCi95": [
+          -1.0140855737391383,
+          -0.9777473535843417
+        ]
+      },
+      "disruption": 0.99591646366174,
+      "disruptionMedianBased": 0.9969118526502405
+    },
+    "ka1|s1": {
+      "relative": -0.9794702515636438,
+      "relativeCi95": [
+        -0.9834207657721925,
+        -0.9755197373550949
+      ],
+      "relativeCi90": [
+        -0.9821555050894155,
+        -0.9767849980378719
+      ],
+      "welchDf": 2.011531828416901,
+      "welchP": 8.260552416375347e-07,
+      "mannWhitneyExactP": 0.1,
+      "equivalentWithin": 0.1,
+      "equivalent": false,
+      "cleanSubset": {
+        "maxForeignCpu": 100.0,
+        "nControl": 3,
+        "nTreatment": 3,
+        "relative": -0.9794702515636438,
+        "relativeCi95": [
+          -0.9834207657721925,
+          -0.9755197373550949
+        ]
+      },
+      "mitigation": -0.9794702515636438,
+      "mitigationMedianBased": -0.9795015804534325,
+      "theta": null,
+      "mitigationNeededForFiniteTheta": 0.29877493909852204,
+      "reversibilityNeededForFiniteTheta": 1.983486353827682
+    }
+  },
+  "cells": {
+    "k8s-ka1-s1-none-r1-20261123-000200": {
+      "condition": [
+        "ka1",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r1|ka1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 47.01010221770578,
+        "errorRate": 0.0,
+        "goodputRps": 47.01010221770578,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.02118317052827,
+        "errorRate": 0.0,
+        "goodputRps": 47.02118317052827,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 40.2,
+      "hostLoadMedian": 3.2,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.06,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-7qpsz": 48.004999999999995
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-6d5cb747c-7qpsz": 3.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-7qpsz"
+      ]
+    },
+    "k8s-ka1-s1-none-r3-20261123-000200": {
+      "condition": [
+        "ka1",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r3|ka1",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 47.03536274356801,
+        "errorRate": 0.0,
+        "goodputRps": 47.03536274356801,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.036049559805164,
+        "errorRate": 0.0,
+        "goodputRps": 47.036049559805164,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 22.0,
+      "hostLoadMedian": 2.96,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 0.7,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-vpbfq": 47.58
+      },
+      "podConnections": {
+        "payment-6d5cb747c-vpbfq": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-vpbfq"
+      ]
+    },
+    "k8s-ka1-s1-none-r2-20261123-000200": {
+      "condition": [
+        "ka1",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r2|ka1",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 46.9066260611832,
+        "errorRate": 0.0,
+        "goodputRps": 46.9066260611832,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 46.899310254217525,
+        "errorRate": 0.0,
+        "goodputRps": 46.899310254217525,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 21.5,
+      "hostLoadMedian": 3.14,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.1,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-bg2k2": 47.730000000000004
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-6d5cb747c-bg2k2": 3.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-bg2k2"
+      ]
+    },
+    "k8s-normal-scale_out-r3-20261123-000200": {
+      "condition": [
+        "base",
+        "normal",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|normal|SCALE_OUT|r3",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 173.3611256909986,
+        "errorRate": 0.0,
+        "goodputRps": 173.3611256909986,
+        "latencyP95Millis": 357.913941
+      },
+      "mitigationWindow": {
+        "throughputRps": 171.54623695042454,
+        "errorRate": 0.0,
+        "goodputRps": 171.54623695042454,
+        "latencyP95Millis": 357.913941
+      },
+      "foreignCpuMedian": 46.4,
+      "hostLoadMedian": 2.87,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.07,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": 13.164879083633423,
+      "podRates": {
+        "payment-678b7866f7-bcblm": 64.91,
+        "payment-678b7866f7-7kvrs": 60.06,
+        "payment-678b7866f7-56h8m": 48.58
+      },
+      "podConnections": {
+        "payment-678b7866f7-bcblm": 4.0,
+        "payment-678b7866f7-7kvrs": 20.0,
+        "payment-678b7866f7-56h8m": 3.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-7kvrs"
+      ]
+    },
+    "k8s-normal-scale_out-r1-20261123-000200": {
+      "condition": [
+        "base",
+        "normal",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|normal|SCALE_OUT|r1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 142.3747910862853,
+        "errorRate": 0.0,
+        "goodputRps": 142.3747910862853,
+        "latencyP95Millis": 626.349396
+      },
+      "mitigationWindow": {
+        "throughputRps": 129.59409186852258,
+        "errorRate": 0.0,
+        "goodputRps": 129.59409186852258,
+        "latencyP95Millis": 626.349396
+      },
+      "foreignCpuMedian": 35.8,
+      "hostLoadMedian": 2.82,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.17,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": 13.10942268371582,
+      "podRates": {
+        "payment-678b7866f7-m8qd8": 49.01,
+        "payment-678b7866f7-pgvr6": 48.76,
+        "payment-678b7866f7-zxl5w": 36.73
+      },
+      "podConnections": {
+        "payment-678b7866f7-m8qd8": 4.0,
+        "payment-678b7866f7-pgvr6": 3.0,
+        "payment-678b7866f7-zxl5w": 20.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-zxl5w"
+      ]
+    },
+    "k8s-normal-scale_out-r2-20261123-000200": {
+      "condition": [
+        "base",
+        "normal",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|normal|SCALE_OUT|r2",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 156.57174599052954,
+        "errorRate": 0.0,
+        "goodputRps": 156.57174599052954,
+        "latencyP95Millis": 447.392426
+      },
+      "mitigationWindow": {
+        "throughputRps": 154.02769064366515,
+        "errorRate": 0.0,
+        "goodputRps": 154.02769064366515,
+        "latencyP95Millis": 447.392426
+      },
+      "foreignCpuMedian": 25.4,
+      "hostLoadMedian": 2.66,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.12,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": 13.03234314918518,
+      "podRates": {
+        "payment-678b7866f7-8cgx9": 64.33,
+        "payment-678b7866f7-cms67": 48.33,
+        "payment-678b7866f7-pr6ns": 54.78
+      },
+      "podConnections": {
+        "payment-678b7866f7-8cgx9": 4.0,
+        "payment-678b7866f7-cms67": 3.0,
+        "payment-678b7866f7-pr6ns": 20.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-pr6ns"
+      ]
+    },
+    "k8s-s1-none-r2-20261123-000200": {
+      "condition": [
+        "base",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r2",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 46.8752651664993,
+        "errorRate": 0.0,
+        "goodputRps": 46.8752651664993,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 46.86694069649334,
+        "errorRate": 0.0,
+        "goodputRps": 46.86694069649334,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 27.5,
+      "hostLoadMedian": 2.9,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.06,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-gmxgf": 47.63
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-678b7866f7-gmxgf": 3.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-gmxgf"
+      ]
+    },
+    "k8s-s1-none-r3-20261123-000200": {
+      "condition": [
+        "base",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r3",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 47.06114546144336,
+        "errorRate": 0.0,
+        "goodputRps": 47.06114546144336,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.058714538178215,
+        "errorRate": 0.0,
+        "goodputRps": 47.058714538178215,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 20.0,
+      "hostLoadMedian": 2.27,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.02,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-4gppt": 47.629999999999995
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-678b7866f7-4gppt": 3.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-4gppt"
+      ]
+    },
+    "k8s-s1-none-r1-20261123-000200": {
+      "condition": [
+        "base",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 46.982610095843064,
+        "errorRate": 0.0,
+        "goodputRps": 46.982610095843064,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 46.93653524252436,
+        "errorRate": 0.0,
+        "goodputRps": 46.93653524252436,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 23.2,
+      "hostLoadMedian": 2.56,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.09,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-r7xt9": 47.57
+      },
+      "podConnections": {
+        "payment-678b7866f7-r7xt9": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-r7xt9"
+      ]
+    },
+    "k8s-ka1-normal-scale_out-r2-20261123-000200": {
+      "condition": [
+        "ka1",
+        "normal",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|normal|SCALE_OUT|r2|ka1",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 0.9838190617194992,
+        "errorRate": 0.0,
+        "goodputRps": 0.9838190617194992,
+        "latencyP95Millis": 78.29367450000001
+      },
+      "mitigationWindow": {
+        "throughputRps": 1.9533775179479154,
+        "errorRate": 0.0,
+        "goodputRps": 1.9533775179479154,
+        "latencyP95Millis": 78.29367450000001
+      },
+      "foreignCpuMedian": 42.9,
+      "hostLoadMedian": 2.77,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.04,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": 18.23659586906433,
+      "podRates": {
+        "payment-6d5cb747c-lz7zg": 2.48,
+        "payment-6d5cb747c-sfsk4": 1.52,
+        "payment-6d5cb747c-54mdb": 0.96
+      },
+      "podConnections": {
+        "payment-6d5cb747c-sfsk4": 7.0,
+        "payment-6d5cb747c-lz7zg": 20.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-lz7zg"
+      ]
+    },
+    "k8s-ka1-normal-scale_out-r1-20261123-000200": {
+      "condition": [
+        "ka1",
+        "normal",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|normal|SCALE_OUT|r1|ka1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 0.9796449943512168,
+        "errorRate": 0.0,
+        "goodputRps": 0.9796449943512168,
+        "latencyP95Millis": 5726.623060999999
+      },
+      "mitigationWindow": {
+        "throughputRps": 0.9797117407195516,
+        "errorRate": 0.0,
+        "goodputRps": 0.9797117407195516,
+        "latencyP95Millis": 3758.0963835
+      },
+      "foreignCpuMedian": 42.8,
+      "hostLoadMedian": 2.48,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.12,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": 18.436073064804077,
+      "podRates": {
+        "payment-6d5cb747c-j8b4n": 0.96,
+        "payment-6d5cb747c-jzk4c": 2.88,
+        "payment-6d5cb747c-2wdpx": 2.205
+      },
+      "podConnections": {
+        "payment-6d5cb747c-jzk4c": 20.0,
+        "payment-6d5cb747c-2wdpx": 7.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-jzk4c"
+      ]
+    },
+    "k8s-ka1-normal-scale_out-r3-20261123-000200": {
+      "condition": [
+        "ka1",
+        "normal",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|normal|SCALE_OUT|r3|ka1",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 1.9486887144302392,
+        "errorRate": 0.0,
+        "goodputRps": 1.9486887144302392,
+        "latencyP95Millis": 4652.881235999999
+      },
+      "mitigationWindow": {
+        "throughputRps": 2.4320950431144635,
+        "errorRate": 0.0,
+        "goodputRps": 2.4320950431144635,
+        "latencyP95Millis": 201.32659
+      },
+      "foreignCpuMedian": 44.2,
+      "hostLoadMedian": 3.6,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 0.97,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": 18.251556158065796,
+      "podRates": {
+        "payment-6d5cb747c-2c62d": 2.11,
+        "payment-6d5cb747c-4kd5b": 0.96,
+        "payment-6d5cb747c-z96nn": 2.11
+      },
+      "podConnections": {
+        "payment-6d5cb747c-2c62d": 20.0,
+        "payment-6d5cb747c-z96nn": 7.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-2c62d"
+      ]
+    },
+    "k8s-ka1-normal-none-r2-20261123-000200": {
+      "condition": [
+        "ka1",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r2|ka1",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 322.1204542982276,
+        "errorRate": 0.0,
+        "goodputRps": 322.1204542982276,
+        "latencyP95Millis": 134.217727
+      },
+      "mitigationWindow": {
+        "throughputRps": 322.4760587681005,
+        "errorRate": 0.0,
+        "goodputRps": 322.4760587681005,
+        "latencyP95Millis": 134.217727
+      },
+      "foreignCpuMedian": 36.7,
+      "hostLoadMedian": 3.81,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.08,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-hcmzg": 320.9
+      },
+      "podConnections": {
+        "payment-6d5cb747c-hcmzg": 20.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-hcmzg"
+      ]
+    },
+    "k8s-ka1-normal-none-r3-20261123-000200": {
+      "condition": [
+        "ka1",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r3|ka1",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 317.3310921131622,
+        "errorRate": 0.0,
+        "goodputRps": 317.3310921131622,
+        "latencyP95Millis": 134.217727
+      },
+      "mitigationWindow": {
+        "throughputRps": 317.844132677247,
+        "errorRate": 0.0,
+        "goodputRps": 317.844132677247,
+        "latencyP95Millis": 134.217727
+      },
+      "foreignCpuMedian": 17.0,
+      "hostLoadMedian": 3.12,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.08,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-jxbxs": 321.24
+      },
+      "podConnections": {
+        "payment-6d5cb747c-jxbxs": 20.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-jxbxs"
+      ]
+    },
+    "k8s-ka1-normal-none-r1-20261123-000200": {
+      "condition": [
+        "ka1",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r1|ka1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 318.57905413616777,
+        "errorRate": 0.0,
+        "goodputRps": 318.57905413616777,
+        "latencyP95Millis": 134.217727
+      },
+      "mitigationWindow": {
+        "throughputRps": 318.65202687401273,
+        "errorRate": 0.0,
+        "goodputRps": 318.65202687401273,
+        "latencyP95Millis": 134.217727
+      },
+      "foreignCpuMedian": 18.1,
+      "hostLoadMedian": 3.77,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.1,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-78dgv": 321.365
+      },
+      "podConnections": {
+        "payment-6d5cb747c-78dgv": 20.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-78dgv"
+      ]
+    },
+    "k8s-ka1-s1-scale_out-r2-20261123-000200": {
+      "condition": [
+        "ka1",
+        "s1",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|s1|SCALE_OUT|r2|ka1",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 0.4804971696941675,
+        "errorRate": 0.0,
+        "goodputRps": 0.4804971696941675,
+        "latencyP95Millis": 3937.053352
+      },
+      "mitigationWindow": {
+        "throughputRps": 0.960994339388335,
+        "errorRate": 0.0,
+        "goodputRps": 0.960994339388335,
+        "latencyP95Millis": 3221.22547
+      },
+      "foreignCpuMedian": 20.0,
+      "hostLoadMedian": 2.59,
+      "hostSaturatedShare": 0.049,
+      "nodeCpuMedianCores": 1.1,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-6ns6g": 0.96,
+        "payment-6d5cb747c-5mk2x": 0.96,
+        "payment-6d5cb747c-lf8dz": 3.33
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-6d5cb747c-lf8dz": 3.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-lf8dz"
+      ]
+    },
+    "k8s-ka1-s1-scale_out-r1-20261123-000200": {
+      "condition": [
+        "ka1",
+        "s1",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|s1|SCALE_OUT|r1|ka1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 0.9686844343812266,
+        "errorRate": 0.0,
+        "goodputRps": 0.9686844343812266,
+        "latencyP95Millis": 7158.278826
+      },
+      "mitigationWindow": {
+        "throughputRps": 0.9689480883374504,
+        "errorRate": 0.0,
+        "goodputRps": 0.9689480883374504,
+        "latencyP95Millis": 6442.4509435
+      },
+      "foreignCpuMedian": 55.7,
+      "hostLoadMedian": 2.58,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.11,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-9q42g": 0.96,
+        "payment-6d5cb747c-jq264": 2.29,
+        "payment-6d5cb747c-8tlqx": 0.96
+      },
+      "podConnections": {
+        "payment-6d5cb747c-jq264": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-jq264"
+      ]
+    },
+    "k8s-ka1-s1-scale_out-r3-20261123-000200": {
+      "condition": [
+        "ka1",
+        "s1",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|s1|SCALE_OUT|r3|ka1",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 0.9651082465197622,
+        "errorRate": 0.0,
+        "goodputRps": 0.9651082465197622,
+        "latencyP95Millis": 4294.967296000001
+      },
+      "mitigationWindow": {
+        "throughputRps": 0.963859940205489,
+        "errorRate": 0.0,
+        "goodputRps": 0.963859940205489,
+        "latencyP95Millis": 67.10886400000001
+      },
+      "foreignCpuMedian": 21.2,
+      "hostLoadMedian": 2.33,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.15,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-6d5cb747c-z742l": 0.96,
+        "payment-6d5cb747c-hzwb8": 1.91,
+        "payment-6d5cb747c-4df5w": 0.96
+      },
+      "podConnections": {
+        "payment-6d5cb747c-hzwb8": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-6d5cb747c-hzwb8"
+      ]
+    },
+    "k8s-normal-none-r3-20261123-000200": {
+      "condition": [
+        "base",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r3",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 316.2443241995092,
+        "errorRate": 0.0,
+        "goodputRps": 316.2443241995092,
+        "latencyP95Millis": 134.217727
+      },
+      "mitigationWindow": {
+        "throughputRps": 316.2343027543231,
+        "errorRate": 0.0,
+        "goodputRps": 316.2343027543231,
+        "latencyP95Millis": 134.217727
+      },
+      "foreignCpuMedian": 15.3,
+      "hostLoadMedian": 2.38,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.04,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-x5vfl": 321.395
+      },
+      "podConnections": {
+        "payment-678b7866f7-x5vfl": 20.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-x5vfl"
+      ]
+    },
+    "k8s-normal-none-r1-20261123-000200": {
+      "condition": [
+        "base",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 316.6573791285958,
+        "errorRate": 0.0,
+        "goodputRps": 316.6573791285958,
+        "latencyP95Millis": 134.217727
+      },
+      "mitigationWindow": {
+        "throughputRps": 316.39990077866383,
+        "errorRate": 0.0,
+        "goodputRps": 316.39990077866383,
+        "latencyP95Millis": 134.217727
+      },
+      "foreignCpuMedian": 24.2,
+      "hostLoadMedian": 2.94,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.02,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-wv5hk": 320.78499999999997
+      },
+      "podConnections": {
+        "payment-678b7866f7-wv5hk": 20.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-wv5hk"
+      ]
+    },
+    "k8s-normal-none-r2-20261123-000200": {
+      "condition": [
+        "base",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r2",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 317.52457430698837,
+        "errorRate": 0.0,
+        "goodputRps": 317.52457430698837,
+        "latencyP95Millis": 134.217727
+      },
+      "mitigationWindow": {
+        "throughputRps": 317.4266029694812,
+        "errorRate": 0.0,
+        "goodputRps": 317.4266029694812,
+        "latencyP95Millis": 134.217727
+      },
+      "foreignCpuMedian": 16.4,
+      "hostLoadMedian": 3.22,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.06,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-skknl": 320.87
+      },
+      "podConnections": {
+        "payment-678b7866f7-skknl": 20.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-skknl"
+      ]
+    },
+    "k8s-s1-scale_out-r2-20261123-000200": {
+      "condition": [
+        "base",
+        "s1",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|s1|SCALE_OUT|r2",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 47.16123404155637,
+        "errorRate": 0.0,
+        "goodputRps": 47.16123404155637,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.18667100384692,
+        "errorRate": 0.0,
+        "goodputRps": 47.18667100384692,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 34.4,
+      "hostLoadMedian": 3.76,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.04,
+      "readyLeadSeconds": 5.3,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-r48s2": 48.31,
+        "payment-678b7866f7-sdprx": 0.19,
+        "payment-678b7866f7-k7nzv": 0.19
+      },
+      "podConnections": {
+        "payment-678b7866f7-r48s2": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-r48s2"
+      ]
+    },
+    "k8s-s1-scale_out-r3-20261123-000200": {
+      "condition": [
+        "base",
+        "s1",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|s1|SCALE_OUT|r3",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 47.195086170642206,
+        "errorRate": 0.0,
+        "goodputRps": 47.195086170642206,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.1946270444474,
+        "errorRate": 0.0,
+        "goodputRps": 47.1946270444474,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 15.8,
+      "hostLoadMedian": 3.35,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.12,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-gsk2b": 0.0,
+        "payment-678b7866f7-b4n4c": 48.02,
+        "payment-678b7866f7-jv4hm": 0.0
+      },
+      "podConnections": {
+        "payment-678b7866f7-b4n4c": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-b4n4c"
+      ]
+    },
+    "k8s-s1-scale_out-r1-20261123-000200": {
+      "condition": [
+        "base",
+        "s1",
+        "SCALE_OUT"
+      ],
+      "cellKey": "k8s|s1|SCALE_OUT|r1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 47.07645253646131,
+        "errorRate": 0.0,
+        "goodputRps": 47.07645253646131,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.05907831859719,
+        "errorRate": 0.0,
+        "goodputRps": 47.05907831859719,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 32.0,
+      "hostLoadMedian": 3.1,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 0.98,
+      "readyLeadSeconds": 5.2,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-flpfd": 0.0,
+        "payment-678b7866f7-b5rgx": 0.0,
+        "payment-678b7866f7-8k654": 48.01
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-678b7866f7-8k654": 3.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-8k654"
+      ]
+    },
+    "k8s-hpa1-normal-none-r1-20261123-013017": {
+      "condition": [
+        "hpa1",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r1|hpa1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 254.07955911004922,
+        "errorRate": 0.0,
+        "goodputRps": 254.07955911004922,
+        "latencyP95Millis": 246.065832
+      },
+      "mitigationWindow": {
+        "throughputRps": 249.4355489558012,
+        "errorRate": 0.0,
+        "goodputRps": 249.4355489558012,
+        "latencyP95Millis": 246.065832
+      },
+      "foreignCpuMedian": 11.6,
+      "hostLoadMedian": 2.79,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.04,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-gj4vh": 113.59,
+        "payment-678b7866f7-kv692": 130.97
+      },
+      "podConnections": {
+        "payment-678b7866f7-gj4vh": 7.0,
+        "payment-678b7866f7-kv692": 20.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-kv692"
+      ]
+    },
+    "k8s-hpa1-normal-none-r3-20261123-013017": {
+      "condition": [
+        "hpa1",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r3|hpa1",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 238.26191945600826,
+        "errorRate": 0.0,
+        "goodputRps": 238.26191945600826,
+        "latencyP95Millis": 246.065832
+      },
+      "mitigationWindow": {
+        "throughputRps": 227.3464210135867,
+        "errorRate": 0.0,
+        "goodputRps": 227.3464210135867,
+        "latencyP95Millis": 257.250644
+      },
+      "foreignCpuMedian": 10.3,
+      "hostLoadMedian": 2.67,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.05,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-pz6rz": 127.73500000000001,
+        "payment-678b7866f7-5lqcq": 113.655
+      },
+      "podConnections": {
+        "payment-678b7866f7-pz6rz": 20.0,
+        "payment-678b7866f7-5lqcq": 7.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-pz6rz"
+      ]
+    },
+    "k8s-hpa1-normal-none-r2-20261123-013017": {
+      "condition": [
+        "hpa1",
+        "normal",
+        "NONE"
+      ],
+      "cellKey": "k8s|normal|NONE|r2|hpa1",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 219.59927514230347,
+        "errorRate": 0.0,
+        "goodputRps": 219.59927514230347,
+        "latencyP95Millis": 201.32659
+      },
+      "mitigationWindow": {
+        "throughputRps": 219.59136648988613,
+        "errorRate": 0.0,
+        "goodputRps": 219.59136648988613,
+        "latencyP95Millis": 201.32659
+      },
+      "foreignCpuMedian": 22.6,
+      "hostLoadMedian": 2.6,
+      "hostSaturatedShare": 0.033,
+      "nodeCpuMedianCores": 1.06,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-kdgmx": 100.46,
+        "payment-678b7866f7-ldps9": 0.96,
+        "payment-678b7866f7-lqhwp": 112.73
+      },
+      "podConnections": {
+        "payment-678b7866f7-kdgmx": 20.0,
+        "payment-678b7866f7-lqhwp": 7.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-kdgmx",
+        "payment-678b7866f7-ldps9",
+        "payment-678b7866f7-lqhwp"
+      ]
+    },
+    "k8s-hpa1-s1-none-r1-20261123-013017": {
+      "condition": [
+        "hpa1",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r1|hpa1",
+      "repeat": 1,
+      "disruptionWindow": {
+        "throughputRps": 47.33162745689935,
+        "errorRate": 0.0,
+        "goodputRps": 47.33162745689935,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.292744825317385,
+        "errorRate": 0.0,
+        "goodputRps": 47.292744825317385,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 20.5,
+      "hostLoadMedian": 2.78,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.02,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-t2rqw": 0.38,
+        "payment-678b7866f7-nxhqt": 48.16,
+        "payment-678b7866f7-kflx2": 0.95
+      },
+      "podConnections": {
+        "payment-678b7866f7-nxhqt": 3.0,
+        "local": 24.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-kflx2",
+        "payment-678b7866f7-nxhqt",
+        "payment-678b7866f7-t2rqw"
+      ]
+    },
+    "k8s-hpa1-s1-none-r3-20261123-013017": {
+      "condition": [
+        "hpa1",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r3|hpa1",
+      "repeat": 3,
+      "disruptionWindow": {
+        "throughputRps": 47.21636545542207,
+        "errorRate": 0.0,
+        "goodputRps": 47.21636545542207,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 47.21876286295069,
+        "errorRate": 0.0,
+        "goodputRps": 47.21876286295069,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 13.3,
+      "hostLoadMedian": 3.16,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 0.93,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-sjfk9": 0.0,
+        "payment-678b7866f7-hgqfd": 48.03,
+        "payment-678b7866f7-v2sd8": 0.0
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-678b7866f7-hgqfd": 3.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-hgqfd",
+        "payment-678b7866f7-sjfk9",
+        "payment-678b7866f7-v2sd8"
+      ]
+    },
+    "k8s-hpa1-s1-none-r2-20261123-013017": {
+      "condition": [
+        "hpa1",
+        "s1",
+        "NONE"
+      ],
+      "cellKey": "k8s|s1|NONE|r2|hpa1",
+      "repeat": 2,
+      "disruptionWindow": {
+        "throughputRps": 47.261110467167214,
+        "errorRate": 0.0,
+        "goodputRps": 47.261110467167214,
+        "latencyP95Millis": 715.827881
+      },
+      "mitigationWindow": {
+        "throughputRps": 46.99607787479732,
+        "errorRate": 0.0,
+        "goodputRps": 46.99607787479732,
+        "latencyP95Millis": 715.827881
+      },
+      "foreignCpuMedian": 24.8,
+      "hostLoadMedian": 2.22,
+      "hostSaturatedShare": 0.0,
+      "nodeCpuMedianCores": 1.05,
+      "readyLeadSeconds": null,
+      "effectOnsetSeconds": null,
+      "podRates": {
+        "payment-678b7866f7-85gmf": 0.0,
+        "payment-678b7866f7-plbf4": 47.75
+      },
+      "podConnections": {
+        "local": 24.0,
+        "payment-678b7866f7-plbf4": 3.0
+      },
+      "originalPods": [
+        "payment-678b7866f7-plbf4"
+      ]
+    }
+  },
+  "mechanism": {
+    "base": {
+      "maxConnections": 30,
+      "s1AppSlots": 3,
+      "perConnectionRps": 15.876666666666665,
+      "leftoverSlotsForNewPods": 7
+    },
+    "hpa1": {
+      "maxConnections": 30,
+      "s1AppSlots": 3,
+      "perConnectionRps": 16.01,
+      "leftoverSlotsForNewPods": 7
+    },
+    "ka1": {
+      "maxConnections": 30,
+      "s1AppSlots": 3,
+      "perConnectionRps": 15.910000000000002,
+      "leftoverSlotsForNewPods": 7
+    }
+  },
+  "contamination": {
+    "foreignCpuVsDeviation": {
+      "rho": 0.04556544071693671,
+      "p": 0.8110346548511408,
+      "n": 30
+    },
+    "hostLoadVsDeviation": {
+      "rho": 0.2930823928646824,
+      "p": 0.1159948885550685,
+      "n": 30
+    },
+    "foreignCpuRange": [
+      10.3,
+      55.7
+    ]
+  },
+  "inputs": [
+    "code/chain/results/k8s-j32/k8s-remediation-20261123-000200.json",
+    "code/chain/results/k8s-j32/k8s-remediation-20261123-013017.json"
+  ],
+  "windows": {
+    "disruption": [
+      10.0,
+      70.0
+    ],
+    "mitigation": [
+      15.0,
+      70.0
+    ],
+    "pods": [
+      20.0,
+      70.0
+    ]
+  },
+  "composeBaseline": {
+    "cellKey": "normal|NONE",
+    "throughputRps": 322.98500855396344,
+    "latencyP95Millis": 134.217727,
+    "goodputWholeCell": 322.30312075801277
+  }
+}

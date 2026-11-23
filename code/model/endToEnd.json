@@ -1,142 +1,175 @@
 {
-  "trainSamples": 8031,
-  "testSamples": 2816,
-  "falsePositiveRate": 0.28540065861690445,
-  "expectedCalibrationError": 0.01298862923483957,
+  "evaluation": "GroupKFold 4접기 out-of-fold",
+  "horizonSeconds": 10.0,
+  "episodes": 34,
+  "samples": 10886,
+  "falsePositiveRate": 0.37454164484023045,
+  "falsePositiveRateByFold": [
+    0.9381835473133618,
+    0.3565714285714286,
+    0.03529411764705882,
+    0.10297961317302666
+  ],
+  "falsePositiveCost": 0.0009070979570455737,
+  "falsePositiveCostByAction": {
+    "BULKHEAD": 0.0008345206914614981,
+    "CIRCUIT_BREAKER": 7.257726558407545e-05
+  },
+  "falsePositiveByWindow": {
+    "faultFree": {
+      "samples": 4959,
+      "rate": 0.35813672111312767,
+      "cost": 7.162734422262554e-05,
+      "byAction": {
+        "CIRCUIT_BREAKER": 1776
+      }
+    },
+    "faultNormalLabel": {
+      "samples": 2677,
+      "rate": 0.40493089279043704,
+      "cost": 0.0024547627941725815,
+      "byAction": {
+        "CIRCUIT_BREAKER": 995,
+        "BULKHEAD": 89
+      }
+    }
+  },
+  "expectedCalibrationError": 0.04553793570779392,
   "reliability": [
     {
       "bin": "0.0~0.1",
-      "count": 1454,
-      "predicted": 0.031204648077793162,
-      "observed": 0.03370013755158184
+      "count": 6816,
+      "predicted": 0.049408014797287354,
+      "observed": 0.011883802816901408
     },
     {
       "bin": "0.1~0.2",
-      "count": 242,
-      "predicted": 0.14105105749793093,
-      "observed": 0.13636363636363635
+      "count": 503,
+      "predicted": 0.1310240752138723,
+      "observed": 0.1709741550695825
     },
     {
       "bin": "0.2~0.3",
-      "count": 118,
-      "predicted": 0.24045609666768045,
-      "observed": 0.3050847457627119
+      "count": 123,
+      "predicted": 0.24527631258140073,
+      "observed": 0.2032520325203252
     },
     {
       "bin": "0.3~0.4",
-      "count": 47,
-      "predicted": 0.3444515297731738,
-      "observed": 0.3404255319148936
+      "count": 71,
+      "predicted": 0.34753972050410675,
+      "observed": 0.4225352112676056
     },
     {
       "bin": "0.4~0.5",
-      "count": 38,
-      "predicted": 0.4509033428631896,
-      "observed": 0.2631578947368421
+      "count": 140,
+      "predicted": 0.46400276386929845,
+      "observed": 0.6
     },
     {
       "bin": "0.5~0.6",
-      "count": 37,
-      "predicted": 0.5509772767964188,
-      "observed": 0.43243243243243246
+      "count": 262,
+      "predicted": 0.5493073069916882,
+      "observed": 0.45038167938931295
     },
     {
       "bin": "0.6~0.7",
-      "count": 31,
-      "predicted": 0.657603507080424,
-      "observed": 0.5161290322580645
+      "count": 189,
+      "predicted": 0.6550144765529042,
+      "observed": 0.7301587301587301
     },
     {
       "bin": "0.7~0.8",
-      "count": 34,
-      "predicted": 0.7531288058876628,
-      "observed": 0.6176470588235294
+      "count": 270,
+      "predicted": 0.7472901171135835,
+      "observed": 0.8814814814814815
     },
     {
       "bin": "0.8~0.9",
-      "count": 47,
-      "predicted": 0.8500016608664898,
-      "observed": 0.8085106382978723
+      "count": 691,
+      "predicted": 0.8544345997535469,
+      "observed": 0.9565846599131693
     },
     {
       "bin": "0.9~1.0",
-      "count": 768,
-      "predicted": 0.9862823862334636,
-      "observed": 0.98828125
+      "count": 1821,
+      "predicted": 0.9585971271684032,
+      "observed": 0.9824272377814388
     }
   ],
   "zeroSpreadShare": 0.0,
-  "holdSwing": 0.2986505681818182,
-  "middleConfidenceShare": 0.2109375,
-  "spreadMedian": 0.008298047383920426,
-  "spreadMax": 0.2964318842509217,
+  "holdSwing": 0.24205401433033252,
+  "middleConfidenceShare": 0.20659562741135404,
+  "spreadMedian": 0.01285080656243689,
+  "spreadMax": 0.34553325920709166,
   "kappaRows": [
     {
       "kappa": 0.0,
       "counts": {
-        "BULKHEAD": 1416,
-        "보류": 1063,
-        "CIRCUIT_BREAKER": 337
+        "CIRCUIT_BREAKER": 3975,
+        "BULKHEAD": 2016,
+        "보류": 4895
       },
-      "holdShare": 0.37748579545454547,
+      "holdShare": 0.44966011390777144,
       "wrongScaleOut": 0
     },
     {
       "kappa": 0.5,
       "counts": {
-        "BULKHEAD": 1329,
-        "보류": 1177,
-        "CIRCUIT_BREAKER": 310
+        "CIRCUIT_BREAKER": 3975,
+        "보류": 5000,
+        "BULKHEAD": 1911
       },
-      "holdShare": 0.41796875,
+      "holdShare": 0.45930553003858166,
       "wrongScaleOut": 0
     },
     {
       "kappa": 1.0,
       "counts": {
-        "BULKHEAD": 1188,
-        "보류": 1338,
-        "CIRCUIT_BREAKER": 290
+        "CIRCUIT_BREAKER": 3972,
+        "보류": 5044,
+        "BULKHEAD": 1870
       },
-      "holdShare": 0.47514204545454547,
+      "holdShare": 0.4633474187029212,
       "wrongScaleOut": 0
     },
     {
       "kappa": 2.0,
       "counts": {
-        "보류": 1710,
-        "BULKHEAD": 874,
-        "CIRCUIT_BREAKER": 232
+        "CIRCUIT_BREAKER": 3789,
+        "보류": 5332,
+        "BULKHEAD": 1765
       },
-      "holdShare": 0.6072443181818182,
+      "holdShare": 0.48980341723314347,
       "wrongScaleOut": 0
     },
     {
       "kappa": 4.0,
       "counts": {
-        "보류": 1904,
-        "BULKHEAD": 712,
-        "CIRCUIT_BREAKER": 200
+        "보류": 7530,
+        "CIRCUIT_BREAKER": 1734,
+        "BULKHEAD": 1622
       },
-      "holdShare": 0.6761363636363636,
+      "holdShare": 0.691714128238104,
       "wrongScaleOut": 0
     }
   ],
   "wrongScaleOut": 0,
   "byLabel": {
-    "S3": {
-      "BULKHEAD": 170,
-      "보류": 22,
-      "CIRCUIT_BREAKER": 207
-    },
     "정상": {
-      "보류": 1302,
-      "CIRCUIT_BREAKER": 83,
-      "BULKHEAD": 437
+      "CIRCUIT_BREAKER": 2771,
+      "보류": 4776,
+      "BULKHEAD": 89
     },
     "S1": {
-      "BULKHEAD": 581,
-      "보류": 14
+      "BULKHEAD": 1496,
+      "CIRCUIT_BREAKER": 377,
+      "보류": 221
+    },
+    "S3": {
+      "CIRCUIT_BREAKER": 824,
+      "BULKHEAD": 285,
+      "보류": 47
     }
   }
 }

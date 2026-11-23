@@ -1,0 +1,159 @@
+{
+  "A 10-15 학습": {
+    "n": 2816,
+    "normal": 1967,
+    "fpr": 0.017793594306049824,
+    "ece": 0.014062464122884736,
+    "fpActions": {
+      "BULKHEAD": 18,
+      "CIRCUIT_BREAKER": 17
+    },
+    "normalRiskMedian": 0.007161781108670051,
+    "normalRiskP90": 0.09474099163851117,
+    "normalEffectiveAboveCb": 0.9374682257244534,
+    "normalTaggedS3": 0.014234875444839857,
+    "fpEffectiveMedian": 0.4627206114359539
+  },
+  "B + normal 셀": {
+    "n": 2816,
+    "normal": 1967,
+    "fpr": 0.5907473309608541,
+    "ece": 0.023934302215075334,
+    "fpActions": {
+      "CIRCUIT_BREAKER": 1140,
+      "BULKHEAD": 22
+    },
+    "normalRiskMedian": 0.013880585186002015,
+    "normalRiskP90": 0.08923991785265789,
+    "normalEffectiveAboveCb": 0.9994916115912558,
+    "normalTaggedS3": 0.5795627859684799,
+    "fpEffectiveMedian": 0.009521789009260505
+  },
+  "C + 새 S3": {
+    "n": 2816,
+    "normal": 1967,
+    "fpr": 0.011184544992374174,
+    "ece": 0.03974458112284003,
+    "fpActions": {
+      "CIRCUIT_BREAKER": 5,
+      "BULKHEAD": 17
+    },
+    "normalRiskMedian": 0.02157447210004255,
+    "normalRiskP90": 0.1540789709313703,
+    "normalEffectiveAboveCb": 0.9984748347737672,
+    "normalTaggedS3": 0.003050330452465684,
+    "fpEffectiveMedian": 0.49014115793184043
+  },
+  "D + 둘 다": {
+    "n": 2816,
+    "normal": 1967,
+    "fpr": 0.646670055922725,
+    "ece": 0.02280918558075684,
+    "fpActions": {
+      "CIRCUIT_BREAKER": 1254,
+      "BULKHEAD": 18
+    },
+    "normalRiskMedian": 0.0255760175030032,
+    "normalRiskP90": 0.11940782098190361,
+    "normalEffectiveAboveCb": 0.99644128113879,
+    "normalTaggedS3": 0.6380274529740722,
+    "fpEffectiveMedian": 0.015779389419109634
+  },
+  "A → normal 셀 표본": {
+    "n": 1335,
+    "normal": 1335,
+    "fpr": 0.10711610486891386,
+    "ece": 0.11420466794491199,
+    "fpActions": {
+      "BULKHEAD": 138,
+      "CIRCUIT_BREAKER": 5
+    },
+    "normalRiskMedian": 0.006915543491341225,
+    "normalRiskP90": 0.6378001862627877,
+    "normalEffectiveAboveCb": 0.9588014981273408,
+    "normalTaggedS3": 0.003745318352059925,
+    "fpEffectiveMedian": 0.9920146400392591
+  },
+  "   └ normal/BROWNOUT": {
+    "n": 354,
+    "normal": 354,
+    "fpr": 0.0,
+    "ece": 0.009523877439495967,
+    "fpActions": {},
+    "normalRiskMedian": 0.006493791085686429,
+    "normalRiskP90": 0.013529280372986806,
+    "normalEffectiveAboveCb": 0.96045197740113,
+    "normalTaggedS3": 0.0,
+    "fpEffectiveMedian": NaN
+  },
+  "   └ normal/BULKHEAD": {
+    "n": 351,
+    "normal": 351,
+    "fpr": 0.37037037037037035,
+    "ece": 0.33806337908779194,
+    "fpActions": {
+      "BULKHEAD": 130
+    },
+    "normalRiskMedian": 0.007886667664633107,
+    "normalRiskP90": 0.9989216290802767,
+    "normalEffectiveAboveCb": 0.9601139601139601,
+    "normalTaggedS3": 0.0,
+    "fpEffectiveMedian": 0.9972357977440149
+  },
+  "   └ normal/CIRCUIT_BREAKER": {
+    "n": 276,
+    "normal": 276,
+    "fpr": 0.04710144927536232,
+    "ece": 0.09589372086409231,
+    "fpActions": {
+      "CIRCUIT_BREAKER": 5,
+      "BULKHEAD": 8
+    },
+    "normalRiskMedian": 0.006828843841362819,
+    "normalRiskP90": 0.3658266534008305,
+    "normalEffectiveAboveCb": 0.9347826086956522,
+    "normalTaggedS3": 0.018115942028985508,
+    "fpEffectiveMedian": 0.7897038800854098
+  },
+  "   └ normal/NONE": {
+    "n": 354,
+    "normal": 354,
+    "fpr": 0.0,
+    "ece": 0.011200186651331805,
+    "fpActions": {},
+    "normalRiskMedian": 0.006940670224894552,
+    "normalRiskP90": 0.016033249875554864,
+    "normalEffectiveAboveCb": 0.9745762711864406,
+    "normalTaggedS3": 0.0,
+    "fpEffectiveMedian": NaN
+  },
+  "A → 새 S3 표본": {
+    "n": 1260,
+    "normal": 926,
+    "fpr": 0.004319654427645789,
+    "ece": 0.012728116181180566,
+    "fpActions": {
+      "CIRCUIT_BREAKER": 4
+    },
+    "normalRiskMedian": 0.006653083415633543,
+    "normalRiskP90": 0.07825403471868649,
+    "normalEffectiveAboveCb": 0.9427645788336934,
+    "normalTaggedS3": 0.004319654427645789,
+    "fpEffectiveMedian": 0.04383953627376728
+  },
+  "A 모델 + 10-15 엔진": {
+    "n": 2816,
+    "normal": 1967,
+    "fpr": 0.07778342653787494,
+    "ece": 0.014062464122884736,
+    "fpActions": {
+      "BULKHEAD": 152,
+      "CIRCUIT_BREAKER": 1
+    },
+    "normalRiskMedian": 0.007161781108670051,
+    "normalRiskP90": 0.09474099163851117,
+    "normalEffectiveAboveCb": 0.9374682257244534,
+    "normalTaggedS3": 0.014234875444839857,
+    "fpEffectiveMedian": 0.11504500097900618
+  }
+}

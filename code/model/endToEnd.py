@@ -37,6 +37,7 @@ from sklearn.model_selection import GroupKFold
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import compareTiers  # noqa: E402
+import corpus  # noqa: E402
 from policyEngine import HOLD, PolicyEngine, defaultProfiles  # noqa: E402
 
 NORMAL_LABEL = "정상"
@@ -74,7 +75,25 @@ def summarizeEnsemble(models: list, features: np.ndarray) -> tuple:
     return meanRisk, uncertainty, bottleneck
 
 
-def main() -> int:
+def trainEnsemble(combined: np.ndarray, labelArray: np.ndarray, groupArray: np.ndarray,
+                  trainIndex: np.ndarray, testIndex: np.ndarray, arguments) -> list:
+    """한 접기의 앙상블. 보정기는 base 가 보지 않은 표본으로 학습해야 하므로 train 을 다시 쪼갠다."""
+    if arguments.calibration == "none":
+        return compareTiers.buildEnsemble(combined[trainIndex], labelArray[trainIndex],
+                                          size=arguments.ensembleSize)
+    inner = GroupKFold(n_splits=3)
+    fitLocal, calibLocal = next(iter(inner.split(
+        combined[trainIndex], labelArray[trainIndex], groupArray[trainIndex])))
+    fitIndex, calibIndex = trainIndex[fitLocal], trainIndex[calibLocal]
+    assert not (set(groupArray[fitIndex]) & set(groupArray[calibIndex])), "fit∩calib 누수"
+    assert not (set(groupArray[fitIndex]) & set(groupArray[testIndex])), "fit∩test 누수"
+    return compareTiers.buildCalibratedEnsemble(
+        combined[fitIndex], labelArray[fitIndex],
+        combined[calibIndex], labelArray[calibIndex],
+        size=arguments.ensembleSize, method=arguments.calibration)
+
+
+def buildParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="예측기 → Policy Engine end-to-end")
     parser.add_argument("--chainDir", default=str(
         pathlib.Path(__file__).resolve().parent.parent / "chain"))
@@ -90,15 +109,20 @@ def main() -> int:
     parser.add_argument("--calibration", default="sigmoid",
                         choices=["none", "sigmoid", "isotonic"],
                         help="멤버별 보정. §2-A 가 설계에 넣어 둔 항목이다")
-    arguments = parser.parse_args()
+    parser.add_argument("--folds", type=int, default=4,
+                        help="GroupKFold 접기 수. 모든 접기의 평가 예측을 모아 지표를 낸다(J36)")
+    return parser
 
+
+def run(arguments, write: bool = True) -> dict:
+    """end-to-end 한 번. `write=False` 면 endToEnd.json 을 쓰지 않는다(Δ 표용 — deltaSweep.py)."""
     chainDir = pathlib.Path(arguments.chainDir).resolve()
     episodes = compareTiers.loadAllEpisodes(chainDir, arguments)
     if not episodes:
         print("에피소드가 없다.")
         return 1
 
-    selfFeatures, neighbourFeatures, labels, groups, nodes = [], [], [], [], []
+    selfFeatures, neighbourFeatures, labels, groups, nodes, timestamps = [], [], [], [], [], []
     for index, episode in enumerate(episodes):
         for sample in episode["samples"]:
             selfFeatures.append(sample["self"])
@@ -106,36 +130,45 @@ def main() -> int:
             labels.append(sample["label"])
             groups.append(index)
             nodes.append(sample["node"])
+            timestamps.append(sample["timestamp"])
 
     combined = np.concatenate([np.stack(selfFeatures), np.stack(neighbourFeatures)], axis=1)
     labelArray = np.array(labels)
     groupArray = np.array(groups)
     nodeArray = np.array(nodes)
 
-    splitter = GroupKFold(n_splits=4)
-    trainIndex, testIndex = next(iter(splitter.split(combined, labelArray, groupArray)))
-    if arguments.calibration == "none":
-        models = compareTiers.buildEnsemble(combined[trainIndex], labelArray[trainIndex],
-                                            size=arguments.ensembleSize)
-    else:
-        # 보정기는 base 가 보지 않은 표본으로 학습해야 한다. train 을 다시 쪼갠다.
-        inner = GroupKFold(n_splits=3)
-        fitLocal, calibLocal = next(iter(inner.split(
-            combined[trainIndex], labelArray[trainIndex], groupArray[trainIndex])))
-        fitIndex, calibIndex = trainIndex[fitLocal], trainIndex[calibLocal]
-        assert not (set(groupArray[fitIndex]) & set(groupArray[calibIndex])), "fit∩calib 누수"
-        assert not (set(groupArray[fitIndex]) & set(groupArray[testIndex])), "fit∩test 누수"
-        models = compareTiers.buildCalibratedEnsemble(
-            combined[fitIndex], labelArray[fitIndex],
-            combined[calibIndex], labelArray[calibIndex],
-            size=arguments.ensembleSize, method=arguments.calibration)
-    assert len(models) == arguments.ensembleSize
-    meanRisk, uncertainty, bottleneck = summarizeEnsemble(models, combined[testIndex])
+    # 🔴 J36 — 접기 **하나**로 평가하면 에피소드가 늘 때 GroupKFold 가 접기를 다시 배정해 결과가
+    #    흔들린다(J35: 학습 데이터 효과 없이 0.011 → 0.423). 접기마다 학습하고 **모든 평가 예측을
+    #    모아**(out-of-fold) 지표를 낸다 — 표본마다 정확히 한 번 평가된다.
+    folds = list(GroupKFold(n_splits=arguments.folds).split(combined, labelArray, groupArray))
+    risks, uncertainties, bottlenecks, indexes, foldIds = [], [], [], [], []
+    for fold, (trainIndex, testIndex) in enumerate(folds):
+        models = trainEnsemble(combined, labelArray, groupArray, trainIndex, testIndex, arguments)
+        assert len(models) == arguments.ensembleSize
+        risk, spreadPart, neck = summarizeEnsemble(models, combined[testIndex])
+        risks.append(risk)
+        uncertainties.append(spreadPart)
+        bottlenecks.append(neck)
+        indexes.append(testIndex)
+        foldIds.append(np.full(len(testIndex), fold))
+    testIndex = np.concatenate(indexes)
+    meanRisk = np.concatenate(risks)
+    uncertainty = np.concatenate(uncertainties)
+    bottleneck = np.concatenate(bottlenecks)
+    foldOf = np.concatenate(foldIds)
     trueLabels = labelArray[testIndex]
     testNodes = nodeArray[testIndex]
+    # 표본이 **장애가 없는 구간**인가 — 대조군 에피소드이거나 주입 전. H5a(장애 미발생 시 개입 비용)는
+    # 이 구간에서 재야 한다. `정상` 라벨에는 장애 에피소드의 비전파 노드도 들어가기 때문이다(J36).
+    records = {record["tracePath"]: record for record in corpus.corpusRecords(chainDir)}
+    episodeRecords = [records[episode["episodeKey"]] for episode in episodes]
+    faultFree = np.array([
+        episodeRecords[group].get("scenario") == "normal"
+        or timestamps[sample] < episodeRecords[group]["injectedAt"]
+        for group, sample in zip(groupArray[testIndex], testIndex)])
 
-    print(f"학습 {len(trainIndex)} / 평가 {len(testIndex)} 표본, 앙상블 N={len(models)}"
-          f", 보정 {arguments.calibration}")
+    print(f"{arguments.folds}접기 교차 검증(out-of-fold) — 에피소드 {len(episodes)} · 표본 "
+          f"{len(testIndex)}, 앙상블 N={arguments.ensembleSize}, 보정 {arguments.calibration}")
     print(f"Δ = L_pred = {arguments.horizonSeconds}s\n")
 
     spread = np.sqrt(uncertainty)
@@ -255,12 +288,15 @@ def main() -> int:
     print("\n━━━ 실제 라벨별 조치 (κ=1) ━━━")
     engine = PolicyEngine(defaultProfiles(), availabilityLoss=1.0, kappa=1.0)
     byLabel: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    actions = []
     for index in range(len(testIndex)):
         decision = engine.decide(
             node=str(testNodes[index]), nodeType="service", bottleneck=str(bottleneck[index]),
             meanRisk=float(meanRisk[index]), uncertainty=float(uncertainty[index]),
             predictionLeadSeconds=arguments.horizonSeconds)
         byLabel[str(trueLabels[index])][decision.action] += 1
+        actions.append(decision.action)
+    actions = np.array(actions)
     print(f"{'실제 라벨':<10}{'표본':>7}  조치 분포")
     for label in sorted(byLabel):
         counts = byLabel[label]
@@ -278,18 +314,67 @@ def main() -> int:
     print("     오탐이 는다. θ 가 0 에 가까운 현 가정에서 특히 그렇다 —")
     print("     **캘리브레이션과 θ 보정(Dₐ·Rₐ 실측)은 함께 풀어야 하는 짝이다.**")
 
-    payload = {"trainSamples": int(len(trainIndex)), "testSamples": int(len(testIndex)),
+    # 🔴 오탐을 **비용으로도** 본다(J26·J36). 장애가 없는 표본에 조치 a 를 걸면 비용함수의
+    #    (1−p)·Dₐ·Rₐ 항이 p=0 에서 실현된다. CB 는 Dₐ·Rₐ 가 0.0002 라 건수로만 보면 과장된다.
+    profiles = {p.name: p for p in defaultProfiles() if p.nodeType == "service"}
+    normalMask = trueLabels == NORMAL_LABEL
+    normalActions = actions[normalMask]
+    unitCost = {name: profile.disruption * profile.reversibility for name, profile in profiles.items()}
+    normalCosts = np.array([0.0 if action == HOLD else unitCost[action] for action in normalActions])
+    falsePositiveCost = float(normalCosts.mean()) if normalMask.any() else float("nan")
+    costByAction = {action: float(normalCosts[normalActions == action].sum() / normalMask.sum())
+                    for action in sorted(set(normalActions)) if action != HOLD}
+    rateByFold = [float((actions[normalMask & (foldOf == fold)] != HOLD).mean())
+                  for fold in range(arguments.folds) if (normalMask & (foldOf == fold)).any()]
+    print(f"  정상 표본당 오탐 비용(Dₐ·Rₐ 평균): {falsePositiveCost:.4f}"
+          + (" — " + ", ".join(f"{a} {c:.4f}" for a, c in costByAction.items()) if costByAction else "")
+          + f"  (1건: " + ", ".join(f"{a} {c:.4f}" for a, c in sorted(unitCost.items())) + ")")
+    print("  접기별 오탐률: " + ", ".join(f"{r:.1%}" for r in rateByFold))
+
+    def falsePositiveIn(window: np.ndarray) -> dict | None:
+        subset = normalMask & window
+        if not subset.any():
+            return None
+        chosen = actions[subset]
+        acted = chosen != HOLD
+        cost = np.array([0.0 if action == HOLD else unitCost[action] for action in chosen])
+        return {"samples": int(subset.sum()), "rate": float(acted.mean()), "cost": float(cost.mean()),
+                "byAction": dict(collections.Counter(chosen[acted]))}
+
+    # 🔴 `정상` 라벨 = 장애 없는 구간 + **장애 구간의 비전파 노드**. 후자에 CB 를 거는 것은 장애가
+    #    없는데 개입한 것이 아니다 — 사슬 어딘가가 실제로 장애 중이다. H5a 는 전자로 잰다(J36).
+    falsePositiveByWindow = {"faultFree": falsePositiveIn(faultFree),
+                             "faultNormalLabel": falsePositiveIn(~faultFree)}
+    for key, name in (("faultFree", "장애 없는 구간"), ("faultNormalLabel", "장애 구간의 정상 라벨")):
+        row = falsePositiveByWindow[key]
+        if row:
+            print(f"  {name:<14} 표본 {row['samples']:>6}  오탐률 {row['rate']:>6.1%}  비용 {row['cost']:.4f}  "
+                  + ", ".join(f"{a} {n}" for a, n in sorted(row["byAction"].items())))
+
+    payload = {"evaluation": f"GroupKFold {arguments.folds}접기 out-of-fold",
+               "horizonSeconds": arguments.horizonSeconds,
+               "episodes": len(episodes), "samples": int(len(testIndex)),
                "falsePositiveRate": float(falsePositiveRate),
+               "falsePositiveRateByFold": rateByFold,
+               "falsePositiveCost": falsePositiveCost,
+               "falsePositiveCostByAction": costByAction,
+               "falsePositiveByWindow": falsePositiveByWindow,
                "expectedCalibrationError": float(expectedError), "reliability": reliability,
                "zeroSpreadShare": zeroShare, "holdSwing": float(holdSwing),
                "middleConfidenceShare": middleShare,
                "spreadMedian": float(np.median(spread)), "spreadMax": float(spread.max()),
                "kappaRows": rows, "wrongScaleOut": int(totalWrong),
                "byLabel": {k: dict(v) for k, v in byLabel.items()}}
-    outputPath = pathlib.Path(__file__).resolve().parent / "endToEnd.json"
-    outputPath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n기록: {outputPath}")
-    return 0
+    if write:
+        outputPath = pathlib.Path(__file__).resolve().parent / "endToEnd.json"
+        outputPath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"\n기록: {outputPath}")
+    return payload
+
+
+def main() -> int:
+    arguments = buildParser().parse_args()
+    return 0 if run(arguments) else 1
 
 
 if __name__ == "__main__":

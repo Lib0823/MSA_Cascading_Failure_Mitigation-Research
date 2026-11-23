@@ -93,11 +93,14 @@ def profileFingerprint() -> dict:
     돌리면 **배선 전 셀과 구분이 되지 않아** 집계가 두 코호트를 섞는다. `cellKey`
     가 같으므로 원장만 보고는 알 수 없다 — 조용히 틀린 숫자가 나오는 경로다.
 
-    지문은 `(조치, 노드종류, Dₐ, Rₐ, mₐ)` 전체의 해시다. 값 하나만 바뀌어도
+    지문은 `(조치, 노드종류, Dₐ, Rₐ, ℓₐ, mₐ)` 전체의 해시다. 값 하나만 바뀌어도
     달라지므로 코호트 분리의 기준이 된다.
     """
+    # 🔴 2026-11-23 — `ℓₐ` 를 지문에 넣었다(J34). 엔진은 `ℓₐ ≥ L_pred` 인 조치를 후보에서
+    #    빼므로 `ℓₐ` 가 바뀌면 결정이 바뀔 수 있는데, 종전 지문은 그것을 보지 않았다 —
+    #    J21·J23 과 같은 유형의 구멍이다. 종전 지문(c299de2c4f92)은 이 항목 없이 계산됐다.
     profiles = sorted(
-        (p.name, p.nodeType, p.disruption, p.reversibility,
+        (p.name, p.nodeType, p.disruption, p.reversibility, p.leadTimeSeconds,
          tuple(sorted(p.mitigationByBottleneck.items())))
         for p in policyEngine.defaultProfiles())
     digest = hashlib.sha256(repr(profiles).encode("utf-8")).hexdigest()[:12]

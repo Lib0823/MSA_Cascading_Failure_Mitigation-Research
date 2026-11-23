@@ -1,0 +1,32 @@
+{
+  "legacyDigest": "c299de2c4f92",
+  "newDigest": "aabd56a124db",
+  "horizonSeconds": 30.0,
+  "cells": 22,
+  "byPolicy": {
+    "A5": {
+      "rows": 1173,
+      "reproduced": 1173,
+      "invariant": 1173,
+      "scaleOutCandidateChanged": 1173
+    },
+    "A6": {
+      "rows": 345,
+      "reproduced": 345,
+      "invariant": 345,
+      "scaleOutCandidateChanged": 345
+    }
+  },
+  "mismatches": [],
+  "legacyOverrides": {
+    "SCALE_OUT/service": {
+      "disruption": 0.5,
+      "leadTimeSeconds": 10.0,
+      "mitigationByBottleneck": {
+        "S1": -0.4,
+        "S2": 0.0,
+        "S3": 0.6
+      }
+    }
+  }
+}

@@ -199,7 +199,7 @@ def defaultProfiles() -> list[ActionProfile]:
     BULKHEAD            0.25    **0.716**  ✅ 쓸 수 있다. 0.703 의 독립 재현
     CIRCUIT_BREAKER     0.15    0.002      ⚠️ 조건부 — 회로가 열릴 때 발생한다
     BROWNOUT            0.30    0.001      🔴 무효 — 처리량이 비용의 반대 방향
-    SCALE_OUT           0.50    —          게이트 ② 대기 (K8s 필요)
+    SCALE_OUT           0.50    0.546      2026-11-23 배선 — 아래 (J34)
     ==================  ======  ========  ===================================
 
     🔴 **2026-11-02 — 두 값을 배선했다. 판단이 바뀐 근거는 측정이다.**
@@ -239,6 +239,32 @@ def defaultProfiles() -> list[ActionProfile]:
     S1 판정은 가정값(0.5, −0.4)으로도 실측값으로도 θ = ∞ 라 결론이 같고,
     `mₐ(S3)` 가 아직 없다. 값이 갖춰지면 한 번에 바꾼다(지문이 바뀐다).
 
+    🔴 **2026-11-23 — Scale-out(service) 을 배선했다**(J33 에서 `mₐ(S3)` 가 나와 값이
+    갖춰졌다, J34). K8s Compose 등가 토폴로지·DB 예산 30·연결 단위 분산(기본 구성)에서 쟀다.
+
+    ===============  ==========  ==========  =====================================
+    파라미터          종전 가정    배선         근거
+    ===============  ==========  ==========  =====================================
+    `Dₐ`             0.50        **0.546**   `disruptionByAction --backend k8s`, 5셀 중앙값
+                                             — BULKHEAD·CB 와 같은 경로. 평균 기준 0.535
+                                             (95% 0.434~0.635), 독립 재현 0.488·0.503
+    `mₐ(S1)`         −0.4        **+0.004**  5셀, ±10% 동등. 요청 단위 분산이면 −0.979(J32)
+    `mₐ(S3)`         0.6         **+0.003**  3셀, ±10% 동등. 신규 파드에도 장애 전파(J33)
+    `ℓₐ`             10.0        **13.0**    트래픽이 신규 파드에 닿기까지의 상한(5초
+                                             표본). Ready 까지는 5.2초. §2-B 의 정의
+                                             (*"트리거 → 효과 발현"*)는 후자가 아니라 이쪽
+    `Rₐ`             0.7         0.7 유지     정책 파라미터 — 실측 대상이 아니다(§4-5)
+    ===============  ==========  ==========  =====================================
+
+    **결과: S1·S2·S3 모두 θ = ∞** — 이 testbed 에서 Scale-out 은 어떤 병목에서도 보류를
+    이기지 못한다(J33). 종전 가정값에서는 S3 에서 θ = 0.78 이었지만 그때도 CB 보다
+    늘 비싸 선택된 적이 없다. **결정 불변을 기록된 결정으로 확인했다**
+    (`code/experiment/replayDecisions.py`, J34).
+
+    ⚠️ `mₐ` 를 실측으로 배선한 조치는 **Scale-out 뿐이다** — 나머지 조치의 `mₐ` 는 여전히
+    §2-B 표의 부호·크기를 따른 가정값이다. `Dₐ` 가 이 값의 함께 속성(공유 자원의 여유)에
+    종속된다는 점도 남는다 — 예산 70 이면 같은 증설이 +58% 다(J31).
+
     **유도되는 `θ` (R=0.1, L=1)**
 
         S1 판정 → BULKHEAD          θ = 0.716·0.1 / (0.8 − 0.716·0.9) = 0.460
@@ -265,9 +291,10 @@ def defaultProfiles() -> list[ActionProfile]:
         ActionProfile("BROWNOUT", "service", disruption=0.3, reversibility=0.1,
                       leadTimeSeconds=0.2,
                       mitigationByBottleneck={"S1": 0.1, "S2": 0.3, "S3": 0.2}),
-        ActionProfile("SCALE_OUT", "service", disruption=0.5, reversibility=0.7,
-                      leadTimeSeconds=10.0,
-                      mitigationByBottleneck={"S1": -0.4, "S2": 0.0, "S3": 0.6}),
+        # 실측 배선(J34) — 위 표. S2 는 서비스 노드에 해당하지 않아 0 을 유지한다.
+        ActionProfile("SCALE_OUT", "service", disruption=0.546, reversibility=0.7,
+                      leadTimeSeconds=13.0,
+                      mitigationByBottleneck={"S1": 0.004, "S2": 0.0, "S3": 0.003}),
         # LLM 노드 — CB·Bulkhead 는 세 파라미터가 일반 서비스와 실질적으로 같다(§2-B 주).
         ActionProfile("CIRCUIT_BREAKER", "llm", disruption=0.15, reversibility=0.1,
                       leadTimeSeconds=0.05,

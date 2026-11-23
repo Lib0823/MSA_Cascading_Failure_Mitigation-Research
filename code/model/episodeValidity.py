@@ -56,6 +56,9 @@ import sys
 
 import numpy as np
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import corpus  # noqa: E402  (코퍼스 규칙은 loadAllEpisodes 와 한 곳에서 — J36)
+
 # 기준선이 참조로 쓸 수 없다고 보는 경계. 1.0 은 "장애가 전혀 느리지 않았다" 다.
 # 여유를 두지 않는다 — 1.0 을 넘기면 방향은 맞으므로 흡수된 장애로 본다.
 INVALID_RATIO = 1.0
@@ -67,21 +70,9 @@ def episodeRecords(chainDir: pathlib.Path) -> list[dict]:
     규칙이 어긋나면 분석이 보는 집합과 검증이 보는 집합이 달라져, 검증을
     통과한 것처럼 보이면서 오염된 에피소드가 분석에 남는다.
     """
-    found = []
-    for path in sorted((chainDir / "results").glob("*.json")):
-        if not (path.name.startswith("episodes-") or path.name.startswith("remediation-")):
-            continue
-        for record in json.loads(path.read_text(encoding="utf-8")):
-            if record.get("injectedAt") is None:
-                continue
-            # 🔴 코퍼스는 Compose 에피소드다. K8s 셀이 섞이면 다른 환경의 분포가 학습에
-            #    들어간다(2026-11-22, J30). 필드가 없는 기존 레코드는 전부 Compose 다.
-            if record.get("backend", "compose") != "compose":
-                continue
-            if not (chainDir / record["tracePath"]).exists():
-                continue   # 중단된 실행이 남긴 고아 기록
-            found.append(record)
-    return found
+    # 🔴 규칙은 corpus.py 한 곳에 있다(J36) — K8s 셀(J30)과 `Dₐ` 측정 셀(J35)을 뺀다.
+    return [record for record in corpus.corpusRecords(chainDir)
+            if (chainDir / record["tracePath"]).exists()]   # 중단된 실행이 남긴 고아 기록
 
 
 def windowMedians(chainDir: pathlib.Path, record: dict) -> tuple[float, float]:

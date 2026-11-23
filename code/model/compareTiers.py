@@ -79,6 +79,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "chain"))
 
 import buildDataset  # noqa: E402
+import corpus  # noqa: E402
+import episodeValidity  # noqa: E402
 
 ENSEMBLE_SIZE = 3
 RANDOM_SEED = 20261014
@@ -176,18 +178,20 @@ def predictEnsemble(models: list, features: np.ndarray) -> np.ndarray:
 
 
 def loadAllEpisodes(chainDir: pathlib.Path, arguments) -> list[dict]:
-    episodes = []
-    for path in sorted((chainDir / "results").glob("*.json")):
-        if not (path.name.startswith("episodes-") or path.name.startswith("remediation-")):
-            continue
-        for record in json.loads(path.read_text(encoding="utf-8")):
-            if record.get("injectedAt") is None:
-                continue
-            # 🔴 episodeValidity.episodeRecords 와 **같은 규칙**이어야 한다 — 어긋나면
-            #    검증이 보는 집합과 학습이 보는 집합이 달라진다. K8s 셀은 코퍼스가 아니다.
-            if record.get("backend", "compose") != "compose":
-                continue
-            episodes.append(record)
+    """모델 코퍼스의 에피소드를 표본으로 만든다.
+
+    🔴 **규칙은 corpus.py 한 곳에 있다**(J36) — episodeValidity.episodeRecords 와 같은 규칙이어야
+    검증이 보는 집합과 학습이 보는 집합이 같다. K8s 셀(J30)과 `Dₐ` 측정 셀(J35)을 뺀다.
+
+    🔴 **무효 에피소드도 기본으로 뺀다**(J36). 장애가 느려지지 않아 기준선이 참조로 부적격이면
+    `f3`·`f4` 가 그 기준선으로 정규화되므로 feature 가 틀린다(J17). 종전에는 trainPredictor·
+    minimalObservation·marginalizeBottleneck 만 각자 뺐고 compareTiers·endToEnd·calibrateEnsemble 은
+    넣었다 — 결과마다 코퍼스가 달랐다. `arguments.keepInvalid` 가 참이면 넣는다(대조용).
+    """
+    episodes = corpus.corpusRecords(chainDir)
+    if not getattr(arguments, "keepInvalid", False):
+        invalid = episodeValidity.invalidTracePaths(chainDir)
+        episodes = [record for record in episodes if record["tracePath"] not in invalid]
     built = []
     for episode in episodes:
         try:

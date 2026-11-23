@@ -43,3 +43,7 @@ build/
 code/control/predictor.joblib
 # 스모크 실행 기록
 code/control/decisions-*.jsonl
+
+# 오케스트레이터 중간 산출물(리뷰) — 로컬 보존, 커밋하지 않는다
+_workspace/
+_workspace_prev/

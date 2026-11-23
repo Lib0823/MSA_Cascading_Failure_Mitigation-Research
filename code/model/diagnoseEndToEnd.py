@@ -30,6 +30,10 @@ import policyEngine  # noqa: E402
 from policyEngine import HOLD, PolicyEngine  # noqa: E402
 
 NORMAL = endToEnd.NORMAL_LABEL
+# J36 이전, 접기 하나로 평가하던 endToEnd 의 마지막 커밋 — `--reproduce` 가 그 코드를 돌린다.
+SINGLE_FOLD_COMMIT = "5426a31"
+# J35 가 추적한 endToEnd.json(FPR 0.285)이 마지막으로 커밋된 곳.
+LEGACY_RESULT_COMMIT = "7d1b035"
 # 10-15(endToEnd.json 의 마지막 생성) 이후 코퍼스에 들어온 파일.
 ADDED_NORMAL = {"remediation-20261101-170108.json"}   # `Dₐ` 측정용 normal × 강제 조치 4셀
 ADDED_S3 = {"episodes-20261101-005334.json", "episodes-20261101-005654.json",
@@ -215,19 +219,31 @@ def reproduceCommitted():
 
     compareTiers.loadAllEpisodes = loadAllEpisodes
     legacy = legacyProfiles()
-    endToEnd.defaultProfiles = lambda: legacy
+    # 🔴 J36 이 endToEnd 를 4접기 평균으로 바꿨다. 커밋된 파일은 접기 하나로 만든 것이므로 그때의
+    #    endToEnd(SINGLE_FOLD_COMMIT)를 git 에서 꺼내 돌린다 — 라벨·모델·보정 코드는 지금 것을 쓴다.
+    source = subprocess.run(["git", "show", f"{SINGLE_FOLD_COMMIT}:code/model/endToEnd.py"],
+                            cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    singleFold = types.ModuleType("endToEndSingleFold")
+    singleFold.__file__ = str(ROOT / "code" / "model" / "endToEnd.py")
+    sys.modules["endToEndSingleFold"] = singleFold
+    exec(compile(source, "endToEndSingleFold", "exec"), singleFold.__dict__)
+    singleFold.defaultProfiles = lambda: legacy
     target = ROOT / "code" / "model" / "endToEnd.json"
     saved = target.read_bytes()
     argv = sys.argv
     try:
         sys.argv = ["endToEnd.py", "--horizonSeconds", "60"]
-        endToEnd.main()
+        singleFold.main()
         produced = target.read_bytes()
     finally:
         sys.argv = argv
         target.write_bytes(saved)
-    same = json.loads(produced) == json.loads(saved)
-    print(f"\n커밋된 endToEnd.json 과 전체 동일: {same}")
+    # 비교 대상은 **작업 트리의 파일이 아니라 10-15 에 커밋된 파일**이다 — J36 이 endToEnd.json 을
+    # 새 평가로 다시 만들었으므로 작업 트리와 비교하면 엉뚱한 것과 비교하게 된다.
+    committed = subprocess.run(["git", "show", f"{LEGACY_RESULT_COMMIT}:code/model/endToEnd.json"],
+                               cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    same = json.loads(produced) == json.loads(committed)
+    print(f"\n{LEGACY_RESULT_COMMIT} 에 커밋된 endToEnd.json 과 전체 동일: {same}")
     return same
 
 

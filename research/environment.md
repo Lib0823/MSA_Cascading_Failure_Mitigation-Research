@@ -1,7 +1,12 @@
 # 연구 환경 (Research Environment)
 
-> 최종 갱신: 2026-09-24 (범위 재설계 반영 — [0923_scope_redesign_proposal.md](../docs/feedback/0923_scope_redesign_proposal.md))
+> 최종 갱신: 2026-11-25 (아래 첫 메모). 골격은 2026-09-24 범위 재설계 반영 — [0923_scope_redesign_proposal.md](../docs/feedback/0923_scope_redesign_proposal.md)
 > 실험을 수행할 장비 사양과, 그 사양에서 실험을 유효하게 유지하기 위한 제약·프로토콜을 정리한다. 의사결정 경위는 [challenges.md](challenges.md) A2·A3·A5.
+>
+> **2026-11-25 — 지금까지의 실험은 맥북에서 돌렸다.** Docker Compose 는 Apple M2 의 4 vCPU VM, K8s 는
+> minikube(vfkit 드라이버, 내부는 kubeadm, v1.37, 6 vCPU·8GiB VM)다(challenges J30). 춘계 원고(E1·E2)가 이
+> 두 환경이다. 이 문서의 실험 전용 데스크톱·kubeadm 클러스터는 **게이트 ③(학위논문)의 계획**이다. 실험 머신
+> 확보 여부는 [timeline.md](timeline.md) 마일스톤 *"실험 머신 확보"* 항목을 따른다(2026-11-25 미체크).
 >
 > **2026-09-27 변경**: LLM 서빙 엔진을 **Ollama → vLLM 으로 되돌린다**([0927_vllm_reversion](../docs/feedback/0927_vllm_reversion.md)). 2026-09-24 의 Ollama 전환은 E1(sm_120 빌드 실패)을 **회피**한 것이었는데, 그 리스크 평가가 낡았다. 동일 GPU(RTX 5060 Ti / sm_120) 사례에서 vLLM 이 동작하는 것이 확인되어 회피할 이유가 사라졌고, Brownout 기전이 프로덕션 서빙과 같아지는 이득이 남는다. **LLM 노드의 역할(Scale-out 불가 노드)은 불변이다.**
 >
@@ -194,8 +199,8 @@ GPU가 한 장이므로 LLM 노드의 레플리카를 늘릴 수 없다. **이�
 
 | # | 항목 | 결정 시점 |
 |---|---|---|
-| ~~1~~ | ~~K8s 배포판 최종 확정~~ | **해소 (2026-09-27)** — **kubeadm 확정**. 구축이 지연되면 12h 컷 후 minikube로 폴백하는 규칙(E4)은 그대로 유지한다 |
+| ~~1~~ | ~~K8s 배포판 최종 확정~~ | **해소 (2026-09-27)** — **kubeadm 확정**. 구축이 지연되면 12h 컷 후 minikube로 폴백하는 규칙(E4)은 그대로 유지한다. *(2026-11-25: 게이트 ② 축소판은 맥북 minikube 로 진행했다 — J30)* |
 | 2 | 호스트 CPU 임계값(§4 규칙 2)의 구체 수치 | 캘리브레이션 후 |
-| 2-1 | **PostgreSQL `max_connections`·DB CPU 상한·슬로우 쿼리 지연의 구체 수치** — *"정상 부하에서는 여유가 있고 HPA가 발동할 만큼 오르면 한계에 닿는"* 구간 | **게이트 ② 캘리브레이션** |
+| 2-1 | **PostgreSQL `max_connections`·DB CPU 상한·슬로우 쿼리 지연의 구체 수치** — *"정상 부하에서는 여유가 있고 HPA가 발동할 만큼 오르면 한계에 닿는"* 구간 | **게이트 ② 캘리브레이션**. *(2026-11-25 부분 해소 — 맥북 K8s 에서 `max_connections` 30(앱용 27)·풀 20 으로 예산 30·70 을 대조했다, J31. 게이트 ③ 에서 다시 정한다)* |
 | 3 | Online Boutique 보조 검증의 로컬 수용 가능 여부 | ③단계 착수 시 (컷 1순위 항목) |
 | 4 | 코어 증설 필요 여부 | §3-1 캘리브레이션 결과에 따라 |

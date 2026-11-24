@@ -1,6 +1,9 @@
 # 신뢰도 기반 이질적 조치 선택을 통한 MSA 연쇄 장애 선제 대응 아키텍처
 
-> **상태**: 프로포절(연구계획서) 준비 단계 — 2026년 9월(2학기) 기준, 실험 미착수.
+> **상태 (2026-11-25)**: 2학기. 3단 사슬 축소판(Docker Compose·맥북 minikube)으로 실험을 진행해
+> **2027 춘계 학회 원고 초안을 완료**했다([draft](docs/paper/draft-spring2027.md), 투고 2027-03 무렵).
+> 서비스 6~7개·LLM 노드·실험 머신을 쓰는 전체 실험은 학위논문 단계다. 현재 위치와 다음 할 일은
+> [research/timeline.md](research/timeline.md) 맨 위에 있다.
 > **2026-09-24 범위 재설계**: GNN이 주력 예측기에서 **검증 대상(비교군)** 으로 내려가고, 기여 서술이 "3축 나열"에서 **"선제 맥락의 조치 선택"이라는 결합**으로 바뀌었다. 경위는 [docs/feedback/0923_scope_redesign_proposal.md](docs/feedback/0923_scope_redesign_proposal.md).
 
 ## Abstract
@@ -42,7 +45,7 @@
 - **예측 레이어 — 위상 정보의 3단 사다리**: ① 규칙/임계값(위상 없음) → ② **GBM + 이웃 집계 feature**(주력) → ③ GAT(위상 학습, 검증 대상). ①→②가 *위상 정보 자체의 기여*를, ②→③이 *표현 학습의 기여*를 분리 측정한다. 출력은 병목 유형 다중 클래스 + 불확실성이며, **CPU만으로 학습·추론한다.**
 - **의사결정 계층 (핵심 기여)**: 기대비용 최소화 비용함수. 신뢰도 구간을 손으로 긋지 않고 조치별 임계값 `θₐ = Dₐ·Rₐ / (mₐ·L − Dₐ(1−Rₐ))`가 유도된다. **완화효과 `mₐ`가 병목 유형에 의존**하므로 같은 조치가 시나리오마다 다른 값을 갖는다.
 - **실행 계층 — 이질적 조치 4종**: Circuit Breaker(차단) / Bulkhead(동시성 제한) / Scale-out(자원 증설) / Brownout(품질 저하) + 무조치. Resilience4j로 애플리케이션 레이어에서 수행하므로 서비스 메시에 의존하지 않는다.
-- **실험**: 자작 Spring 구성 6~7개 서비스(의존 깊이 4단) + LLM 노드(vLLM, 레플리카 1 고정) + PostgreSQL. Locust 트래픽 + **앱 레벨 장애 주입**. 반응형 HPA·규칙 기반·단일 조치 정책·무조치와 비교하며, Online Boutique는 외부 타당성 보조 검증으로 둔다.
+- **실험**: 지금까지는 자작 Spring 단일 이미지로 만든 `gateway → orders → payment → PostgreSQL` 사슬을 Docker Compose 와 맥북 minikube 에서 돌렸다. 부하는 직접 만든 폐루프 부하 생성기이고, 장애는 **앱 레벨에서 주입**한다. 학위논문 단계에서 6~7개 서비스(의존 깊이 4단) + LLM 노드(vLLM, 레플리카 1 고정)로 넓히고, 반응형 HPA·규칙 기반·단일 조치 정책·무조치와 비교한다. Online Boutique는 외부 타당성 보조 검증으로 둔다.
 
 ### 장애 시나리오
 
@@ -52,51 +55,65 @@
 | S2 | LLM 노드 포화 | **Brownout** | 증설이 **불가능** |
 | S3 | 다운스트림 지연 | **Circuit Breaker** | **S1과의 증상 동형 쌍** |
 
-S1과 S3는 관측 증상이 유사하지만 정답이 상충한다 — S1에 Circuit Breaker를 걸면 재시도 증폭으로 악화된다. 이 쌍이 *"신뢰도에 따라 조치를 가른다"* 의 필요성을 실증한다.
+S1과 S3는 관측 증상이 유사하지만 정답이 상충한다. 실측에서 S3에 Bulkhead를 걸면 p95가 4배(481 → 1,873ms)가 됐고, S1에 Circuit Breaker를 걸면 128 워커 장애 구간의 입구 오류율이 평균 76%였다. 이 쌍이 *"신뢰도에 따라 조치를 가른다"* 의 필요성을 실증한다.
 
 자세한 설계 근거와 심사 방어 논리는 [docs/proposal.md](docs/proposal.md)를 참고.
 
 ## Results
 
-현재 프로포절 준비 단계로 **실험은 착수하지 않았다**. 산출물 현황은 [research/outputs.md](research/outputs.md)에 정리되어 있다.
+2026-11-24 기준, 3단 사슬 축소판(단일 머신, Docker Compose·맥북 minikube)에서 나온 결과다. 상세는 원고
+초안 [docs/paper/draft-spring2027.md](docs/paper/draft-spring2027.md) 와 [research/challenges.md](research/challenges.md) J29~J38.
+
+- **조치별 임계값이 유도된다.** 실측한 즉시 비용 `Dₐ` 만으로 CB 는 θ = 0.00025(상시 장전), Bulkhead 는 0.46(선별 투입), Scale-out 은 θ = ∞(자동 배제)가 나온다.
+- **증설의 득실은 DB 커넥션 예산이 정한다.** 장애가 없을 때 예산 30 에서 증설은 처리량을 −53.5%, CPU 기반 HPA 는 −25.1% 바꿨고, 예산 70 에서는 각각 +58.2%·+59.8% 였다. 장애 중 증설은 효과가 없었다(S1 +0.4%, S3 +0.3%).
+- **불확실성 할인**은 벌크헤드 후보 결정의 보류를 평균 +8.8%p 늘렸다(17회, 95% 신뢰구간 +6.6~+10.9%p). 비용이 줄었는지는 확정되지 않았다(p = 0.57).
+- **S1·S3 를 가르는 최소 관측은 풀 획득 대기(f2)와 지연(f4) 둘이다**(macro F1 0.937 ± 0.041). 표준 지표만 쓰면 0.647 ± 0.139 다. 이웃 집계는 3클래스 F1 을 0.736 → 0.887 로 올린다.
+- **폐루프 정책 비교(S1)에서는 무조치의 goodput 이 가장 높았다**(196.0 rps, 제안 정책 185.7). 용량이 고정된 환경에서 호출자 측 조치는 대기 위치만 옮긴다.
+- **결론 결정표** — 학습된 판정을 깊이 2 트리로 줄이면 조치 전 판정에서 GBM 과 같거나 나았다. 조치는 자기 진단 신호(풀 대기율)를 지운다 → [docs/decision-table.md](docs/decision-table.md).
+
+산출물 목록은 [research/outputs.md](research/outputs.md)에 있다.
 
 ## Repository Structure
 
 ```text
 .
 ├── README.md
+├── CLAUDE.md                 # Claude Code 작업 규칙 (하네스 · 커밋 규칙)
 │
 ├── docs/
-│   └── proposal.md          # 연구계획서 (아키텍처 설계, 실험 설계, 심사 방어 전략, 참고문헌)
+│   ├── proposal.md           # 연구계획서 (아키텍처 설계, 실험 설계, 심사 방어 전략, 참고문헌)
+│   ├── paper/                # 2027 춘계 학회 원고 초안 · 골격 · 그림 · 분량 추정기
+│   ├── decision-table.md     # 결론 결정표 초안 (관측 → 판정 → 조치)
+│   └── feedback/             # 외부 · 자체 검토 기록
 │
 ├── research/
 │   ├── overview.md           # 연구 소개 요약
-│   ├── timeline.md           # 연구 진행 과정 · 일정 · 리스크 관리
+│   ├── timeline.md           # 현재 위치 · 다음 할 일 · 일정 · 리스크 관리
 │   ├── environment.md        # 실험 환경 사양 · 제약 · 실험 프로토콜
-│   ├── challenges.md         # 의사결정 및 팩트체크 로그
+│   ├── challenges.md         # 의사결정 및 팩트체크 로그 (J1~J38)
 │   ├── outputs.md            # 산출물 현황
+│   ├── seminar/              # 세미나 자료 (이미지)
 │   └── study_notes/          # 연구를 위한 학습 커리큘럼 및 주제별 학습 노트
 │
-├── code/                     # (착수 전, 폴더 구조만 준비)
-│   ├── backend/              # Policy Engine / API
-│   ├── model/                # GNN(GAT) 예측 모델
-│   ├── simulator/             # 트래픽 생성 · 장애주입 스크립트
-│   └── utils/
+├── code/
+│   ├── services/             # 자작 Spring 서비스 (단일 이미지 + 프로파일, Resilience4j 조치, 장애 주입)
+│   ├── chain/                # 사슬 실행 · 역라벨링 하네스와 실행 결과
+│   ├── calibration/          # 게이트 ①.5 캘리브레이션 · 폐루프 부하 생성기
+│   ├── model/                # 예측기(규칙 · GBM) · Policy Engine · 분석 스크립트와 결과
+│   ├── control/              # 폐루프 제어기 · 예측기 학습
+│   ├── experiment/           # 배치 실행 · 정책 비교 · 조치별 측정과 결과 원장
+│   ├── backend/ simulator/ utils/   # 초기 구조로 남은 빈 폴더
+│   └── requirements.txt
 │
-├── data/                     # (착수 전, 폴더 구조만 준비)
-│   ├── raw/
-│   ├── processed/
-│   └── sample/
-│
-├── assets/                   # (착수 전, 폴더 구조만 준비)
-│   ├── diagrams/
-│   ├── figures/
-│   └── images/
-│
-└── temp/                     # 원본 작업 노트 (PDF), 정리 작업의 원본 자료
+├── deploy/k8s/               # K8s 매니페스트 (기본 · Compose 등가 · 로컬 접속)
+├── ontology_temp/            # 도메인 온톨로지 원본 (OWL · 요약)
+├── devkit/                   # 온톨로지 스캔 결과 · 뷰어
+├── tools/                    # 문서 링크 검사기
+├── data/                     # 초기 구조로 남은 빈 폴더 (raw · processed · sample)
+└── assets/                   # 초기 구조로 남은 빈 폴더 (diagrams · figures · images)
 ```
 
-> `code/`, `data/`, `assets/`는 실험 착수 전이라 아직 내용은 없고 폴더 구조만 미리 준비해 두었다(`.gitkeep`으로 git에 추적). `LICENSE`는 아직 결정 전이라 생성하지 않았다.
+> 실행 결과는 `code/chain/results`·`code/experiment/results`·`code/model/*.json` 에 있다. `code/backend`·`simulator`·`utils`, `data/`, `assets/` 는 초기 구조로 남겨 둔 빈 폴더다(`.gitkeep`). `LICENSE`는 아직 정하지 않았다.
 
 ## Related Links
 

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 그림 1. 제안 구조 — draft-spring2027.md §3.1.
+     2단 양식의 한 단(약 84mm)에 넣었을 때 본문 글자가 6.5pt 이상이 되도록 그렸다(폭 700, 글자 19px).
+     학회 양식에 옮길 때 그대로 쓰거나 다시 그린다. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="272" viewBox="0 0 700 272"
+     font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"
+            orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="700" height="272" fill="#ffffff"/>
+
+  <!-- 계층 1: 예측 -->
+  <rect x="8" y="8" width="192" height="118" rx="8" fill="#f2f5fa" stroke="#3a5a8c" stroke-width="2"/>
+  <text x="104" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#1f3556">예측</text>
+  <text x="104" y="74" text-anchor="middle" font-size="19" fill="#222">GBM 앙상블 (N=5)</text>
+  <text x="104" y="102" text-anchor="middle" font-size="19" fill="#222">+ 이웃 집계</text>
+
+  <!-- 계층 2: 의사결정 -->
+  <rect x="256" y="8" width="238" height="118" rx="8" fill="#fbf6ee" stroke="#9a6b1f" stroke-width="2"/>
+  <text x="375" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#5a3d0e">의사결정</text>
+  <text x="375" y="74" text-anchor="middle" font-size="18" fill="#222">θ<tspan font-size="13" baseline-shift="sub">a</tspan>=D<tspan font-size="13" baseline-shift="sub">a</tspan>R<tspan font-size="13" baseline-shift="sub">a</tspan>/(m<tspan font-size="13" baseline-shift="sub">a</tspan>L−D<tspan font-size="13" baseline-shift="sub">a</tspan>(1−R<tspan font-size="13" baseline-shift="sub">a</tspan>))</text>
+  <text x="375" y="104" text-anchor="middle" font-size="18" fill="#222">p<tspan font-size="13" baseline-shift="sub">eff</tspan> = max(0, p̄ − κ√u)</text>
+
+  <!-- 계층 3: 실행 -->
+  <rect x="538" y="8" width="154" height="118" rx="8" fill="#f1f8f3" stroke="#2f7a45" stroke-width="2"/>
+  <text x="615" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#1d4d2b">실행</text>
+  <text x="615" y="70" text-anchor="middle" font-size="18" fill="#222">CB·벌크헤드</text>
+  <text x="615" y="92" text-anchor="middle" font-size="18" fill="#555">→ 호출자</text>
+  <text x="615" y="116" text-anchor="middle" font-size="18" fill="#222">증설 → 자신</text>
+
+  <!-- 계층 사이 화살표 -->
+  <line x1="200" y1="67" x2="254" y2="67" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="228" y="57" text-anchor="middle" font-size="17" fill="#333">p̄, u, ŝ</text>
+  <line x1="494" y1="67" x2="536" y2="67" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="515" y="57" text-anchor="middle" font-size="17" fill="#333">조치</text>
+
+  <!-- 서비스 사슬 -->
+  <rect x="60" y="196" width="120" height="44" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.8"/>
+  <text x="120" y="225" text-anchor="middle" font-size="19" fill="#222">gateway</text>
+  <rect x="220" y="196" width="120" height="44" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.8"/>
+  <text x="280" y="225" text-anchor="middle" font-size="19" fill="#222">orders</text>
+  <rect x="380" y="196" width="120" height="44" rx="6" fill="#ffffff" stroke="#b03a2e" stroke-width="2.4"/>
+  <text x="440" y="225" text-anchor="middle" font-size="19" fill="#222">payment</text>
+  <rect x="540" y="196" width="140" height="44" rx="6" fill="#ffffff" stroke="#555" stroke-width="1.8"/>
+  <text x="610" y="225" text-anchor="middle" font-size="19" fill="#222">PostgreSQL</text>
+  <line x1="180" y1="218" x2="218" y2="218" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="340" y1="218" x2="378" y2="218" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="500" y1="218" x2="538" y2="218" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="440" y="264" text-anchor="middle" font-size="17" fill="#b03a2e">장애 주입 (S1·S3)</text>
+
+  <!-- 지표 수집 (사슬 → 예측) -->
+  <path d="M 120 196 L 120 128" fill="none" stroke="#3a5a8c" stroke-width="1.8" stroke-dasharray="6 4"
+        marker-end="url(#arrow)"/>
+  <text x="128" y="168" font-size="17" fill="#3a5a8c">지표 (5초)</text>
+
+  <!-- 조치 적용 (실행 → 호출자 / 노드 자신) -->
+  <path d="M 575 126 L 575 152 L 280 152 L 280 194" fill="none" stroke="#2f7a45" stroke-width="1.8"
+        marker-end="url(#arrow)"/>
+  <text x="290" y="146" font-size="17" fill="#2f7a45">CB·벌크헤드</text>
+  <path d="M 655 126 L 655 174 L 440 174 L 440 194" fill="none" stroke="#2f7a45" stroke-width="1.8"
+        stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <text x="600" y="168" font-size="17" fill="#2f7a45">증설</text>
+</svg>

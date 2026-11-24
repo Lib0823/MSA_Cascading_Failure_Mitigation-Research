@@ -1,0 +1,1310 @@
+{
+  "evaluation": "GroupKFold 4접기 out-of-fold (endToEnd 와 같은 접기)",
+  "label": "propagation",
+  "trainOn": "all",
+  "horizonSeconds": 30.0,
+  "kappa": 1.0,
+  "ensembleSize": 5,
+  "calibration": "sigmoid",
+  "minLeaf": 100,
+  "episodes": 34,
+  "samples": 10886,
+  "features": {
+    "selfLatencyRatio": "자기 p95 ÷ 기준선",
+    "selfLatencyRatioMean": "자기 p95 ÷ 기준선 (10초 평균)",
+    "selfErrorRate": "자기 오류율",
+    "selfPoolWait": "자기 풀 대기율",
+    "pathPoolWait": "호출 경로의 풀 대기율",
+    "pathPoolWaitMean": "호출 경로의 풀 대기율 (10초 평균)",
+    "pathLatencyRatio": "호출 경로의 p95 ÷ 기준선",
+    "callerLatencyRatio": "호출자 p95 ÷ 기준선",
+    "isChainEnd": "호출 대상 없음 (사슬 끝)",
+    "isEntry": "입구 노드"
+  },
+  "reproduction": {
+    "reference": {
+      "samples": 4821,
+      "rate": 0.35158680771624146,
+      "cost": 0.00012955818294959552,
+      "byAction": {
+        "CIRCUIT_BREAKER": 1691,
+        "BULKHEAD": 4
+      }
+    },
+    "produced": {
+      "samples": 4821,
+      "rate": 0.35158680771624146,
+      "cost": 0.00012955818294959552,
+      "byAction": {
+        "CIRCUIT_BREAKER": 1691,
+        "BULKHEAD": 4
+      }
+    },
+    "matches": true
+  },
+  "gbm": {
+    "metrics": {
+      "macroF1": 0.8032716340653158,
+      "typeAccuracy": 0.8001755412521943,
+      "typeMacroF1": 0.782475543693736
+    },
+    "outcomes": {
+      "faultFree": {
+        "samples": 4821,
+        "rate": 0.35158680771624146,
+        "cost": 0.00012955818294959552,
+        "byAction": {
+          "CIRCUIT_BREAKER": 1691,
+          "BULKHEAD": 4
+        }
+      },
+      "faultNormalLabel": {
+        "samples": 2647,
+        "rate": 0.37891953154514546,
+        "cost": 0.0027192293162070264,
+        "byAction": {
+          "CIRCUIT_BREAKER": 905,
+          "BULKHEAD": 98
+        }
+      },
+      "S1": {
+        "samples": 2195,
+        "rightAction": 0.7289293849658315,
+        "wrongAction": 0.1548974943052392,
+        "hold": 0.11617312072892938
+      },
+      "S3": {
+        "samples": 1223,
+        "rightAction": 0.7195421095666394,
+        "wrongAction": 0.18233851185609157,
+        "hold": 0.09811937857726902
+      }
+    }
+  },
+  "trees": [
+    {
+      "depth": 1,
+      "metrics": {
+        "macroF1": 0.5034283957779566,
+        "typeAccuracy": 0.6421884142773552,
+        "typeMacroF1": 0.39105647603776944
+      },
+      "agreement": {
+        "predicted": 0.8394267866985119,
+        "typeOnFaults": 0.6430661205383265,
+        "action": 0.6130810214954988,
+        "actionOnFaults": 0.5359859566998244
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 4821,
+          "rate": 0.00020742584526031943,
+          "cost": 1.485169052063887e-05,
+          "byAction": {
+            "BULKHEAD": 1
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.10578012844729882,
+          "cost": 0.007573857196826596,
+          "byAction": {
+            "BULKHEAD": 280
+          }
+        },
+        "S1": {
+          "samples": 2195,
+          "rightAction": 0.6656036446469248,
+          "wrongAction": 0.0,
+          "hold": 0.33439635535307516
+        },
+        "S3": {
+          "samples": 1223,
+          "rightAction": 0.0,
+          "wrongAction": 0.848732624693377,
+          "hold": 0.15126737530662307
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.8397436141967773
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.125
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.166666626930237
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.5192307829856873
+          }
+        ]
+      ]
+    },
+    {
+      "depth": 2,
+      "metrics": {
+        "macroF1": 0.7544589519314645,
+        "typeAccuracy": 0.772674078408426,
+        "typeMacroF1": 0.7631037338698419
+      },
+      "agreement": {
+        "predicted": 0.9078633106742605,
+        "typeOnFaults": 0.7788180222352252,
+        "action": 0.6883152673158185,
+        "actionOnFaults": 0.7232299590403745
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 4821,
+          "rate": 0.00020742584526031943,
+          "cost": 1.485169052063887e-05,
+          "byAction": {
+            "BULKHEAD": 1
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.10691348696637704,
+          "cost": 0.002044427653947865,
+          "byAction": {
+            "CIRCUIT_BREAKER": 208,
+            "BULKHEAD": 75
+          }
+        },
+        "S1": {
+          "samples": 2195,
+          "rightAction": 0.5353075170842825,
+          "wrongAction": 0.2419134396355353,
+          "hold": 0.22277904328018222
+        },
+        "S3": {
+          "samples": 1223,
+          "rightAction": 0.7988552739165985,
+          "wrongAction": 0.10874897792313983,
+          "hold": 0.09239574816026165
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.8397436141967773
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.30069395899772644
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.125
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.30069395899772644
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.166666626930237
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.34259259700775146
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.10795454680919647
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.5192307829856873
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.3282606899738312
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          }
+        ]
+      ]
+    },
+    {
+      "depth": 3,
+      "metrics": {
+        "macroF1": 0.7082491276739483,
+        "typeAccuracy": 0.7024575775307197,
+        "typeMacroF1": 0.6835732268511425
+      },
+      "agreement": {
+        "predicted": 0.910619143854492,
+        "typeOnFaults": 0.7770626097132827,
+        "action": 0.5898401616755465,
+        "actionOnFaults": 0.7203042715038034
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 4821,
+          "rate": 0.238954573739888,
+          "cost": 0.00035880522713130055,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1131,
+            "BULKHEAD": 21
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.1590479788439743,
+          "cost": 0.002054854552323385,
+          "byAction": {
+            "CIRCUIT_BREAKER": 346,
+            "BULKHEAD": 75
+          }
+        },
+        "S1": {
+          "samples": 2195,
+          "rightAction": 0.537129840546697,
+          "wrongAction": 0.26287015945330294,
+          "hold": 0.2
+        },
+        "S3": {
+          "samples": 1223,
+          "rightAction": 0.6402289452166803,
+          "wrongAction": 0.27718724448078497,
+          "hold": 0.08258381030253475
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.8397436141967773
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.30069395899772644
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.8444989621639252
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.1823989674448967
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.6164215803146362
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.125
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.30069395899772644
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.8604567348957062
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.20910584926605225
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.23564814031124115
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.166666626930237
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.34259259700775146
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.10795454680919647
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 1.0645833015441895
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.5192307829856873
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.3282606899738312
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.8439450860023499
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 1.4375
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 2.5083333253860474
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.291666626930237
+          }
+        ]
+      ]
+    },
+    {
+      "depth": 4,
+      "metrics": {
+        "macroF1": 0.7308515746719015,
+        "typeAccuracy": 0.7261556465769455,
+        "typeMacroF1": 0.7103683532019063
+      },
+      "agreement": {
+        "predicted": 0.8923387837589565,
+        "typeOnFaults": 0.76214160327677,
+        "action": 0.5684365239757486,
+        "actionOnFaults": 0.7042129900526624
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 4821,
+          "rate": 0.238954573739888,
+          "cost": 0.00035880522713130055,
+          "byAction": {
+            "CIRCUIT_BREAKER": 1131,
+            "BULKHEAD": 21
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2647,
+          "rate": 0.1590479788439743,
+          "cost": 0.007530562901397808,
+          "byAction": {
+            "CIRCUIT_BREAKER": 143,
+            "BULKHEAD": 278
+          }
+        },
+        "S1": {
+          "samples": 2195,
+          "rightAction": 0.5471526195899772,
+          "wrongAction": 0.2528473804100228,
+          "hold": 0.2
+        },
+        "S3": {
+          "samples": 1223,
+          "rightAction": 0.6884709730171709,
+          "wrongAction": 0.22894521668029436,
+          "hold": 0.08258381030253475
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.8397436141967773
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.30069395899772644
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.8444989621639252
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.1823989674448967
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.6164215803146362
+          },
+          {
+            "depth": 3,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 3,
+            "feature": "callerLatencyRatio",
+            "threshold": 0.5
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.08951599150896072
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.125
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.30069395899772644
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.8604567348957062
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.20910584926605225
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.23564814031124115
+          },
+          {
+            "depth": 3,
+            "feature": "selfLatencyRatio",
+            "threshold": 1.9166666865348816
+          },
+          {
+            "depth": 3,
+            "feature": "callerLatencyRatio",
+            "threshold": 2.0
+          },
+          {
+            "depth": 3,
+            "feature": "callerLatencyRatio",
+            "threshold": 0.5
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.166666626930237
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.34259259700775146
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.10795454680919647
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 1.0645833015441895
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          },
+          {
+            "depth": 3,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 1.0291666388511658
+          },
+          {
+            "depth": 3,
+            "feature": "pathLatencyRatio",
+            "threshold": 0.046875
+          },
+          {
+            "depth": 3,
+            "feature": "callerLatencyRatio",
+            "threshold": 0.5
+          },
+          {
+            "depth": 3,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 3.7083332538604736
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "pathLatencyRatio",
+            "threshold": 1.5192307829856873
+          },
+          {
+            "depth": 1,
+            "feature": "selfErrorRate",
+            "threshold": 0.3282606899738312
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.8439450860023499
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 1.4375
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 2.5083333253860474
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.291666626930237
+          },
+          {
+            "depth": 3,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 3,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.583333373069763
+          },
+          {
+            "depth": 3,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 3.016666531562805
+          }
+        ]
+      ]
+    }
+  ],
+  "chosenDepth": 2,
+  "table": [
+    {
+      "leaf": 2,
+      "conditions": [
+        {
+          "feature": "pathLatencyRatio",
+          "op": "<=",
+          "threshold": 2.125
+        },
+        {
+          "feature": "selfErrorRate",
+          "op": "<=",
+          "threshold": 0.30069395899772644
+        }
+      ],
+      "samples": 8119,
+      "classCounts": {
+        "정상": 7462,
+        "S1": 536,
+        "S3": 121
+      },
+      "risk": 0.08092129572607465,
+      "bottleneck": "S1",
+      "action": "보류",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    },
+    {
+      "leaf": 3,
+      "conditions": [
+        {
+          "feature": "pathLatencyRatio",
+          "op": "<=",
+          "threshold": 2.125
+        },
+        {
+          "feature": "selfErrorRate",
+          "op": ">",
+          "threshold": 0.30069395899772644
+        }
+      ],
+      "samples": 321,
+      "classCounts": {
+        "정상": 3,
+        "S1": 246,
+        "S3": 72
+      },
+      "risk": 0.9906542056074766,
+      "bottleneck": "S1",
+      "action": "BULKHEAD",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    },
+    {
+      "leaf": 5,
+      "conditions": [
+        {
+          "feature": "pathLatencyRatio",
+          "op": ">",
+          "threshold": 2.125
+        },
+        {
+          "feature": "pathPoolWait",
+          "op": "<=",
+          "threshold": 0.426630437374115
+        }
+      ],
+      "samples": 1348,
+      "classCounts": {
+        "정상": 3,
+        "S1": 315,
+        "S3": 1030
+      },
+      "risk": 0.9977744807121661,
+      "bottleneck": "S3",
+      "action": "CIRCUIT_BREAKER",
+      "candidateAction": "CIRCUIT_BREAKER",
+      "candidateThreshold": 0.00025056376847907793
+    },
+    {
+      "leaf": 6,
+      "conditions": [
+        {
+          "feature": "pathLatencyRatio",
+          "op": ">",
+          "threshold": 2.125
+        },
+        {
+          "feature": "pathPoolWait",
+          "op": ">",
+          "threshold": 0.426630437374115
+        }
+      ],
+      "samples": 1098,
+      "classCounts": {
+        "정상": 0,
+        "S1": 1098,
+        "S3": 0
+      },
+      "risk": 1.0,
+      "bottleneck": "S1",
+      "action": "BULKHEAD",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    }
+  ],
+  "byEpisodeKind": {
+    "natural": {
+      "samples": 6275,
+      "episodes": 20,
+      "gbm": {
+        "metrics": {
+          "macroF1": 0.8331903842594532,
+          "typeAccuracy": 0.8532796317606444,
+          "typeMacroF1": 0.8483615181297954
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 2945,
+            "rate": 0.39558573853989815,
+            "cost": 0.00017609507640067913,
+            "byAction": {
+              "CIRCUIT_BREAKER": 1161,
+              "BULKHEAD": 4
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 1592,
+            "rate": 0.4886934673366834,
+            "cost": 0.0040893216080402015,
+            "byAction": {
+              "CIRCUIT_BREAKER": 689,
+              "BULKHEAD": 89
+            }
+          },
+          "S1": {
+            "samples": 957,
+            "rightAction": 0.8652037617554859,
+            "wrongAction": 0.06165099268547544,
+            "hold": 0.07314524555903866
+          },
+          "S3": {
+            "samples": 781,
+            "rightAction": 0.7490396927016645,
+            "wrongAction": 0.19590268886043533,
+            "hold": 0.05505761843790013
+          }
+        }
+      },
+      "tree": {
+        "metrics": {
+          "macroF1": 0.8594570303148711,
+          "typeAccuracy": 0.9240506329113924,
+          "typeMacroF1": 0.9216536417246197
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 2945,
+            "rate": 0.00033955857385398983,
+            "cost": 2.431239388794567e-05,
+            "byAction": {
+              "BULKHEAD": 1
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 1592,
+            "rate": 0.1771356783919598,
+            "cost": 0.003399120603015075,
+            "byAction": {
+              "CIRCUIT_BREAKER": 207,
+              "BULKHEAD": 75
+            }
+          },
+          "S1": {
+            "samples": 957,
+            "rightAction": 0.8307210031347962,
+            "wrongAction": 0.0020898641588296763,
+            "hold": 0.1671891327063741
+          },
+          "S3": {
+            "samples": 781,
+            "rightAction": 0.8335467349551856,
+            "wrongAction": 0.07810499359795134,
+            "hold": 0.088348271446863
+          }
+        }
+      }
+    },
+    "forced": {
+      "samples": 4611,
+      "episodes": 14,
+      "gbm": {
+        "metrics": {
+          "macroF1": 0.7639937551050388,
+          "typeAccuracy": 0.7452380952380953,
+          "typeMacroF1": 0.6984089967267243
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 1876,
+            "rate": 0.28251599147121537,
+            "cost": 5.650319829424308e-05,
+            "byAction": {
+              "CIRCUIT_BREAKER": 530
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 1055,
+            "rate": 0.2132701421800948,
+            "cost": 0.0006517535545023697,
+            "byAction": {
+              "CIRCUIT_BREAKER": 216,
+              "BULKHEAD": 9
+            }
+          },
+          "S1": {
+            "samples": 1238,
+            "rightAction": 0.6235864297253635,
+            "wrongAction": 0.22697899838449112,
+            "hold": 0.1494345718901454
+          },
+          "S3": {
+            "samples": 442,
+            "rightAction": 0.667420814479638,
+            "wrongAction": 0.1583710407239819,
+            "hold": 0.17420814479638008
+          }
+        }
+      },
+      "tree": {
+        "metrics": {
+          "macroF1": 0.6306739355039483,
+          "typeAccuracy": 0.6160714285714286,
+          "typeMacroF1": 0.5950235283257422
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 1876,
+            "rate": 0.0,
+            "cost": 0.0,
+            "byAction": {}
+          },
+          "faultNormalLabel": {
+            "samples": 1055,
+            "rate": 0.0009478672985781991,
+            "cost": 1.8957345971563982e-07,
+            "byAction": {
+              "CIRCUIT_BREAKER": 1
+            }
+          },
+          "S1": {
+            "samples": 1238,
+            "rightAction": 0.3069466882067851,
+            "wrongAction": 0.4273021001615509,
+            "hold": 0.265751211631664
+          },
+          "S3": {
+            "samples": 442,
+            "rightAction": 0.7375565610859729,
+            "wrongAction": 0.16289592760180996,
+            "hold": 0.09954751131221719
+          }
+        }
+      }
+    }
+  },
+  "poolWaitSensitivity": {
+    "node": 4,
+    "fittedThreshold": 0.426630437374115,
+    "subsets": {
+      "all": {
+        "reached": {
+          "정상": 3,
+          "S1": 1413,
+          "S3": 1030
+        },
+        "rows": [
+          {
+            "threshold": 0.05,
+            "S1": 0.8280254777070064,
+            "S3": 0.9271844660194175,
+            "balanced": 0.877604971863212
+          },
+          {
+            "threshold": 0.1,
+            "S1": 0.8280254777070064,
+            "S3": 0.9388349514563107,
+            "balanced": 0.8834302145816586
+          },
+          {
+            "threshold": 0.15,
+            "S1": 0.7827317763623496,
+            "S3": 0.9485436893203884,
+            "balanced": 0.8656377328413689
+          },
+          {
+            "threshold": 0.2,
+            "S1": 0.7827317763623496,
+            "S3": 0.958252427184466,
+            "balanced": 0.8704921017734077
+          },
+          {
+            "threshold": 0.25,
+            "S1": 0.7799009200283086,
+            "S3": 0.9650485436893204,
+            "balanced": 0.8724747318588144
+          },
+          {
+            "threshold": 0.3,
+            "S1": 0.7799009200283086,
+            "S3": 0.9766990291262136,
+            "balanced": 0.8782999745772611
+          },
+          {
+            "threshold": 0.35,
+            "S1": 0.7799009200283086,
+            "S3": 0.9805825242718447,
+            "balanced": 0.8802417221500767
+          },
+          {
+            "threshold": 0.4,
+            "S1": 0.7770700636942676,
+            "S3": 1.0,
+            "balanced": 0.8885350318471338
+          },
+          {
+            "threshold": 0.45,
+            "S1": 0.7770700636942676,
+            "S3": 1.0,
+            "balanced": 0.8885350318471338
+          },
+          {
+            "threshold": 0.5,
+            "S1": 0.7763623496107572,
+            "S3": 1.0,
+            "balanced": 0.8881811748053786
+          },
+          {
+            "threshold": 0.55,
+            "S1": 0.7763623496107572,
+            "S3": 1.0,
+            "balanced": 0.8881811748053786
+          },
+          {
+            "threshold": 0.6,
+            "S1": 0.775654635527247,
+            "S3": 1.0,
+            "balanced": 0.8878273177636236
+          },
+          {
+            "threshold": 0.65,
+            "S1": 0.7261146496815286,
+            "S3": 1.0,
+            "balanced": 0.8630573248407643
+          },
+          {
+            "threshold": 0.7,
+            "S1": 0.7197452229299363,
+            "S3": 1.0,
+            "balanced": 0.8598726114649682
+          },
+          {
+            "threshold": 0.75,
+            "S1": 0.7126680820948337,
+            "S3": 1.0,
+            "balanced": 0.8563340410474168
+          },
+          {
+            "threshold": 0.8,
+            "S1": 0.5343241330502477,
+            "S3": 1.0,
+            "balanced": 0.7671620665251239
+          }
+        ]
+      },
+      "natural": {
+        "reached": {
+          "정상": 3,
+          "S1": 770,
+          "S3": 706
+        },
+        "rows": [
+          {
+            "threshold": 0.05,
+            "S1": 0.9974025974025974,
+            "S3": 0.8937677053824362,
+            "balanced": 0.9455851513925169
+          },
+          {
+            "threshold": 0.1,
+            "S1": 0.9974025974025974,
+            "S3": 0.9107648725212465,
+            "balanced": 0.954083734961922
+          },
+          {
+            "threshold": 0.15,
+            "S1": 0.9974025974025974,
+            "S3": 0.9249291784702549,
+            "balanced": 0.9611658879364262
+          },
+          {
+            "threshold": 0.2,
+            "S1": 0.9974025974025974,
+            "S3": 0.9390934844192634,
+            "balanced": 0.9682480409109304
+          },
+          {
+            "threshold": 0.25,
+            "S1": 0.9974025974025974,
+            "S3": 0.9490084985835694,
+            "balanced": 0.9732055479930835
+          },
+          {
+            "threshold": 0.3,
+            "S1": 0.9974025974025974,
+            "S3": 0.9660056657223796,
+            "balanced": 0.9817041315624885
+          },
+          {
+            "threshold": 0.35,
+            "S1": 0.9974025974025974,
+            "S3": 0.9716713881019831,
+            "balanced": 0.9845369927522902
+          },
+          {
+            "threshold": 0.4,
+            "S1": 0.9948051948051948,
+            "S3": 1.0,
+            "balanced": 0.9974025974025974
+          },
+          {
+            "threshold": 0.45,
+            "S1": 0.9948051948051948,
+            "S3": 1.0,
+            "balanced": 0.9974025974025974
+          },
+          {
+            "threshold": 0.5,
+            "S1": 0.9948051948051948,
+            "S3": 1.0,
+            "balanced": 0.9974025974025974
+          },
+          {
+            "threshold": 0.55,
+            "S1": 0.9948051948051948,
+            "S3": 1.0,
+            "balanced": 0.9974025974025974
+          },
+          {
+            "threshold": 0.6,
+            "S1": 0.9948051948051948,
+            "S3": 1.0,
+            "balanced": 0.9974025974025974
+          },
+          {
+            "threshold": 0.65,
+            "S1": 0.990909090909091,
+            "S3": 1.0,
+            "balanced": 0.9954545454545455
+          },
+          {
+            "threshold": 0.7,
+            "S1": 0.987012987012987,
+            "S3": 1.0,
+            "balanced": 0.9935064935064934
+          },
+          {
+            "threshold": 0.75,
+            "S1": 0.9818181818181818,
+            "S3": 1.0,
+            "balanced": 0.990909090909091
+          },
+          {
+            "threshold": 0.8,
+            "S1": 0.812987012987013,
+            "S3": 1.0,
+            "balanced": 0.9064935064935065
+          }
+        ]
+      },
+      "forced": {
+        "reached": {
+          "정상": 0,
+          "S1": 643,
+          "S3": 324
+        },
+        "rows": [
+          {
+            "threshold": 0.05,
+            "S1": 0.6251944012441679,
+            "S3": 1.0,
+            "balanced": 0.812597200622084
+          },
+          {
+            "threshold": 0.1,
+            "S1": 0.6251944012441679,
+            "S3": 1.0,
+            "balanced": 0.812597200622084
+          },
+          {
+            "threshold": 0.15,
+            "S1": 0.5256609642301711,
+            "S3": 1.0,
+            "balanced": 0.7628304821150855
+          },
+          {
+            "threshold": 0.2,
+            "S1": 0.5256609642301711,
+            "S3": 1.0,
+            "balanced": 0.7628304821150855
+          },
+          {
+            "threshold": 0.25,
+            "S1": 0.5194401244167963,
+            "S3": 1.0,
+            "balanced": 0.7597200622083982
+          },
+          {
+            "threshold": 0.3,
+            "S1": 0.5194401244167963,
+            "S3": 1.0,
+            "balanced": 0.7597200622083982
+          },
+          {
+            "threshold": 0.35,
+            "S1": 0.5194401244167963,
+            "S3": 1.0,
+            "balanced": 0.7597200622083982
+          },
+          {
+            "threshold": 0.4,
+            "S1": 0.5163297045101088,
+            "S3": 1.0,
+            "balanced": 0.7581648522550544
+          },
+          {
+            "threshold": 0.45,
+            "S1": 0.5163297045101088,
+            "S3": 1.0,
+            "balanced": 0.7581648522550544
+          },
+          {
+            "threshold": 0.5,
+            "S1": 0.5147744945567652,
+            "S3": 1.0,
+            "balanced": 0.7573872472783826
+          },
+          {
+            "threshold": 0.55,
+            "S1": 0.5147744945567652,
+            "S3": 1.0,
+            "balanced": 0.7573872472783826
+          },
+          {
+            "threshold": 0.6,
+            "S1": 0.5132192846034215,
+            "S3": 1.0,
+            "balanced": 0.7566096423017108
+          },
+          {
+            "threshold": 0.65,
+            "S1": 0.40902021772939345,
+            "S3": 1.0,
+            "balanced": 0.7045101088646968
+          },
+          {
+            "threshold": 0.7,
+            "S1": 0.39968895800933124,
+            "S3": 1.0,
+            "balanced": 0.6998444790046656
+          },
+          {
+            "threshold": 0.75,
+            "S1": 0.39035769828926903,
+            "S3": 1.0,
+            "balanced": 0.6951788491446345
+          },
+          {
+            "threshold": 0.8,
+            "S1": 0.2006220839813375,
+            "S3": 1.0,
+            "balanced": 0.6003110419906688
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,1217 @@
+{
+  "evaluation": "GroupKFold 4접기 out-of-fold (endToEnd 와 같은 접기)",
+  "label": "selfOnly",
+  "trainOn": "all",
+  "horizonSeconds": 30.0,
+  "kappa": 1.0,
+  "ensembleSize": 5,
+  "calibration": "sigmoid",
+  "minLeaf": 100,
+  "episodes": 34,
+  "samples": 10886,
+  "features": {
+    "selfLatencyRatio": "자기 p95 ÷ 기준선",
+    "selfLatencyRatioMean": "자기 p95 ÷ 기준선 (10초 평균)",
+    "selfErrorRate": "자기 오류율",
+    "selfPoolWait": "자기 풀 대기율",
+    "pathPoolWait": "호출 경로의 풀 대기율",
+    "pathPoolWaitMean": "호출 경로의 풀 대기율 (10초 평균)",
+    "pathLatencyRatio": "호출 경로의 p95 ÷ 기준선",
+    "callerLatencyRatio": "호출자 p95 ÷ 기준선",
+    "isChainEnd": "호출 대상 없음 (사슬 끝)",
+    "isEntry": "입구 노드"
+  },
+  "reproduction": {
+    "reference": null,
+    "produced": {
+      "samples": 3384,
+      "rate": 0.37322695035460995,
+      "cost": 0.006889716312056738,
+      "byAction": {
+        "BULKHEAD": 323,
+        "CIRCUIT_BREAKER": 940
+      }
+    },
+    "matches": false
+  },
+  "gbm": {
+    "metrics": {
+      "macroF1": 0.6744367702890545,
+      "typeAccuracy": 0.73112265281662,
+      "typeMacroF1": 0.7000165438698374
+    },
+    "outcomes": {
+      "faultFree": {
+        "samples": 3384,
+        "rate": 0.37322695035460995,
+        "cost": 0.006889716312056738,
+        "byAction": {
+          "BULKHEAD": 323,
+          "CIRCUIT_BREAKER": 940
+        }
+      },
+      "faultNormalLabel": {
+        "samples": 2496,
+        "rate": 0.3701923076923077,
+        "cost": 0.004908413461538462,
+        "byAction": {
+          "CIRCUIT_BREAKER": 755,
+          "BULKHEAD": 169
+        }
+      },
+      "S1": {
+        "samples": 3182,
+        "rightAction": 0.6341923318667505,
+        "wrongAction": 0.1715901948460088,
+        "hold": 0.19421747328724073
+      },
+      "S3": {
+        "samples": 1824,
+        "rightAction": 0.5614035087719298,
+        "wrongAction": 0.2450657894736842,
+        "hold": 0.19353070175438597
+      }
+    }
+  },
+  "trees": [
+    {
+      "depth": 1,
+      "metrics": {
+        "macroF1": 0.45763794465889235,
+        "typeAccuracy": 0.6356372353176188,
+        "typeMacroF1": 0.38861748900830484
+      },
+      "agreement": {
+        "predicted": 0.5807459121807826,
+        "typeOnFaults": 0.6863763483819417,
+        "action": 0.5246187764100679,
+        "actionOnFaults": 0.49240910906911706
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 3384,
+          "rate": 0.4988179669030733,
+          "cost": 0.03571536643026005,
+          "byAction": {
+            "BULKHEAD": 1688
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2496,
+          "rate": 0.22556089743589744,
+          "cost": 0.016150160256410258,
+          "byAction": {
+            "BULKHEAD": 563
+          }
+        },
+        "S1": {
+          "samples": 3182,
+          "rightAction": 1.0,
+          "wrongAction": 0.0,
+          "hold": 0.0
+        },
+        "S3": {
+          "samples": 1824,
+          "rightAction": 0.0,
+          "wrongAction": 1.0,
+          "hold": 0.0
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          }
+        ]
+      ]
+    },
+    {
+      "depth": 2,
+      "metrics": {
+        "macroF1": 0.4959787498962884,
+        "typeAccuracy": 0.5435477427087495,
+        "typeMacroF1": 0.5105939060786256
+      },
+      "agreement": {
+        "predicted": 0.7080654051074775,
+        "typeOnFaults": 0.6402317219336796,
+        "action": 0.598475105640272,
+        "actionOnFaults": 0.5479424690371554
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 3384,
+          "rate": 0.3472222222222222,
+          "cost": 0.012855614657210402,
+          "byAction": {
+            "BULKHEAD": 606,
+            "CIRCUIT_BREAKER": 569
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2496,
+          "rate": 0.22556089743589744,
+          "cost": 0.0020761217948717945,
+          "byAction": {
+            "CIRCUIT_BREAKER": 492,
+            "BULKHEAD": 71
+          }
+        },
+        "S1": {
+          "samples": 3182,
+          "rightAction": 0.48617221873035826,
+          "wrongAction": 0.3683218101822753,
+          "hold": 0.14550597108736643
+        },
+        "S3": {
+          "samples": 1824,
+          "rightAction": 0.38980263157894735,
+          "wrongAction": 0.5164473684210527,
+          "hold": 0.09375
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.6946002840995789
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.125
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.291666626930237
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.6946002840995789
+          }
+        ]
+      ]
+    },
+    {
+      "depth": 3,
+      "metrics": {
+        "macroF1": 0.6647474858015543,
+        "typeAccuracy": 0.7299240910906911,
+        "typeMacroF1": 0.7062190250244467
+      },
+      "agreement": {
+        "predicted": 0.8113172882601507,
+        "typeOnFaults": 0.7167399121054734,
+        "action": 0.5925959948557781,
+        "actionOnFaults": 0.6014782261286457
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 3384,
+          "rate": 0.30910165484633567,
+          "cost": 0.014704728132387703,
+          "byAction": {
+            "CIRCUIT_BREAKER": 352,
+            "BULKHEAD": 694
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2496,
+          "rate": 0.22556089743589744,
+          "cost": 0.016150160256410258,
+          "byAction": {
+            "BULKHEAD": 563
+          }
+        },
+        "S1": {
+          "samples": 3182,
+          "rightAction": 0.6722187303582653,
+          "wrongAction": 0.2023884349465745,
+          "hold": 0.12539283469516027
+        },
+        "S3": {
+          "samples": 1824,
+          "rightAction": 0.6118421052631579,
+          "wrongAction": 0.21875,
+          "hold": 0.16940789473684212
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.6946002840995789
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.4807692766189575
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 1.3541666865348816
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.125
+          },
+          {
+            "depth": 2,
+            "feature": "selfErrorRate",
+            "threshold": 0.004587155766785145
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.291666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.3774987906217575
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.10795454680919647
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.6946002840995789
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.4807692766189575
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.166666626930237
+          }
+        ]
+      ]
+    },
+    {
+      "depth": 4,
+      "metrics": {
+        "macroF1": 0.6374776707892293,
+        "typeAccuracy": 0.6530163803435877,
+        "typeMacroF1": 0.610437806782139
+      },
+      "agreement": {
+        "predicted": 0.8217894543450304,
+        "typeOnFaults": 0.8028365960846984,
+        "action": 0.6595627411354033,
+        "actionOnFaults": 0.6715940870954854
+      },
+      "outcomes": {
+        "faultFree": {
+          "samples": 3384,
+          "rate": 0.32476359338061467,
+          "cost": 0.017471867612293142,
+          "byAction": {
+            "BULKHEAD": 825,
+            "CIRCUIT_BREAKER": 274
+          }
+        },
+        "faultNormalLabel": {
+          "samples": 2496,
+          "rate": 0.22556089743589744,
+          "cost": 0.007968910256410257,
+          "byAction": {
+            "CIRCUIT_BREAKER": 286,
+            "BULKHEAD": 277
+          }
+        },
+        "S1": {
+          "samples": 3182,
+          "rightAction": 0.6568196103079824,
+          "wrongAction": 0.2262727844123193,
+          "hold": 0.1169076052796983
+        },
+        "S3": {
+          "samples": 1824,
+          "rightAction": 0.44243421052631576,
+          "wrongAction": 0.3881578947368421,
+          "hold": 0.16940789473684212
+        }
+      },
+      "foldSplits": [
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.6946002840995789
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.4807692766189575
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 1.3541666865348816
+          },
+          {
+            "depth": 3,
+            "feature": "selfLatencyRatio",
+            "threshold": 1.8397436141967773
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.8420590162277222
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.125
+          },
+          {
+            "depth": 2,
+            "feature": "selfErrorRate",
+            "threshold": 0.004587155766785145
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.11250000074505806
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.8404964506626129
+          },
+          {
+            "depth": 3,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.666666626930237
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.291666626930237
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.3774987906217575
+          },
+          {
+            "depth": 2,
+            "feature": "pathPoolWait",
+            "threshold": 0.10795454680919647
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.17999446392059326
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWaitMean",
+            "threshold": 0.8425168097019196
+          },
+          {
+            "depth": 3,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.583333373069763
+          },
+          {
+            "depth": 3,
+            "feature": "pathPoolWait",
+            "threshold": 0.426630437374115
+          }
+        ],
+        [
+          {
+            "depth": 0,
+            "feature": "isChainEnd",
+            "threshold": 0.5
+          },
+          {
+            "depth": 1,
+            "feature": "pathPoolWait",
+            "threshold": 0.6946002840995789
+          },
+          {
+            "depth": 2,
+            "feature": "pathLatencyRatio",
+            "threshold": 2.4807692766189575
+          },
+          {
+            "depth": 2,
+            "feature": "selfLatencyRatio",
+            "threshold": 2.166666626930237
+          },
+          {
+            "depth": 3,
+            "feature": "pathLatencyRatio",
+            "threshold": 0.6770833432674408
+          },
+          {
+            "depth": 3,
+            "feature": "pathLatencyRatio",
+            "threshold": 3.2051281929016113
+          },
+          {
+            "depth": 3,
+            "feature": "selfLatencyRatioMean",
+            "threshold": 1.0878204703330994
+          }
+        ]
+      ]
+    }
+  ],
+  "chosenDepth": 3,
+  "table": [
+    {
+      "leaf": 3,
+      "conditions": [
+        {
+          "feature": "isChainEnd",
+          "op": "<=",
+          "threshold": 0.5
+        },
+        {
+          "feature": "selfLatencyRatio",
+          "op": "<=",
+          "threshold": 2.291666626930237
+        },
+        {
+          "feature": "selfErrorRate",
+          "op": "<=",
+          "threshold": 0.004587155766785145
+        }
+      ],
+      "samples": 4086,
+      "classCounts": {
+        "정상": 2251,
+        "S1": 1112,
+        "S3": 723
+      },
+      "risk": 0.44909446891825744,
+      "bottleneck": "S1",
+      "action": "보류",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    },
+    {
+      "leaf": 4,
+      "conditions": [
+        {
+          "feature": "isChainEnd",
+          "op": "<=",
+          "threshold": 0.5
+        },
+        {
+          "feature": "selfLatencyRatio",
+          "op": "<=",
+          "threshold": 2.291666626930237
+        },
+        {
+          "feature": "selfErrorRate",
+          "op": ">",
+          "threshold": 0.004587155766785145
+        }
+      ],
+      "samples": 265,
+      "classCounts": {
+        "정상": 0,
+        "S1": 217,
+        "S3": 48
+      },
+      "risk": 1.0,
+      "bottleneck": "S1",
+      "action": "BULKHEAD",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    },
+    {
+      "leaf": 6,
+      "conditions": [
+        {
+          "feature": "isChainEnd",
+          "op": "<=",
+          "threshold": 0.5
+        },
+        {
+          "feature": "selfLatencyRatio",
+          "op": ">",
+          "threshold": 2.291666626930237
+        },
+        {
+          "feature": "pathPoolWait",
+          "op": "<=",
+          "threshold": 0.11250000074505806
+        }
+      ],
+      "samples": 1459,
+      "classCounts": {
+        "정상": 0,
+        "S1": 470,
+        "S3": 989
+      },
+      "risk": 1.0,
+      "bottleneck": "S3",
+      "action": "CIRCUIT_BREAKER",
+      "candidateAction": "CIRCUIT_BREAKER",
+      "candidateThreshold": 0.00025056376847907793
+    },
+    {
+      "leaf": 7,
+      "conditions": [
+        {
+          "feature": "isChainEnd",
+          "op": "<=",
+          "threshold": 0.5
+        },
+        {
+          "feature": "selfLatencyRatio",
+          "op": ">",
+          "threshold": 2.291666626930237
+        },
+        {
+          "feature": "pathPoolWait",
+          "op": ">",
+          "threshold": 0.11250000074505806
+        }
+      ],
+      "samples": 1447,
+      "classCounts": {
+        "정상": 0,
+        "S1": 1383,
+        "S3": 64
+      },
+      "risk": 1.0,
+      "bottleneck": "S1",
+      "action": "BULKHEAD",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    },
+    {
+      "leaf": 8,
+      "conditions": [
+        {
+          "feature": "isChainEnd",
+          "op": ">",
+          "threshold": 0.5
+        }
+      ],
+      "samples": 3629,
+      "classCounts": {
+        "정상": 3629,
+        "S1": 0,
+        "S3": 0
+      },
+      "risk": 0.0,
+      "bottleneck": "S1",
+      "action": "보류",
+      "candidateAction": "BULKHEAD",
+      "candidateThreshold": 0.460154241645244
+    }
+  ],
+  "byEpisodeKind": {
+    "natural": {
+      "samples": 6275,
+      "episodes": 20,
+      "gbm": {
+        "metrics": {
+          "macroF1": 0.6933968638970134,
+          "typeAccuracy": 0.7439375256884505,
+          "typeMacroF1": 0.7360725212511943
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 2261,
+            "rate": 0.42768686421937196,
+            "cost": 0.007285537372843875,
+            "byAction": {
+              "BULKHEAD": 228,
+              "CIRCUIT_BREAKER": 739
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 1581,
+            "rate": 0.4433902593295383,
+            "cost": 0.0067725490196078415,
+            "byAction": {
+              "CIRCUIT_BREAKER": 553,
+              "BULKHEAD": 148
+            }
+          },
+          "S1": {
+            "samples": 1277,
+            "rightAction": 0.7314017227877838,
+            "wrongAction": 0.12685982772122162,
+            "hold": 0.1417384494909945
+          },
+          "S3": {
+            "samples": 1156,
+            "rightAction": 0.6012110726643599,
+            "wrongAction": 0.2231833910034602,
+            "hold": 0.17560553633217993
+          }
+        }
+      },
+      "tree": {
+        "metrics": {
+          "macroF1": 0.7949638240475315,
+          "typeAccuracy": 0.7903822441430333,
+          "typeMacroF1": 0.7810227866329714
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 2261,
+            "rate": 0.3485183547103052,
+            "cost": 0.015101282618310482,
+            "byAction": {
+              "CIRCUIT_BREAKER": 312,
+              "BULKHEAD": 476
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 1581,
+            "rate": 0.3333333333333333,
+            "cost": 0.023866666666666665,
+            "byAction": {
+              "BULKHEAD": 527
+            }
+          },
+          "S1": {
+            "samples": 1277,
+            "rightAction": 0.8308535630383712,
+            "wrongAction": 0.050117462803445575,
+            "hold": 0.11902897415818324
+          },
+          "S3": {
+            "samples": 1156,
+            "rightAction": 0.6141868512110726,
+            "wrongAction": 0.16868512110726644,
+            "hold": 0.2171280276816609
+          }
+        }
+      }
+    },
+    "forced": {
+      "samples": 4611,
+      "episodes": 14,
+      "gbm": {
+        "metrics": {
+          "macroF1": 0.6480831200505072,
+          "typeAccuracy": 0.7190050524679362,
+          "typeMacroF1": 0.6422172281186622
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 1123,
+            "rate": 0.26357969723953695,
+            "cost": 0.006092787177203918,
+            "byAction": {
+              "BULKHEAD": 95,
+              "CIRCUIT_BREAKER": 201
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 915,
+            "rate": 0.24371584699453552,
+            "cost": 0.001687431693989071,
+            "byAction": {
+              "CIRCUIT_BREAKER": 202,
+              "BULKHEAD": 21
+            }
+          },
+          "S1": {
+            "samples": 1905,
+            "rightAction": 0.5690288713910762,
+            "wrongAction": 0.2015748031496063,
+            "hold": 0.2293963254593176
+          },
+          "S3": {
+            "samples": 668,
+            "rightAction": 0.49251497005988026,
+            "wrongAction": 0.28293413173652693,
+            "hold": 0.2245508982035928
+          }
+        }
+      },
+      "tree": {
+        "metrics": {
+          "macroF1": 0.5158670693002659,
+          "typeAccuracy": 0.672755538282161,
+          "typeMacroF1": 0.624904255157063
+        },
+        "outcomes": {
+          "faultFree": {
+            "samples": 1123,
+            "rate": 0.22974176313446126,
+            "cost": 0.013906322350845947,
+            "byAction": {
+              "BULKHEAD": 218,
+              "CIRCUIT_BREAKER": 40
+            }
+          },
+          "faultNormalLabel": {
+            "samples": 915,
+            "rate": 0.03934426229508197,
+            "cost": 0.002817049180327869,
+            "byAction": {
+              "BULKHEAD": 36
+            }
+          },
+          "S1": {
+            "samples": 1905,
+            "rightAction": 0.5658792650918635,
+            "wrongAction": 0.30446194225721784,
+            "hold": 0.12965879265091865
+          },
+          "S3": {
+            "samples": 668,
+            "rightAction": 0.6077844311377245,
+            "wrongAction": 0.30538922155688625,
+            "hold": 0.08682634730538923
+          }
+        }
+      }
+    }
+  },
+  "poolWaitSensitivity": {
+    "node": 5,
+    "fittedThreshold": 0.11250000074505806,
+    "subsets": {
+      "all": {
+        "reached": {
+          "정상": 0,
+          "S1": 1853,
+          "S3": 1053
+        },
+        "rows": [
+          {
+            "threshold": 0.05,
+            "S1": 0.7463572584997301,
+            "S3": 0.9259259259259259,
+            "balanced": 0.836141592212828
+          },
+          {
+            "threshold": 0.1,
+            "S1": 0.7463572584997301,
+            "S3": 0.9373219373219374,
+            "balanced": 0.8418395979108337
+          },
+          {
+            "threshold": 0.15,
+            "S1": 0.6794387479762547,
+            "S3": 0.9468186134852802,
+            "balanced": 0.8131286807307674
+          },
+          {
+            "threshold": 0.2,
+            "S1": 0.6794387479762547,
+            "S3": 0.956315289648623,
+            "balanced": 0.8178770188124389
+          },
+          {
+            "threshold": 0.25,
+            "S1": 0.6762007555315704,
+            "S3": 0.9629629629629629,
+            "balanced": 0.8195818592472667
+          },
+          {
+            "threshold": 0.3,
+            "S1": 0.675661090124123,
+            "S3": 0.9753086419753086,
+            "balanced": 0.8254848660497158
+          },
+          {
+            "threshold": 0.35,
+            "S1": 0.675661090124123,
+            "S3": 0.9791073124406457,
+            "balanced": 0.8273842012823844
+          },
+          {
+            "threshold": 0.4,
+            "S1": 0.6724230976794388,
+            "S3": 1.0,
+            "balanced": 0.8362115488397194
+          },
+          {
+            "threshold": 0.45,
+            "S1": 0.6724230976794388,
+            "S3": 1.0,
+            "balanced": 0.8362115488397194
+          },
+          {
+            "threshold": 0.5,
+            "S1": 0.671343766864544,
+            "S3": 1.0,
+            "balanced": 0.8356718834322721
+          },
+          {
+            "threshold": 0.55,
+            "S1": 0.671343766864544,
+            "S3": 1.0,
+            "balanced": 0.8356718834322721
+          },
+          {
+            "threshold": 0.6,
+            "S1": 0.6702644360496492,
+            "S3": 1.0,
+            "balanced": 0.8351322180248246
+          },
+          {
+            "threshold": 0.65,
+            "S1": 0.595250944414463,
+            "S3": 1.0,
+            "balanced": 0.7976254722072316
+          },
+          {
+            "threshold": 0.7,
+            "S1": 0.5887749595250944,
+            "S3": 1.0,
+            "balanced": 0.7943874797625472
+          },
+          {
+            "threshold": 0.75,
+            "S1": 0.5833783054506206,
+            "S3": 1.0,
+            "balanced": 0.7916891527253103
+          },
+          {
+            "threshold": 0.8,
+            "S1": 0.4473826227738802,
+            "S3": 1.0,
+            "balanced": 0.7236913113869401
+          }
+        ]
+      },
+      "natural": {
+        "reached": {
+          "정상": 0,
+          "S1": 836,
+          "S3": 703
+        },
+        "rows": [
+          {
+            "threshold": 0.05,
+            "S1": 0.9976076555023924,
+            "S3": 0.8918918918918919,
+            "balanced": 0.9447497736971422
+          },
+          {
+            "threshold": 0.1,
+            "S1": 0.9976076555023924,
+            "S3": 0.9089615931721194,
+            "balanced": 0.9532846243372559
+          },
+          {
+            "threshold": 0.15,
+            "S1": 0.9976076555023924,
+            "S3": 0.9231863442389758,
+            "balanced": 0.960396999870684
+          },
+          {
+            "threshold": 0.2,
+            "S1": 0.9976076555023924,
+            "S3": 0.9374110953058321,
+            "balanced": 0.9675093754041122
+          },
+          {
+            "threshold": 0.25,
+            "S1": 0.9976076555023924,
+            "S3": 0.9473684210526315,
+            "balanced": 0.972488038277512
+          },
+          {
+            "threshold": 0.3,
+            "S1": 0.9976076555023924,
+            "S3": 0.9644381223328592,
+            "balanced": 0.9810228889176258
+          },
+          {
+            "threshold": 0.35,
+            "S1": 0.9976076555023924,
+            "S3": 0.9701280227596017,
+            "balanced": 0.9838678391309971
+          },
+          {
+            "threshold": 0.4,
+            "S1": 0.9952153110047847,
+            "S3": 1.0,
+            "balanced": 0.9976076555023923
+          },
+          {
+            "threshold": 0.45,
+            "S1": 0.9952153110047847,
+            "S3": 1.0,
+            "balanced": 0.9976076555023923
+          },
+          {
+            "threshold": 0.5,
+            "S1": 0.9952153110047847,
+            "S3": 1.0,
+            "balanced": 0.9976076555023923
+          },
+          {
+            "threshold": 0.55,
+            "S1": 0.9952153110047847,
+            "S3": 1.0,
+            "balanced": 0.9976076555023923
+          },
+          {
+            "threshold": 0.6,
+            "S1": 0.9952153110047847,
+            "S3": 1.0,
+            "balanced": 0.9976076555023923
+          },
+          {
+            "threshold": 0.65,
+            "S1": 0.9904306220095693,
+            "S3": 1.0,
+            "balanced": 0.9952153110047847
+          },
+          {
+            "threshold": 0.7,
+            "S1": 0.9880382775119617,
+            "S3": 1.0,
+            "balanced": 0.9940191387559809
+          },
+          {
+            "threshold": 0.75,
+            "S1": 0.9832535885167464,
+            "S3": 1.0,
+            "balanced": 0.9916267942583732
+          },
+          {
+            "threshold": 0.8,
+            "S1": 0.8277511961722488,
+            "S3": 1.0,
+            "balanced": 0.9138755980861244
+          }
+        ]
+      },
+      "forced": {
+        "reached": {
+          "정상": 0,
+          "S1": 1017,
+          "S3": 350
+        },
+        "rows": [
+          {
+            "threshold": 0.05,
+            "S1": 0.5398230088495575,
+            "S3": 0.9942857142857143,
+            "balanced": 0.767054361567636
+          },
+          {
+            "threshold": 0.1,
+            "S1": 0.5398230088495575,
+            "S3": 0.9942857142857143,
+            "balanced": 0.767054361567636
+          },
+          {
+            "threshold": 0.15,
+            "S1": 0.41789577187807275,
+            "S3": 0.9942857142857143,
+            "balanced": 0.7060907430818936
+          },
+          {
+            "threshold": 0.2,
+            "S1": 0.41789577187807275,
+            "S3": 0.9942857142857143,
+            "balanced": 0.7060907430818936
+          },
+          {
+            "threshold": 0.25,
+            "S1": 0.4119960668633235,
+            "S3": 0.9942857142857143,
+            "balanced": 0.7031408905745189
+          },
+          {
+            "threshold": 0.3,
+            "S1": 0.4110127826941986,
+            "S3": 0.9971428571428571,
+            "balanced": 0.7040778199185278
+          },
+          {
+            "threshold": 0.35,
+            "S1": 0.4110127826941986,
+            "S3": 0.9971428571428571,
+            "balanced": 0.7040778199185278
+          },
+          {
+            "threshold": 0.4,
+            "S1": 0.40707964601769914,
+            "S3": 1.0,
+            "balanced": 0.7035398230088495
+          },
+          {
+            "threshold": 0.45,
+            "S1": 0.40707964601769914,
+            "S3": 1.0,
+            "balanced": 0.7035398230088495
+          },
+          {
+            "threshold": 0.5,
+            "S1": 0.4051130776794494,
+            "S3": 1.0,
+            "balanced": 0.7025565388397247
+          },
+          {
+            "threshold": 0.55,
+            "S1": 0.4051130776794494,
+            "S3": 1.0,
+            "balanced": 0.7025565388397247
+          },
+          {
+            "threshold": 0.6,
+            "S1": 0.4031465093411996,
+            "S3": 1.0,
+            "balanced": 0.7015732546705998
+          },
+          {
+            "threshold": 0.65,
+            "S1": 0.2704031465093412,
+            "S3": 1.0,
+            "balanced": 0.6352015732546706
+          },
+          {
+            "threshold": 0.7,
+            "S1": 0.2605703048180924,
+            "S3": 1.0,
+            "balanced": 0.6302851524090463
+          },
+          {
+            "threshold": 0.75,
+            "S1": 0.25467059980334317,
+            "S3": 1.0,
+            "balanced": 0.6273352999016716
+          },
+          {
+            "threshold": 0.8,
+            "S1": 0.13470993117010815,
+            "S3": 1.0,
+            "balanced": 0.567354965585054
+          }
+        ]
+      }
+    }
+  }
+}
